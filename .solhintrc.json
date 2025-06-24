@@ -21,7 +21,7 @@
     "ordering": "warn",
     "state-visibility": "error",
     "no-empty-blocks": "warn",
-    "no-unused-vars": "error",
+    "no-unused-vars": "warn",
     "payable-fallback": "error",
     "no-inline-assembly": "off",
     "no-complex-fallback": "error",

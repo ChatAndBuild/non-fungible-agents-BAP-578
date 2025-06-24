@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "./interfaces/IBEP007.sol";
 import "./interfaces/ILearningModule.sol";
-
 /**
  * @title BEP007Enhanced - Enhanced Non-Fungible Agent (NFA) Token Standard with Learning
  * @dev Implementation of the enhanced BEP-007 standard with optional learning capabilities
@@ -36,13 +35,13 @@ abstract contract BEP007Enhanced is
     address public experienceModuleRegistry;
 
     // Mapping from token ID to agent state
-    mapping(uint256 => State) private _agentStates;
+    mapping(uint256 => State) internal _agentStates;
 
     // Mapping from token ID to agent metadata URI
-    mapping(uint256 => string) private _agentMetadataURIs;
+    mapping(uint256 => string) internal _agentMetadataURIs;
 
     // Mapping from token ID to extended agent metadata
-    mapping(uint256 => EnhancedAgentMetadata) private _agentExtendedMetadata;
+    mapping(uint256 => EnhancedAgentMetadata) internal _agentExtendedMetadata;
 
     // Mapping from token ID to learning module address
     mapping(uint256 => address) private _learningModules;
@@ -51,7 +50,7 @@ abstract contract BEP007Enhanced is
     bool public globalPause;
 
     // Gas limit for delegatecall to prevent out-of-gas attacks
-    uint256 public constant MAX_GAS_FOR_DELEGATECALL = 3000000;
+    uint256 public constant MAX_GAS_FOR_DELEGATECALL = 3_000_000;
 
     /**
      * @dev Enhanced AgentMetadata structure with learning capabilities
@@ -111,12 +110,15 @@ abstract contract BEP007Enhanced is
 
     /**
      * @dev Initializes the contract
+     * @dev This function can only be called once due to the initializer modifier
      */
     function initialize(
         string memory name,
         string memory symbol,
         address governanceAddress
-    ) public initializer {
+    ) public virtual initializer {
+        require(governanceAddress != address(0), "BEP007Enhanced: governance address is zero");
+
         __ERC721_init(name, symbol);
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -126,6 +128,9 @@ abstract contract BEP007Enhanced is
 
         governance = governanceAddress;
         globalPause = false;
+
+        // Transfer ownership to governance for additional security
+        _transferOwnership(governanceAddress);
     }
 
     /**
@@ -142,32 +147,7 @@ abstract contract BEP007Enhanced is
         string memory metadataURI,
         EnhancedAgentMetadata memory extendedMetadata
     ) external returns (uint256 tokenId) {
-        require(logicAddress != address(0), "BEP007Enhanced: logic address is zero");
-
-        _tokenIdCounter.increment();
-        tokenId = _tokenIdCounter.current();
-
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, metadataURI);
-
-        _agentStates[tokenId] = State({
-            balance: 0,
-            status: Status.Active,
-            owner: to,
-            logicAddress: logicAddress,
-            lastActionTimestamp: block.timestamp
-        });
-
-        _agentMetadataURIs[tokenId] = metadataURI;
-        _agentExtendedMetadata[tokenId] = extendedMetadata;
-
-        // Set up learning module if enabled
-        if (extendedMetadata.learningEnabled && extendedMetadata.learningModule != address(0)) {
-            _learningModules[tokenId] = extendedMetadata.learningModule;
-            emit LearningEnabled(tokenId, extendedMetadata.learningModule);
-        }
-
-        return tokenId;
+        return _createAgentInternal(to, logicAddress, metadataURI, extendedMetadata);
     }
 
     /**
@@ -196,7 +176,44 @@ abstract contract BEP007Enhanced is
             learningVersion: 0
         });
 
-        return this.createAgent(to, logicAddress, metadataURI, basicMetadata);
+        return _createAgentInternal(to, logicAddress, metadataURI, basicMetadata);
+    }
+
+    /**
+     * @dev Internal function to create agent with enhanced metadata
+     */
+    function _createAgentInternal(
+        address to,
+        address logicAddress,
+        string memory metadataURI,
+        EnhancedAgentMetadata memory extendedMetadata
+    ) internal returns (uint256 tokenId) {
+        require(logicAddress != address(0), "BEP007Enhanced: logic address is zero");
+
+        _tokenIdCounter.increment();
+        tokenId = _tokenIdCounter.current();
+
+        _mint(to, tokenId);
+        _setTokenURI(tokenId, metadataURI);
+
+        _agentStates[tokenId] = State({
+            balance: 0,
+            status: Status.Active,
+            owner: to,
+            logicAddress: logicAddress,
+            lastActionTimestamp: block.timestamp
+        });
+
+        _agentMetadataURIs[tokenId] = metadataURI;
+        _agentExtendedMetadata[tokenId] = extendedMetadata;
+
+        // Set up learning module if enabled
+        if (extendedMetadata.learningEnabled && extendedMetadata.learningModule != address(0)) {
+            _learningModules[tokenId] = extendedMetadata.learningModule;
+            emit LearningEnabled(tokenId, extendedMetadata.learningModule);
+        }
+
+        return tokenId;
     }
 
     /**
@@ -346,7 +363,7 @@ abstract contract BEP007Enhanced is
     function executeAction(
         uint256 tokenId,
         bytes calldata data
-    ) external nonReentrant whenAgentActive(tokenId) {
+    ) external virtual nonReentrant whenAgentActive(tokenId) {
         State storage agentState = _agentStates[tokenId];
 
         // Only the owner or the logic contract itself can execute actions
@@ -361,8 +378,8 @@ abstract contract BEP007Enhanced is
         // Update the last action timestamp
         agentState.lastActionTimestamp = block.timestamp;
 
-        // Execute the action via delegatecall with gas limit
-        (bool success, bytes memory result) = agentState.logicAddress.delegatecall{
+        // Execute the action via call with gas limit (upgrade-safe)
+        (bool success, bytes memory result) = agentState.logicAddress.call{
             gas: MAX_GAS_FOR_DELEGATECALL
         }(data);
 
@@ -394,7 +411,7 @@ abstract contract BEP007Enhanced is
      */
     function getAgentMetadata(
         uint256 tokenId
-    ) external view override returns (IBEP007.AgentMetadata memory) {
+    ) external view virtual override returns (IBEP007.AgentMetadata memory) {
         require(_exists(tokenId), "BEP007Enhanced: agent does not exist");
         EnhancedAgentMetadata storage enhanced = _agentExtendedMetadata[tokenId];
         return
@@ -415,7 +432,7 @@ abstract contract BEP007Enhanced is
      */
     function getAgentEnhancedMetadata(
         uint256 tokenId
-    ) external view returns (EnhancedAgentMetadata memory) {
+    ) external view virtual returns (EnhancedAgentMetadata memory) {
         require(_exists(tokenId), "BEP007Enhanced: agent does not exist");
         return _agentExtendedMetadata[tokenId];
     }
@@ -428,7 +445,7 @@ abstract contract BEP007Enhanced is
     function updateAgentMetadata(
         uint256 tokenId,
         IBEP007.AgentMetadata memory metadata
-    ) external override onlyAgentOwner(tokenId) {
+    ) external virtual override onlyAgentOwner(tokenId) {
         // Update only the base metadata fields
         EnhancedAgentMetadata storage enhanced = _agentExtendedMetadata[tokenId];
         enhanced.persona = metadata.persona;
@@ -449,7 +466,7 @@ abstract contract BEP007Enhanced is
     function updateAgentEnhancedMetadata(
         uint256 tokenId,
         EnhancedAgentMetadata memory metadata
-    ) external onlyAgentOwner(tokenId) {
+    ) external virtual onlyAgentOwner(tokenId) {
         // Preserve learning settings if not explicitly changing them
         EnhancedAgentMetadata storage currentMetadata = _agentExtendedMetadata[tokenId];
         if (metadata.learningEnabled != currentMetadata.learningEnabled) {
@@ -464,7 +481,163 @@ abstract contract BEP007Enhanced is
         emit MetadataUpdated(tokenId, _agentMetadataURIs[tokenId]);
     }
 
-    // ... (Include remaining functions from original BEP007.sol with appropriate modifications)
+    /**
+     * @dev Updates the logic address for the agent
+     * @param tokenId The ID of the agent token
+     * @param newLogic The address of the new logic contract
+     */
+    function setLogicAddress(
+        uint256 tokenId,
+        address newLogic
+    ) external virtual onlyAgentOwner(tokenId) {
+        require(newLogic != address(0), "BEP007Enhanced: new logic address is zero");
+
+        address oldLogic = _agentStates[tokenId].logicAddress;
+        _agentStates[tokenId].logicAddress = newLogic;
+
+        emit LogicUpgraded(address(this), oldLogic, newLogic);
+    }
+
+    /**
+     * @dev Funds the agent with BNB for gas fees
+     * @param tokenId The ID of the agent token
+     */
+    function fundAgent(uint256 tokenId) external payable virtual {
+        require(_exists(tokenId), "BEP007Enhanced: agent does not exist");
+
+        _agentStates[tokenId].balance += msg.value;
+
+        emit AgentFunded(address(this), msg.sender, msg.value);
+    }
+
+    /**
+     * @dev Returns the current state of the agent
+     * @param tokenId The ID of the agent token
+     * @return The agent's state
+     */
+    function getState(uint256 tokenId) external view virtual returns (State memory) {
+        require(_exists(tokenId), "BEP007Enhanced: agent does not exist");
+        return _agentStates[tokenId];
+    }
+
+    /**
+     * @dev Pauses the agent
+     * @param tokenId The ID of the agent token
+     */
+    function pause(uint256 tokenId) external virtual onlyAgentOwner(tokenId) {
+        require(_agentStates[tokenId].status == Status.Active, "BEP007Enhanced: agent not active");
+
+        _agentStates[tokenId].status = Status.Paused;
+
+        emit StatusChanged(address(this), Status.Paused);
+    }
+
+    /**
+     * @dev Resumes the agent
+     * @param tokenId The ID of the agent token
+     */
+    function unpause(uint256 tokenId) external virtual onlyAgentOwner(tokenId) {
+        require(_agentStates[tokenId].status == Status.Paused, "BEP007Enhanced: agent not paused");
+
+        _agentStates[tokenId].status = Status.Active;
+
+        emit StatusChanged(address(this), Status.Active);
+    }
+
+    /**
+     * @dev Terminates the agent permanently
+     * @param tokenId The ID of the agent token
+     */
+    function terminate(uint256 tokenId) external virtual onlyAgentOwner(tokenId) {
+        require(
+            _agentStates[tokenId].status != Status.Terminated,
+            "BEP007Enhanced: agent already terminated"
+        );
+
+        _agentStates[tokenId].status = Status.Terminated;
+
+        // Return any remaining balance to the owner
+        uint256 remainingBalance = _agentStates[tokenId].balance;
+        if (remainingBalance > 0) {
+            _agentStates[tokenId].balance = 0;
+            payable(ownerOf(tokenId)).transfer(remainingBalance);
+        }
+
+        emit StatusChanged(address(this), Status.Terminated);
+    }
+
+    /**
+     * @dev Registers a experience module for the agent
+     * @param tokenId The ID of the agent token
+     * @param moduleAddress The address of the experience module
+     */
+    function registerExperienceModule(
+        uint256 tokenId,
+        address moduleAddress
+    ) external virtual onlyAgentOwner(tokenId) {
+        require(
+            experienceModuleRegistry != address(0),
+            "BEP007Enhanced: experience module registry not set"
+        );
+
+        emit ExperienceModuleRegistered(tokenId, moduleAddress);
+    }
+
+    /**
+     * @dev Withdraws BNB from the agent
+     * @param tokenId The ID of the agent token
+     * @param amount The amount to withdraw
+     */
+    function withdrawFromAgent(
+        uint256 tokenId,
+        uint256 amount
+    ) external virtual onlyAgentOwner(tokenId) {
+        require(amount <= _agentStates[tokenId].balance, "BEP007Enhanced: insufficient balance");
+
+        _agentStates[tokenId].balance -= amount;
+        payable(msg.sender).transfer(amount);
+    }
+
+    /**
+     * @dev Updates the agent's metadata URI
+     * @param tokenId The ID of the agent token
+     * @param newMetadataURI The new metadata URI
+     */
+    function setAgentMetadataURI(
+        uint256 tokenId,
+        string memory newMetadataURI
+    ) external virtual onlyAgentOwner(tokenId) {
+        _agentMetadataURIs[tokenId] = newMetadataURI;
+        _setTokenURI(tokenId, newMetadataURI);
+
+        emit MetadataUpdated(tokenId, newMetadataURI);
+    }
+
+    /**
+     * @dev Sets the global pause state (emergency circuit breaker)
+     * @param paused The new pause state
+     */
+    function setGlobalPause(bool paused) external virtual onlyGovernance {
+        globalPause = paused;
+    }
+
+    /**
+     * @dev Updates the governance address
+     * @param newGovernance The address of the new governance contract
+     */
+    function setGovernance(address newGovernance) external virtual onlyGovernance {
+        require(newGovernance != address(0), "BEP007Enhanced: new governance address is zero");
+        governance = newGovernance;
+    }
+
+    /**
+     * @dev Sets the experience module registry address
+     * @param registry The address of the experience module registry
+     */
+    function setExperienceModuleRegistry(address registry) external virtual onlyGovernance {
+        require(registry != address(0), "BEP007Enhanced: registry is zero address");
+        experienceModuleRegistry = registry;
+    }
 
     /**
      * @dev See {IERC165-supportsInterface}
@@ -474,6 +647,7 @@ abstract contract BEP007Enhanced is
     )
         public
         view
+        virtual
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
@@ -488,7 +662,7 @@ abstract contract BEP007Enhanced is
         address to,
         uint256 tokenId,
         uint256 batchSize
-    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+    ) internal virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
 
         // Update owner in agent state when transferred
@@ -502,7 +676,7 @@ abstract contract BEP007Enhanced is
      */
     function _burn(
         uint256 tokenId
-    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
+    ) internal virtual override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
         super._burn(tokenId);
     }
 
@@ -511,7 +685,13 @@ abstract contract BEP007Enhanced is
      */
     function tokenURI(
         uint256 tokenId
-    ) public view override(ERC721Upgradeable, ERC721URIStorageUpgradeable) returns (string memory) {
+    )
+        public
+        view
+        virtual
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
+        returns (string memory)
+    {
         return super.tokenURI(tokenId);
     }
 
@@ -519,5 +699,7 @@ abstract contract BEP007Enhanced is
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
      * Called by {upgradeTo} and {upgradeToAndCall}.
      */
-    function _authorizeUpgrade(address) internal override onlyGovernance {}
+    function _authorizeUpgrade(address) internal virtual override onlyOwner {}
+
+    receive() external payable {}
 }

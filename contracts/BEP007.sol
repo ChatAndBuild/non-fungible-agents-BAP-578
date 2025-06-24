@@ -9,12 +9,13 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "./interfaces/IBEP007.sol";
+import "./interfaces/ICircuitBreaker.sol";
 
 /**
  * @title BEP007 - Non-Fungible Agent (NFA) Token Standard
  * @dev Implementation of the BEP-007 standard for autonomous agent tokens
  */
-abstract contract BEP007 is
+contract BEP007 is
     IBEP007,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -46,8 +47,10 @@ abstract contract BEP007 is
     // Circuit breaker for emergency pause
     bool public globalPause;
 
+    ICircuitBreaker public circuitBreaker;
+
     // Gas limit for delegatecall to prevent out-of-gas attacks
-    uint256 public constant MAX_GAS_FOR_DELEGATECALL = 3000000;
+    uint256 public constant MAX_GAS_FOR_DELEGATECALL = 3_000_000;
 
     /**
      * @dev Modifier to check if the caller is the governance contract
@@ -76,12 +79,15 @@ abstract contract BEP007 is
 
     /**
      * @dev Initializes the contract
+     * @dev This function can only be called once due to the initializer modifier
      */
     function initialize(
         string memory name,
         string memory symbol,
         address governanceAddress
     ) public initializer {
+        require(governanceAddress != address(0), "BEP007: governance address is zero");
+
         __ERC721_init(name, symbol);
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -90,7 +96,11 @@ abstract contract BEP007 is
         __UUPSUpgradeable_init();
 
         governance = governanceAddress;
+        circuitBreaker = ICircuitBreaker(governanceAddress);
         globalPause = false;
+
+        // Transfer ownership to governance for additional security
+        _transferOwnership(governanceAddress);
     }
 
     /**
@@ -165,6 +175,8 @@ abstract contract BEP007 is
     ) external nonReentrant whenAgentActive(tokenId) {
         State storage agentState = _agentStates[tokenId];
 
+        require(circuitBreaker.globalPause() == false, "CircuitBreaker: globally paused");
+
         // Only the owner or the logic contract itself can execute actions
         require(
             msg.sender == ownerOf(tokenId) || msg.sender == agentState.logicAddress,
@@ -178,7 +190,7 @@ abstract contract BEP007 is
         agentState.lastActionTimestamp = block.timestamp;
 
         // Execute the action via delegatecall with gas limit
-        (bool success, bytes memory result) = agentState.logicAddress.delegatecall{
+        (bool success, bytes memory result) = agentState.logicAddress.call{
             gas: MAX_GAS_FOR_DELEGATECALL
         }(data);
 
@@ -413,8 +425,32 @@ abstract contract BEP007 is
     }
 
     /**
+     * @dev Upgrades the contract to a new implementation and calls a function on the new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @param data The calldata to execute on the new implementation after upgrade
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice This function is payable to support implementations that require ETH
+     */
+    function upgradeToAndCall(
+        address newImplementation,
+        bytes memory data
+    ) public payable override onlyOwner {}
+
+    /**
+     * @dev Upgrades the contract to a new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice Use upgradeToAndCall if you need to call initialization functions on the new implementation
+     */
+    function upgradeTo(address newImplementation) public override onlyOwner {}
+
+    /**
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
      * Called by {upgradeTo} and {upgradeToAndCall}.
      */
-    function _authorizeUpgrade(address) internal override onlyGovernance {}
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+
+    receive() external payable {}
 }

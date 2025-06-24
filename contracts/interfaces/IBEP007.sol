@@ -10,8 +10,8 @@ interface IBEP007 {
      * @dev Enum representing the current status of an agent
      */
     enum Status {
-        Active,
         Paused,
+        Active,
         Terminated
     }
 
@@ -69,42 +69,77 @@ interface IBEP007 {
     event ExperienceModuleRegistered(uint256 indexed tokenId, address indexed moduleAddress);
 
     /**
+     * @dev Creates a new agent token with extended metadata
+     * @param to The address that will own the agent
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata for the agent
+     * @return tokenId The ID of the new agent token
+     */
+    function createAgent(
+        address to,
+        address logicAddress,
+        string memory metadataURI,
+        AgentMetadata memory extendedMetadata
+    ) external returns (uint256 tokenId);
+
+    /**
+     * @dev Creates a new agent token with basic metadata
+     * @param to The address that will own the agent
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @return tokenId The ID of the new agent token
+     */
+    function createAgent(
+        address to,
+        address logicAddress,
+        string memory metadataURI
+    ) external returns (uint256 tokenId);
+
+    /**
      * @dev Executes an action using the agent's logic
+     * @param tokenId The ID of the agent token
      * @param data The encoded function call to execute
      */
-    function executeAction(bytes calldata data) external;
+    function executeAction(uint256 tokenId, bytes calldata data) external;
 
     /**
      * @dev Updates the logic address for the agent
+     * @param tokenId The ID of the agent token
      * @param newLogic The address of the new logic contract
      */
-    function setLogicAddress(address newLogic) external;
+    function setLogicAddress(uint256 tokenId, address newLogic) external;
 
     /**
      * @dev Funds the agent with BNB for gas fees
+     * @param tokenId The ID of the agent token
      */
-    function fundAgent() external payable;
+    function fundAgent(uint256 tokenId) external payable;
 
     /**
      * @dev Returns the current state of the agent
+     * @param tokenId The ID of the agent token
      * @return The agent's state
      */
-    function getState() external view returns (State memory);
+    function getState(uint256 tokenId) external view returns (State memory);
 
     /**
      * @dev Pauses the agent
+     * @param tokenId The ID of the agent token
      */
-    function pause() external;
+    function pause(uint256 tokenId) external;
 
     /**
      * @dev Resumes the agent
+     * @param tokenId The ID of the agent token
      */
-    function unpause() external;
+    function unpause(uint256 tokenId) external;
 
     /**
      * @dev Terminates the agent permanently
+     * @param tokenId The ID of the agent token
      */
-    function terminate() external;
+    function terminate(uint256 tokenId) external;
 
     /**
      * @dev Gets the agent's extended metadata
@@ -119,4 +154,25 @@ interface IBEP007 {
      * @param metadata The new metadata
      */
     function updateAgentMetadata(uint256 tokenId, AgentMetadata memory metadata) external;
+
+    /**
+     * @dev Registers an experience module for the agent
+     * @param tokenId The ID of the agent token
+     * @param moduleAddress The address of the experience module
+     */
+    function registerExperienceModule(uint256 tokenId, address moduleAddress) external;
+
+    /**
+     * @dev Withdraws BNB from the agent
+     * @param tokenId The ID of the agent token
+     * @param amount The amount to withdraw
+     */
+    function withdrawFromAgent(uint256 tokenId, uint256 amount) external;
+
+    /**
+     * @dev Updates the agent's metadata URI
+     * @param tokenId The ID of the agent token
+     * @param newMetadataURI The new metadata URI
+     */
+    function setAgentMetadataURI(uint256 tokenId, string memory newMetadataURI) external;
 }

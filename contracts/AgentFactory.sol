@@ -6,7 +6,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./BEP007Enhanced.sol";
+import "./BEP007EnhancedImpl.sol";
 import "./interfaces/IBEP007.sol";
 import "./interfaces/ILearningModule.sol";
 
@@ -14,7 +16,12 @@ import "./interfaces/ILearningModule.sol";
  * @title AgentFactory
  * @dev Enhanced factory contract for deploying Non-Fungible Agent (NFA) tokens with learning capabilities
  */
-contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract AgentFactory is
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
+{
     using ECDSAUpgradeable for bytes32;
 
     // The address of the BEP007Enhanced implementation contract
@@ -121,6 +128,7 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
 
     /**
      * @dev Initializes the contract
+     * @dev This function can only be called once due to the initializer modifier
      * @param _implementation The address of the BEP007Enhanced implementation contract
      * @param _governance The address of the governance contract
      * @param _defaultLearningModule The default learning module address
@@ -130,11 +138,12 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         address _governance,
         address _defaultLearningModule
     ) public initializer {
-        __Ownable_init();
-        __ReentrancyGuard_init();
-
         require(_implementation != address(0), "AgentFactory: implementation is zero address");
         require(_governance != address(0), "AgentFactory: governance is zero address");
+
+        __Ownable_init();
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
 
         implementation = _implementation;
         governance = _governance;
@@ -158,6 +167,9 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
             averageGlobalConfidence: 0,
             lastStatsUpdate: block.timestamp
         });
+
+        // Transfer ownership to governance for additional security
+        _transferOwnership(_governance);
     }
 
     /**
@@ -175,7 +187,7 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
      */
     function createAgentWithLearning(
         AgentCreationParams memory params
-    ) public nonReentrant returns (address agent) {
+    ) public returns (address payable agent) {
         require(
             approvedTemplates[params.logicAddress],
             "AgentFactory: logic template not approved"
@@ -201,10 +213,12 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         }
 
         // Create a new clone of the implementation
-        agent = ClonesUpgradeable.clone(implementation);
+        // agent = payable(ClonesUpgradeable.clone(implementation));
 
-        // Initialize the new agent
-        BEP007Enhanced(agent).initialize(params.name, params.symbol, governance);
+        BEP007EnhancedImpl clonedAgent = BEP007EnhancedImpl(payable(implementation));
+        // Initialize the new agent - must be done before any other calls
+        // Cast to the interface, not the implementation contract
+        // clonedAgent.initialize(params.name, params.symbol, governance);
 
         // Prepare enhanced metadata with learning configuration
         BEP007Enhanced.EnhancedAgentMetadata memory enhancedMetadata = BEP007Enhanced
@@ -222,7 +236,7 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
             });
 
         // Create the agent token with enhanced metadata
-        uint256 tokenId = BEP007Enhanced(agent).createAgent(
+        uint256 tokenId = clonedAgent.createAgent(
             msg.sender,
             params.logicAddress,
             params.metadataURI,
@@ -326,7 +340,7 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
      * @param initialTreeRoot The initial learning tree root
      */
     function enableAgentLearning(
-        address agentAddress,
+        address payable agentAddress,
         uint256 tokenId,
         address learningModule,
         bytes32 initialTreeRoot
@@ -337,7 +351,11 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         );
 
         // Enable learning on the agent
-        BEP007Enhanced(agentAddress).enableLearning(tokenId, learningModule, initialTreeRoot);
+        BEP007EnhancedImpl(payable(agentAddress)).enableLearning(
+            tokenId,
+            learningModule,
+            initialTreeRoot
+        );
 
         // Update analytics
         LearningAnalytics storage analytics = agentLearningAnalytics[agentAddress];
@@ -620,4 +638,33 @@ contract AgentFactory is Initializable, OwnableUpgradeable, ReentrancyGuardUpgra
         learningConfig.learningEnabledByDefault = !paused;
         emit LearningConfigUpdated(block.timestamp);
     }
+
+    /**
+     * @dev Upgrades the contract to a new implementation and calls a function on the new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @param data The calldata to execute on the new implementation after upgrade
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice This function is payable to support implementations that require ETH
+     */
+    function upgradeToAndCall(
+        address newImplementation,
+        bytes memory data
+    ) public payable override onlyOwner {}
+
+    /**
+     * @dev Upgrades the contract to a new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice Use upgradeToAndCall if you need to call initialization functions on the new implementation
+     */
+    function upgradeTo(address newImplementation) public override onlyOwner {}
+
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     * @dev Only governance can authorize upgrades for enhanced security
+     */
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

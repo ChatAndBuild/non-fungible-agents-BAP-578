@@ -606,11 +606,11 @@ contract DeFiAgent is Ownable {
         // Check if the price meets the buy/sell thresholds
         if (tokenIn == address(0)) {
             // Buying - check if price is below buy threshold
-            uint256 buyPrice = movingAverage - ((movingAverage * strategy.buyThreshold) / 10000);
+            uint256 buyPrice = movingAverage - ((movingAverage * strategy.buyThreshold) / 10_000);
             return currentPrice <= buyPrice;
         } else {
             // Selling - check if price is above sell threshold
-            uint256 sellPrice = movingAverage + ((movingAverage * strategy.sellThreshold) / 10000);
+            uint256 sellPrice = movingAverage + ((movingAverage * strategy.sellThreshold) / 10_000);
             return currentPrice >= sellPrice;
         }
     }
@@ -872,7 +872,7 @@ contract DeFiAgent is Ownable {
             payable(recipient).transfer(amount);
         } else {
             // Withdraw tokens
-            IERC20(token).transfer(recipient, amount);
+            require(IERC20(token).transfer(recipient, amount), "DeFiAgent: token transfer failed");
         }
     }
 

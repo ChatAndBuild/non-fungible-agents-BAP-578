@@ -154,9 +154,9 @@ contract BEP007Treasury is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
         require(agentMinter != address(0), "BEP007Treasury: minter is zero address");
 
         // Calculate distribution amounts
-        uint256 foundationAmount = (msg.value * FOUNDATION_PERCENTAGE) / 10000;
-        uint256 treasuryAmount = (msg.value * TREASURY_PERCENTAGE) / 10000;
-        uint256 stakingAmount = (msg.value * STAKING_PERCENTAGE) / 10000;
+        uint256 foundationAmount = (msg.value * FOUNDATION_PERCENTAGE) / 10_000;
+        uint256 treasuryAmount = (msg.value * TREASURY_PERCENTAGE) / 10_000;
+        uint256 stakingAmount = (msg.value * STAKING_PERCENTAGE) / 10_000;
 
         // Ensure total equals input (handle rounding)
         uint256 totalDistributed = foundationAmount + treasuryAmount + stakingAmount;
@@ -197,9 +197,9 @@ contract BEP007Treasury is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
         require(contractBalance > 0, "BEP007Treasury: no pending fees to distribute");
 
         // Calculate distribution based on current balance
-        uint256 foundationAmount = (contractBalance * FOUNDATION_PERCENTAGE) / 10000;
-        uint256 treasuryAmount = (contractBalance * TREASURY_PERCENTAGE) / 10000;
-        uint256 stakingAmount = (contractBalance * STAKING_PERCENTAGE) / 10000;
+        uint256 foundationAmount = (contractBalance * FOUNDATION_PERCENTAGE) / 10_000;
+        uint256 treasuryAmount = (contractBalance * TREASURY_PERCENTAGE) / 10_000;
+        uint256 stakingAmount = (contractBalance * STAKING_PERCENTAGE) / 10_000;
 
         // Handle rounding
         uint256 totalDistributed = foundationAmount + treasuryAmount + stakingAmount;
@@ -506,9 +506,9 @@ contract BEP007Treasury is Initializable, OwnableUpgradeable, ReentrancyGuardUpg
         pure
         returns (uint256 foundationAmount, uint256 treasuryAmount, uint256 stakingAmount)
     {
-        foundationAmount = (feeAmount * FOUNDATION_PERCENTAGE) / 10000;
-        treasuryAmount = (feeAmount * TREASURY_PERCENTAGE) / 10000;
-        stakingAmount = (feeAmount * STAKING_PERCENTAGE) / 10000;
+        foundationAmount = (feeAmount * FOUNDATION_PERCENTAGE) / 10_000;
+        treasuryAmount = (feeAmount * TREASURY_PERCENTAGE) / 10_000;
+        stakingAmount = (feeAmount * STAKING_PERCENTAGE) / 10_000;
 
         // Handle rounding by adding remainder to foundation
         uint256 totalDistributed = foundationAmount + treasuryAmount + stakingAmount;

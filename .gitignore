@@ -105,3 +105,4 @@ local/
 
 # Compiled contracts info
 deployments/
+slither-env/

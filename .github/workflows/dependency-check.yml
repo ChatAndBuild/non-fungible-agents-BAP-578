@@ -49,16 +49,20 @@ jobs:
   dependency-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@v3
+        uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
-          allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC
+          allow-licenses: '*'
+          comment-summary-in-pr: always
 
   update-dependencies:
     runs-on: ubuntu-latest

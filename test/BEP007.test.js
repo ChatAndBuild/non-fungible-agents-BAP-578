@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const { ethers, upgrades } = require('hardhat');
 
 describe('BEP007 Non-Fungible Agent', function () {
   let BEP007;
@@ -21,21 +21,30 @@ describe('BEP007 Non-Fungible Agent', function () {
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
 
     // Deploy CircuitBreaker
-    circuitBreaker = await CircuitBreaker.deploy();
+    circuitBreaker = await upgrades.deployProxy(
+      CircuitBreaker,
+      [owner.address, owner.address],
+      { initializer: "initialize"}
+    );
     await circuitBreaker.deployed();
 
-    // Deploy MockAgentLogic
-    mockAgentLogic = await MockAgentLogic.deploy();
-    await mockAgentLogic.deployed();
-
     // Deploy BEP007 with CircuitBreaker
-    bep007 = await BEP007.deploy('Non-Fungible Agent', 'NFA', circuitBreaker.address);
+    bep007 = await upgrades.deployProxy(
+      BEP007,
+      ["Non-Fungible Agent", "NFA", circuitBreaker.address],
+      { initializer: "initialize", kind: "uups" }
+    );
     await bep007.deployed();
+
+    // Deploy MockAgentLogic
+    mockAgentLogic = await MockAgentLogic.deploy(bep007.address, "Non-Fungible Agent", "NFA Description", "NFA Experience", ["capability 1"], ["domain.com"]);
+    await mockAgentLogic.deployed();
   });
 
   describe('Deployment', function () {
     it('Should set the right owner', async function () {
-      expect(await bep007.owner()).to.equal(owner.address);
+      // After our security fix, ownership is transferred to governance (CircuitBreaker)
+      expect(await bep007.owner()).to.equal(circuitBreaker.address);
     });
 
     it('Should set the right name and symbol', async function () {
@@ -44,7 +53,7 @@ describe('BEP007 Non-Fungible Agent', function () {
     });
 
     it('Should set the right circuit breaker', async function () {
-      expect(await bep007.circuitBreaker()).to.equal(circuitBreaker.address);
+      expect(await bep007.governance()).to.equal(circuitBreaker.address);
     });
   });
 
@@ -60,7 +69,8 @@ describe('BEP007 Non-Fungible Agent', function () {
         vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
       };
 
-      await bep007.createAgent(
+
+      await bep007["createAgent(address,address,string,(string,string,string,string,string,bytes32))"](
         addr1.address,
         mockAgentLogic.address,
         metadataURI,
@@ -81,7 +91,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
       const agentState = await bep007.getState(tokenId);
       expect(agentState.logicAddress).to.equal(mockAgentLogic.address);
-      expect(agentState.active).to.be.true;
+      expect(agentState.status).to.equal(1);
     });
   });
 
@@ -100,7 +110,7 @@ describe('BEP007 Non-Fungible Agent', function () {
         vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
       };
 
-      await bep007.createAgent(
+      await bep007["createAgent(address,address,string,(string,string,string,string,string,bytes32))"](
         addr1.address,
         mockAgentLogic.address,
         metadataURI,
@@ -118,8 +128,8 @@ describe('BEP007 Non-Fungible Agent', function () {
     });
 
     it('Should execute an action successfully', async function () {
-      // Encode the function call to the mock agent's testAction method
-      const data = mockAgentLogic.interface.encodeFunctionData('testAction', [42]);
+      // Encode the function call to the mock agent's startConversation method
+      const data = mockAgentLogic.interface.encodeFunctionData('startConversation', [owner.address, "Topic 1"]);
 
       // Execute the action
       await bep007.connect(addr1).executeAction(tokenId, data);
@@ -131,7 +141,7 @@ describe('BEP007 Non-Fungible Agent', function () {
     it('Should update logic address', async function () {
       // Deploy a new logic contract
       const NewMockAgentLogic = await ethers.getContractFactory('MockAgentLogic');
-      const newMockAgentLogic = await NewMockAgentLogic.deploy();
+      const newMockAgentLogic = await NewMockAgentLogic.deploy(bep007.address, "Non-Fungible Agent", "NFA", "asdf", ["asdf"], ["asdf"]);
       await newMockAgentLogic.deployed();
 
       // Update the logic address
@@ -181,7 +191,7 @@ describe('BEP007 Non-Fungible Agent', function () {
         vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
       };
 
-      await bep007.createAgent(
+      await bep007["createAgent(address,address,string,(string,string,string,string,string,bytes32))"](
         addr1.address,
         mockAgentLogic.address,
         metadataURI,
@@ -193,18 +203,18 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     it('Should pause and unpause an agent', async function () {
       // Pause the agent
-      await bep007.connect(addr1).setAgentActive(tokenId, false);
+      await bep007.connect(addr1).pause(tokenId);
 
       // Verify the agent is paused
       const agentState = await bep007.getState(tokenId);
-      expect(agentState.active).to.be.false;
+      expect(agentState.status).to.equal(0);
 
       // Unpause the agent
-      await bep007.connect(addr1).setAgentActive(tokenId, true);
+      await bep007.connect(addr1).unpause(tokenId);
 
       // Verify the agent is unpaused
       const updatedAgentState = await bep007.getState(tokenId);
-      expect(updatedAgentState.active).to.be.true;
+      expect(updatedAgentState.status).to.equal(1);
     });
 
     it('Should respect global circuit breaker', async function () {
@@ -212,7 +222,7 @@ describe('BEP007 Non-Fungible Agent', function () {
       await circuitBreaker.setGlobalPause(true);
 
       // Try to execute an action (should fail)
-      const data = mockAgentLogic.interface.encodeFunctionData('testAction', [42]);
+      const data = mockAgentLogic.interface.encodeFunctionData('startConversation', [owner.address, "Topic 1"]);
       await expect(bep007.connect(addr1).executeAction(tokenId, data)).to.be.revertedWith(
         'CircuitBreaker: globally paused',
       );

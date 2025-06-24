@@ -205,7 +205,7 @@ contract DAOAgent is Ownable {
      * @param _voteThreshold The threshold for voting (in basis points)
      */
     function setThresholdStrategy(uint256 _voteThreshold) external onlyOwner {
-        require(_voteThreshold <= 10000, "DAOAgent: threshold must be <= 10000");
+        require(_voteThreshold <= 10_000, "DAOAgent: threshold must be <= 10000");
 
         votingStrategy = VotingStrategy.Threshold;
         voteThreshold = _voteThreshold;
@@ -300,9 +300,9 @@ contract DAOAgent is Ownable {
         } else if (votingStrategy == VotingStrategy.Threshold) {
             uint256 randomValue = uint256(
                 keccak256(abi.encodePacked(block.timestamp, proposalId))
-            ) % 10000;
+            ) % 10_000;
             support = randomValue <= voteThreshold;
-            confidence = support ? (voteThreshold * 1e14) : ((10000 - voteThreshold) * 1e14);
+            confidence = support ? (voteThreshold * 1e14) : ((10_000 - voteThreshold) * 1e14);
         } else if (votingStrategy == VotingStrategy.Delegate) {
             uint256 randomValue = uint256(
                 keccak256(abi.encodePacked(block.timestamp, delegateAddress, proposalId))

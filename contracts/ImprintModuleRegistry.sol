@@ -40,7 +40,7 @@ contract ExperienceModuleRegistry is Initializable, OwnableUpgradeable, Reentran
      * @dev Initializes the contract
      * @param _bep007Token The address of the BEP007 token contract
      */
-    function initialize(address _bep007Token) public initializer {
+    function initialize(address payable _bep007Token) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 

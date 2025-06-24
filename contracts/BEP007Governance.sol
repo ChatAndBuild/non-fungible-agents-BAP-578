@@ -74,7 +74,7 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
      */
     function initialize(
         string memory name,
-        address _bep007Token,
+        address payable _bep007Token,
         address _owner,
         uint256 _votingPeriod,
         uint256 _quorumPercentage,
@@ -256,6 +256,28 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
 
         emit VotingParametersUpdated(_votingPeriod, _quorumPercentage, _executionDelay);
     }
+
+    /**
+     * @dev Upgrades the contract to a new implementation and calls a function on the new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @param data The calldata to execute on the new implementation after upgrade
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice This function is payable to support implementations that require ETH
+     */
+    function upgradeToAndCall(
+        address newImplementation,
+        bytes memory data
+    ) public payable override onlyOwner {}
+
+    /**
+     * @dev Upgrades the contract to a new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice Use upgradeToAndCall if you need to call initialization functions on the new implementation
+     */
+    function upgradeTo(address newImplementation) public override onlyOwner {}
 
     /**
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.

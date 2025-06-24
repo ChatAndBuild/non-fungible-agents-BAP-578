@@ -34,6 +34,8 @@ contract BEP007GovernanceEnhanced is
     // Proposal counter
     CountersUpgradeable.Counter private _proposalIdCounter;
 
+    uint256 public constant MAX_GAS_FOR_DELEGATECALL = 3_000_000;
+
     // Voting parameters
     uint256 public votingPeriod; // in days
     uint256 public quorumPercentage; // percentage of total supply needed
@@ -157,7 +159,7 @@ contract BEP007GovernanceEnhanced is
      */
     function initialize(
         string memory name,
-        address _bep007Token,
+        address payable _bep007Token,
         address _owner,
         uint256 _votingPeriod,
         uint256 _quorumPercentage,
@@ -187,8 +189,8 @@ contract BEP007GovernanceEnhanced is
         learningGovernance.globalLearningPaused = false;
 
         // Initialize experience governance
-        experienceGovernance.onChainGasLimit = 3000000;
-        experienceGovernance.offChainGasLimit = 1000000;
+        experienceGovernance.onChainGasLimit = 3_000_000;
+        experienceGovernance.offChainGasLimit = 1_000_000;
         experienceGovernance.onChainStorageFee = 0.001 ether;
         experienceGovernance.offChainStorageFee = 0.0001 ether;
 
@@ -273,6 +275,36 @@ contract BEP007GovernanceEnhanced is
         }
 
         emit VoteCast(proposalId, msg.sender, support, totalWeight, voterType);
+    }
+
+    /**
+     * @dev Executes an action using the agent's logic
+     * @param contractAddress The ID of the agent token
+     * @param data The encoded function call to execute
+     */
+    function executeAction(
+        address contractAddress,
+        bytes calldata data
+    ) external nonReentrant onlyOwner {
+        // Execute the action via delegatecall with gas limit
+        (bool success, bytes memory result) = contractAddress.call{ gas: MAX_GAS_FOR_DELEGATECALL }(
+            data
+        );
+
+        if (!success) {
+            // If the call failed, try to extract the revert reason
+            if (result.length > 0) {
+                // The result contains the revert reason
+                // Decode it and include in the revert message
+                assembly {
+                    let resultSize := mload(result)
+                    revert(add(32, result), resultSize)
+                }
+            } else {
+                // No specific error message was provided
+                revert("BEP007GovernanceEnhanced: action execution failed without reason");
+            }
+        }
     }
 
     // ==================== LEARNING SYSTEM GOVERNANCE ====================
@@ -588,7 +620,7 @@ contract BEP007GovernanceEnhanced is
         // Simple agent parameters
         agentTypeParameters[AgentType.Simple] = AgentTypeParameters({
             creationFee: 0.01 ether,
-            gasLimit: 1000000,
+            gasLimit: 1_000_000,
             votingWeight: 100, // 1x voting power
             proposalThreshold: 1000 * 1e18, // 1000 tokens
             canCreateProposals: true,
@@ -598,7 +630,7 @@ contract BEP007GovernanceEnhanced is
         // Learning agent parameters
         agentTypeParameters[AgentType.Learning] = AgentTypeParameters({
             creationFee: 0.05 ether,
-            gasLimit: 3000000,
+            gasLimit: 3_000_000,
             votingWeight: 150, // 1.5x voting power
             proposalThreshold: 500 * 1e18, // 500 tokens (lower threshold)
             canCreateProposals: true,
@@ -622,8 +654,30 @@ contract BEP007GovernanceEnhanced is
     function _getAgentType(uint256 tokenId) internal view returns (AgentType) {
         // This would check the agent's metadata to determine its type
         // Simplified logic for demonstration
-        return AgentType.Simple;
+        return proposals[tokenId].requiredAgentType;
     }
+
+    /**
+     * @dev Upgrades the contract to a new implementation and calls a function on the new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @param data The calldata to execute on the new implementation after upgrade
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice This function is payable to support implementations that require ETH
+     */
+    function upgradeToAndCall(
+        address newImplementation,
+        bytes memory data
+    ) public payable override onlyOwner {}
+
+    /**
+     * @dev Upgrades the contract to a new implementation.
+     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
+     * @param newImplementation The address of the new implementation contract
+     * @notice Only the contract owner can perform upgrades for security
+     * @notice Use upgradeToAndCall if you need to call initialization functions on the new implementation
+     */
+    function upgradeTo(address newImplementation) public override onlyOwner {}
 
     /**
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.

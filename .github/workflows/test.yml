@@ -85,7 +85,7 @@ jobs:
       run: npm ci
     
     - name: Run Slither static analysis
-      uses: crytic/slither-action@v0.3.0
+      uses: crytic/slither-action@v0.4.1
       continue-on-error: true
       with:
         node-version: '20'

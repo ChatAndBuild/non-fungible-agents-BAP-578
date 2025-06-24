@@ -8,7 +8,8 @@ import "../interfaces/ILearningModule.sol";
 
 /**
  * @title CreatorAgent
- * @dev Enhanced template for creator agents with learning capabilities that serve as personalized brand assistants or digital twins
+ * @dev Enhanced template for creator agents with learning capabilities
+ *      that serve as personalized brand assistants or digital twins
  */
 contract CreatorAgent is Ownable, ReentrancyGuard {
     // The address of the BEP007 token that owns this logic
