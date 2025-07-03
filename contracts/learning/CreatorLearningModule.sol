@@ -6,7 +6,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 import "../interfaces/ICreatorLearningModule.sol";
+import "../libraries/CreatorInteractionTypes.sol";
 import "../BEP007.sol";
+
 /**
  * @title CreatorLearningModule
  * @dev Specialized learning module for CreatorAgent templates
@@ -39,6 +41,12 @@ contract CreatorLearningModule is
         uint256 lastContentTimestamp;
     }
 
+    struct Interaction {
+        CreatorInteractionTypes.InteractionType interactionType;
+        bool success;
+        bytes32 metadata;
+    }
+
     struct ContentLearningData {
         string contentType;
         uint256 engagementRate;
@@ -67,6 +75,8 @@ contract CreatorLearningModule is
 
     // Mapping from token ID to learning tree root
     mapping(uint256 => bytes32) private _learningRoots;
+
+    mapping(uint256 => mapping(uint256 => Interaction)) public interactions;
 
     // Mapping from token ID to creator learning metrics
     mapping(uint256 => CreatorLearningMetrics) private _creatorMetrics;
@@ -172,13 +182,8 @@ contract CreatorLearningModule is
      * @dev Enables learning for a creator agent
      * @param tokenId The ID of the agent token
      * @param initialRoot The initial learning tree root
-     * @param creatorProfile Initial creator profile data
      */
-    function enableCreatorLearning(
-        uint256 tokenId,
-        bytes32 initialRoot,
-        bytes calldata creatorProfile
-    ) external {
+    function enableCreatorLearning(uint256 tokenId, bytes32 initialRoot) external {
         address owner = bep007Token.ownerOf(tokenId);
         require(msg.sender == owner, "CreatorLearningModule: not token owner");
         require(!_learningEnabled[tokenId], "CreatorLearningModule: already enabled");
@@ -222,7 +227,7 @@ contract CreatorLearningModule is
         CreatorLearningMetrics storage metrics = _creatorMetrics[tokenId];
 
         // Update content creation count
-        if (metrics.lastContentTimestamp == 0) {
+        if (engagementRate == 0) {
             metrics.contentCreationCount++;
         }
         metrics.lastContentTimestamp = block.timestamp;
@@ -258,10 +263,10 @@ contract CreatorLearningModule is
         });
 
         // Update creativity score based on content variety and performance
-        _updateCreativityScore(tokenId, contentType, engagementRate);
+        _updateCreativityScore(tokenId, engagementRate);
 
         // Detect and record creative patterns
-        _detectCreativePatterns(tokenId, contentType, tags, engagementRate, isHighEngagement);
+        _detectCreativePatterns(tokenId, contentType, tags, isHighEngagement);
 
         // Check for content milestones
         _checkContentMilestones(tokenId, metrics, isViral);
@@ -269,7 +274,12 @@ contract CreatorLearningModule is
         emit ContentLearningRecorded(tokenId, contentId, contentType, engagementRate, isViral);
 
         // Record as general interaction
-        _recordGeneralInteraction(tokenId, "content_creation", true);
+        _recordGeneralInteraction(
+            tokenId,
+            CreatorInteractionTypes.InteractionType.CONTENT_CREATION,
+            true,
+            bytes32(contentId)
+        );
     }
 
     /**
@@ -315,21 +325,47 @@ contract CreatorLearningModule is
         emit AudienceLearningUpdated(tokenId, segmentId, engagementRate, growthRate);
 
         // Record as general interaction
-        _recordGeneralInteraction(tokenId, "audience_analysis", true);
+        _recordGeneralInteraction(
+            tokenId,
+            CreatorInteractionTypes.InteractionType.AUDIENCE_ANALYSIS,
+            true,
+            bytes32(segmentId)
+        );
     }
 
     /**
-     * @dev Records an interaction for learning metrics
+     * @dev Records an interaction for learning metrics (base interface implementation)
      * @param tokenId The ID of the agent token
-     * @param interactionType The type of interaction
+     * @param interactionType The type of interaction (string)
+     * @param success Whether the interaction was successful
+     * @param metadata Additional metadata about the interaction
+     */
+    function recordInteraction(
+        uint256 tokenId,
+        CreatorInteractionTypes.InteractionType interactionType,
+        bool success,
+        bytes32 metadata
+    ) external onlyAuthorized(tokenId) whenLearningEnabled(tokenId) {
+        _recordGeneralInteraction(tokenId, interactionType, success, metadata);
+    }
+
+    /**
+     * @dev Records an interaction for learning metrics (string-based, backward compatibility)
+     * @param tokenId The ID of the agent token
+     * @param interactionType The type of interaction (string)
      * @param success Whether the interaction was successful
      */
     function recordInteraction(
         uint256 tokenId,
         string calldata interactionType,
         bool success
-    ) external override onlyAuthorized(tokenId) whenLearningEnabled(tokenId) {
-        _recordGeneralInteraction(tokenId, interactionType, success);
+    ) external onlyAuthorized(tokenId) whenLearningEnabled(tokenId) {
+        _recordGeneralInteraction(
+            tokenId,
+            CreatorInteractionTypes.fromString(interactionType),
+            success,
+            bytes32(0)
+        );
     }
 
     /**
@@ -464,15 +500,33 @@ contract CreatorLearningModule is
      */
     function _recordGeneralInteraction(
         uint256 tokenId,
-        string memory interactionType,
-        bool success
+        CreatorInteractionTypes.InteractionType interactionType,
+        bool success,
+        bytes32 metadata
     ) internal {
         CreatorLearningMetrics storage metrics = _creatorMetrics[tokenId];
         metrics.totalInteractions++;
 
-        // Update confidence score based on success rate
+        interactions[tokenId][metrics.totalInteractions] = Interaction({
+            interactionType: interactionType,
+            success: success,
+            metadata: metadata
+        });
+
+        // Enhanced processing based on interaction type
+        if (CreatorInteractionTypes.isContentRelated(interactionType)) {
+            _processContentInteraction(tokenId, interactionType, success);
+        } else if (CreatorInteractionTypes.isAudienceRelated(interactionType)) {
+            _processAudienceInteraction(tokenId, interactionType, success);
+        } else if (CreatorInteractionTypes.isLearningRelated(interactionType)) {
+            _processLearningInteraction(tokenId, interactionType, success);
+        }
+
+        // Update confidence score based on success rate and interaction weight
+        uint8 weight = CreatorInteractionTypes.getGasCostWeight(interactionType);
         if (success) {
-            metrics.confidenceScore = _updateConfidence(metrics.confidenceScore, true);
+            uint256 boost = (weight * 1e16) / 5; // Scale weight to confidence boost
+            metrics.confidenceScore = _updateConfidence(metrics.confidenceScore + boost, true);
         } else {
             metrics.confidenceScore = _updateConfidence(metrics.confidenceScore, false);
         }
@@ -492,11 +546,7 @@ contract CreatorLearningModule is
     /**
      * @dev Internal function to update creativity score
      */
-    function _updateCreativityScore(
-        uint256 tokenId,
-        string memory contentType,
-        uint256 engagementRate
-    ) internal {
+    function _updateCreativityScore(uint256 tokenId, uint256 engagementRate) internal {
         CreatorLearningMetrics storage metrics = _creatorMetrics[tokenId];
 
         // Boost creativity for high-performing content
@@ -532,9 +582,8 @@ contract CreatorLearningModule is
      */
     function _detectCreativePatterns(
         uint256 tokenId,
-        string memory contentType,
-        string[] memory tags,
-        uint256 engagementRate,
+        string calldata contentType,
+        string[] calldata tags,
         bool isHighEngagement
     ) internal {
         if (isHighEngagement) {
@@ -634,6 +683,75 @@ contract CreatorLearningModule is
         } else {
             uint256 decrease = currentScore / 50; // 2% decrease
             return currentScore > decrease ? currentScore - decrease : 0;
+        }
+    }
+
+    /**
+     * @dev Internal function to process content-related interactions
+     */
+    function _processContentInteraction(
+        uint256 tokenId,
+        CreatorInteractionTypes.InteractionType interactionType,
+        bool success
+    ) internal {
+        CreatorLearningMetrics storage metrics = _creatorMetrics[tokenId];
+
+        if (interactionType == CreatorInteractionTypes.InteractionType.CONTENT_CREATION) {
+            if (success) {
+                metrics.creativityScore = _capScore(metrics.creativityScore + 1, 100);
+            }
+        } else if (
+            interactionType == CreatorInteractionTypes.InteractionType.VIRAL_CONTENT_DETECTED
+        ) {
+            if (success) {
+                metrics.creativityScore = _capScore(metrics.creativityScore + 5, 100);
+                metrics.trendAdaptationScore = _capScore(metrics.trendAdaptationScore + 3, 100);
+            }
+        }
+    }
+
+    /**
+     * @dev Internal function to process audience-related interactions
+     */
+    function _processAudienceInteraction(
+        uint256 tokenId,
+        CreatorInteractionTypes.InteractionType interactionType,
+        bool success
+    ) internal {
+        CreatorLearningMetrics storage metrics = _creatorMetrics[tokenId];
+
+        if (interactionType == CreatorInteractionTypes.InteractionType.AUDIENCE_ANALYSIS) {
+            if (success) {
+                metrics.trendAdaptationScore = _capScore(metrics.trendAdaptationScore + 2, 100);
+            }
+        } else if (
+            interactionType == CreatorInteractionTypes.InteractionType.ENGAGEMENT_OPTIMIZATION
+        ) {
+            if (success) {
+                metrics.trendAdaptationScore = _capScore(metrics.trendAdaptationScore + 3, 100);
+            }
+        }
+    }
+
+    /**
+     * @dev Internal function to process learning-related interactions
+     */
+    function _processLearningInteraction(
+        uint256 tokenId,
+        CreatorInteractionTypes.InteractionType interactionType,
+        bool success
+    ) internal {
+        CreatorLearningMetrics storage metrics = _creatorMetrics[tokenId];
+
+        if (interactionType == CreatorInteractionTypes.InteractionType.LEARNING_MILESTONE) {
+            if (success) {
+                metrics.confidenceScore = _capScore(metrics.confidenceScore + 5e16, 1e18); // 5% boost
+            }
+        } else if (interactionType == CreatorInteractionTypes.InteractionType.PATTERN_RECOGNITION) {
+            if (success) {
+                metrics.creativityScore = _capScore(metrics.creativityScore + 2, 100);
+                metrics.trendAdaptationScore = _capScore(metrics.trendAdaptationScore + 2, 100);
+            }
         }
     }
 

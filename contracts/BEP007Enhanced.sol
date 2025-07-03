@@ -95,7 +95,10 @@ abstract contract BEP007Enhanced is
      * @dev Modifier to check if the caller is the owner of the token
      */
     modifier onlyAgentOwner(uint256 tokenId) {
-        require(ownerOf(tokenId) == msg.sender, "BEP007Enhanced: caller is not agent owner");
+        require(
+            ownerOf(tokenId) == msg.sender || ownerOf(tokenId) == governance,
+            "BEP007Enhanced: caller is not agent owner"
+        );
         _;
     }
 
@@ -548,16 +551,15 @@ abstract contract BEP007Enhanced is
      * @dev Terminates the agent permanently
      * @param tokenId The ID of the agent token
      */
-    function terminate(uint256 tokenId) external virtual onlyAgentOwner(tokenId) {
+    function terminate(uint256 tokenId) external virtual nonReentrant onlyAgentOwner(tokenId) {
         require(
             _agentStates[tokenId].status != Status.Terminated,
             "BEP007Enhanced: agent already terminated"
         );
 
-        _agentStates[tokenId].status = Status.Terminated;
-
         // Return any remaining balance to the owner
         uint256 remainingBalance = _agentStates[tokenId].balance;
+        _agentStates[tokenId].status = Status.Terminated;
         if (remainingBalance > 0) {
             _agentStates[tokenId].balance = 0;
             payable(ownerOf(tokenId)).transfer(remainingBalance);

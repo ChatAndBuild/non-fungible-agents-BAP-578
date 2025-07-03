@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "./ILearningModule.sol";
+import "../libraries/CreatorInteractionTypes.sol";
+
 /**
  * @title ILearningModule
  * @dev Interface for learning modules in the BEP007 ecosystem
@@ -39,5 +41,19 @@ interface ICreatorLearningModule is ILearningModule {
         uint256 growthRate,
         string[] calldata preferredContentTypes,
         uint256[] calldata optimalPostingTimes
+    ) external;
+
+    /**
+     * @dev Records an interaction for learning metrics (enum-based)
+     * @param tokenId The ID of the agent token
+     * @param interactionType The type of interaction (enum)
+     * @param success Whether the interaction was successful
+     * @param metadata Additional metadata about the interaction
+     */
+    function recordInteraction(
+        uint256 tokenId,
+        CreatorInteractionTypes.InteractionType interactionType,
+        bool success,
+        bytes32 metadata
     ) external;
 }
