@@ -170,8 +170,8 @@ The BEP-007 standard defines comprehensive events for all lifecycle stages:
 
 ### Creation Events
 ```solidity
-event AgentCreated(uint256 indexed tokenId, address indexed owner, address logic);
-event LearningEnabled(uint256 indexed tokenId, address learningModule);
+event AgentCreated(uint256 indexed tokenId, address indexed owner, address logic, bool learningEnabled, address learningModule);
+event LearningEnabled(uint256 indexed tokenId, address indexed learningModule);
 ```
 
 ### Operation Events
@@ -183,7 +183,7 @@ event ExperienceRecorded(uint256 indexed tokenId, bytes32 experienceHash);
 ### Evolution Events
 ```solidity
 event LogicUpdated(uint256 indexed tokenId, address oldLogic, address newLogic);
-event LearningUpdated(uint256 indexed tokenId, bytes32 newTreeRoot, uint256 version);
+event LearningUpdated(uint256 indexed tokenId, bytes32 previousRoot, bytes32 newTreeRoot, uint256 timestamp);
 event MilestoneAchieved(uint256 indexed tokenId, bytes32 milestoneHash);
 ```
 

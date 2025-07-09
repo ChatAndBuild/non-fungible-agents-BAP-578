@@ -112,15 +112,23 @@ Emergency shutdown mechanism with global and targeted pause capabilities, includ
 
 ```solidity
 contract CircuitBreaker {
-    bool public globalPaused;
-    bool public learningPaused;
-    mapping(uint256 => bool) public agentPaused;
-    mapping(uint256 => bool) public learningPausedForAgent;
-    
-    function pauseGlobal() external onlyGovernance;
-    function pauseLearning() external onlyGovernance;
-    function pauseAgent(uint256 tokenId) external onlyOwnerOrGovernance(tokenId);
-    function pauseAgentLearning(uint256 tokenId) external onlyOwnerOrGovernance(tokenId);
+    // State variable getters
+    function governance() external view returns (address);
+    function emergencyMultiSig() external view returns (address);
+    function globalPause() external view returns (bool);
+    function contractPauses(address) external view returns (bool);
+
+    // Events
+    event GlobalPauseUpdated(bool paused);
+    event ContractPauseUpdated(address indexed contractAddress, bool paused);
+
+    // Functions
+    function initialize(address _governance, address _emergencyMultiSig) external;
+    function setGlobalPause(bool paused) external;
+    function setContractPause(address contractAddress, bool paused) external;
+    function isContractPaused(address contractAddress) external view returns (bool);
+    function setGovernance(address _governance) external;
+    function setEmergencyMultiSig(address _emergencyMultiSig) external;
 }
 ```
 
@@ -129,35 +137,163 @@ Factory contract for deploying new agent tokens with customizable templates and 
 
 ```solidity
 contract AgentFactory {
-    struct AgentTemplate {
-        string name;
-        string description;
-        bool learningSupported;
-        address defaultLearningModule;
-        bytes32 templateHash;
+    struct LearningAnalytics {
+        uint256 totalAgents;
+        uint256 learningEnabledAgents;
+        uint256 totalInteractions;
+        uint256 averageConfidenceScore;
+        uint256 lastAnalyticsUpdate;
     }
-    
-    mapping(bytes32 => AgentTemplate) public templates;
-    mapping(address => bool) public approvedLearningModules;
-    
-    function createSimpleAgent(
-        bytes32 templateId,
-        string memory agentName,
-        address owner
-    ) external returns (uint256);
-    
-    function createLearningAgent(
-        bytes32 templateId,
-        string memory agentName,
-        address owner,
+
+    struct LearningGlobalStats {
+        uint256 totalAgentsCreated;
+        uint256 totalLearningEnabledAgents;
+        uint256 totalLearningInteractions;
+        uint256 totalLearningModules;
+        uint256 averageGlobalConfidence;
+        uint256 lastStatsUpdate;
+    }
+
+    struct LearningConfig {
+        bool learningEnabledByDefault;
+        uint256 minConfidenceThreshold;
+        uint256 maxLearningModulesPerAgent;
+        uint256 learningAnalyticsUpdateInterval;
+        bool requireSignatureForLearning;
+    }
+
+    struct AgentCreationParams {
+        string name;
+        string symbol;
+        address logicAddress;
+        string metadataURI;
+        IBEP007.AgentMetadata extendedMetadata;
+        bool enableLearning;
+        address learningModule;
+        bytes32 initialLearningRoot;
+        bytes learningSignature;
+    }
+
+    function implementation() external view returns (address);
+    function governance() external view returns (address);
+    function defaultLearningModule() external view returns (address);
+    function approvedTemplates(address) external view returns (bool);
+    function templateVersions(string memory) external view returns (address);
+    function approvedLearningModules(address) external view returns (bool);
+    function learningModuleVersions(string memory) external view returns (address);
+    function agentLearningAnalytics(address) external view returns (
+        uint256 totalAgents,
+        uint256 learningEnabledAgents,
+        uint256 totalInteractions,
+        uint256 averageConfidenceScore,
+        uint256 lastAnalyticsUpdate
+    );
+    function globalLearningStats() external view returns (LearningGlobalStats memory);
+    function learningConfig() external view returns (LearningConfig memory);
+
+    event AgentCreated(
+        address indexed agent,
+        address indexed owner,
+        address logic,
+        bool learningEnabled,
         address learningModule
-    ) external returns (uint256);
-    
-    function registerLearningModule(
-        address moduleAddress,
-        bytes32 moduleHash,
-        string memory specification
-    ) external onlyGovernance;
+    );
+    event TemplateApproved(address indexed template, string category, string version);
+    event LearningModuleApproved(address indexed module, string category, string version);
+    event LearningAnalyticsUpdated(address indexed agent, uint256 timestamp);
+    event GlobalLearningStatsUpdated(uint256 timestamp);
+    event LearningConfigUpdated(uint256 timestamp);
+    event AgentLearningEnabled(
+        address indexed agent,
+        uint256 indexed tokenId,
+        address learningModule
+    );
+    event AgentLearningDisabled(address indexed agent, uint256 indexed tokenId);
+
+    function initialize(
+        address _implementation,
+        address _governance,
+        address _defaultLearningModule
+    ) external;
+
+    function createAgentWithLearning(
+        AgentCreationParams memory params
+    ) external returns (address agent);
+
+    function createAgent(
+        string memory name,
+        string memory symbol,
+        address logicAddress,
+        string memory metadataURI
+    ) external returns (address agent);
+
+    function createAgent(
+        string memory name,
+        string memory symbol,
+        address logicAddress,
+        string memory metadataURI,
+        IBEP007.AgentMetadata memory extendedMetadata
+    ) external returns (address agent);
+
+    function enableAgentLearning(
+        address agentAddress,
+        uint256 tokenId,
+        address learningModule,
+        bytes32 initialTreeRoot
+    ) external;
+
+    function approveTemplate(
+        address template,
+        string memory category,
+        string memory version
+    ) external;
+
+    function approveLearningModule(
+        address module,
+        string memory category,
+        string memory version
+    ) external;
+
+    function revokeTemplate(address template) external;
+
+    function revokeLearningModule(address module) external;
+
+    function updateLearningConfig(LearningConfig memory config) external;
+
+    function setDefaultLearningModule(address newDefaultModule) external;
+
+    function setImplementation(address newImplementation) external;
+
+    function setGovernance(address newGovernance) external;
+
+    function getLatestTemplate(string memory category) external view returns (address);
+
+    function getLatestLearningModule(string memory category) external view returns (address);
+
+    function getAgentLearningAnalytics(
+        address agentAddress
+    )
+        external
+        view
+        returns (
+            uint256 totalAgents,
+            uint256 learningEnabledAgents,
+            uint256 totalInteractions,
+            uint256 averageConfidenceScore,
+            uint256 lastAnalyticsUpdate
+        );
+
+    function getGlobalLearningStats() external view returns (LearningGlobalStats memory);
+
+    function getLearningConfig() external view returns (LearningConfig memory);
+
+    function isLearningModuleApproved(address module) external view returns (bool);
+
+    function batchCreateAgentsWithLearning(
+        AgentCreationParams[] memory paramsArray
+    ) external returns (address[] memory agents);
+
+    function setLearningPaused(bool paused) external;
 }
 ```
 
@@ -166,27 +302,82 @@ Governance contract for protocol-level decisions including learning module appro
 
 ```solidity
 contract BEP007Governance {
-    struct LearningProposal {
-        address proposedModule;
-        bytes32 moduleHash;
-        string specification;
-        uint256 votingDeadline;
-        uint256 forVotes;
-        uint256 againstVotes;
+    struct Proposal {
+        uint256 id;
+        address proposer;
+        string description;
+        bytes callData;
+        address targetContract;
+        uint256 createdAt;
+        uint256 votesFor;
+        uint256 votesAgainst;
         bool executed;
+        bool canceled;
     }
-    
-    mapping(uint256 => LearningProposal) public learningProposals;
-    mapping(address => bool) public approvedLearningModules;
-    
-    function proposeLearningModule(
-        address moduleAddress,
-        bytes32 moduleHash,
-        string memory specification
+
+    function governanceName() external view returns (string memory);
+    function bep007Token() external view returns (BEP007);
+    function treasury() external view returns (address);
+    function agentFactory() external view returns (address);
+    function votingPeriod() external view returns (uint256);
+    function quorumPercentage() external view returns (uint256);
+    function executionDelay() external view returns (uint256);
+    function proposals(uint256) external view returns (
+        uint256 id,
+        address proposer,
+        string memory description,
+        bytes memory callData,
+        address targetContract,
+        uint256 createdAt,
+        uint256 votesFor,
+        uint256 votesAgainst,
+        bool executed,
+        bool canceled
+    );
+    function hasVoted(uint256 proposalId, address voter) external view returns (bool);
+
+    event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string description);
+    event VoteCast(uint256 indexed proposalId, address indexed voter, bool support, uint256 weight);
+    event ProposalExecuted(uint256 indexed proposalId);
+    event ProposalCanceled(uint256 indexed proposalId);
+    event TreasuryUpdated(address indexed newTreasury);
+    event AgentFactoryUpdated(address indexed newAgentFactory);
+    event VotingParametersUpdated(
+        uint256 votingPeriod,
+        uint256 quorumPercentage,
+        uint256 executionDelay
+    );
+
+    function initialize(
+        string memory name,
+        address payable _bep7Token,
+        address _owner,
+        uint256 _votingPeriod,
+        uint256 _quorumPercentage,
+        uint256 _executionDelay
+    ) external;
+
+    function createProposal(
+        string memory description,
+        bytes memory callData,
+        address targetContract
     ) external returns (uint256);
-    
-    function voteLearningModule(uint256 proposalId, bool support) external;
-    function executeLearningProposal(uint256 proposalId) external;
+
+    function castVote(uint256 proposalId, bool support) external;
+
+    function executeProposal(uint256 proposalId) external;
+
+    function cancelProposal(uint256 proposalId) external;
+
+    function setTreasury(address _treasury) external;
+
+    function setAgentFactory(address _agentFactory) external;
+
+    function updateVotingParameters(
+        uint256 _votingPeriod,
+        uint256 _quorumPercentage,
+        uint256 _executionDelay
+    ) external;
 }
 ```
 
