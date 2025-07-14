@@ -596,7 +596,6 @@ contract AgentFactory is
             bytes32 messageHash = keccak256(
                 abi.encodePacked(
                     params.name,
-                    params.symbol,
                     params.logicAddress,
                     params.learningModule,
                     params.initialLearningRoot
