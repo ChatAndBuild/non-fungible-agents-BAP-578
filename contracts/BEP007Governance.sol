@@ -18,9 +18,6 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     // BEP007 token contract
     BEP007 public bep007Token;
 
-    // Treasury contract
-    address public treasury;
-
     // Agent factory contract
     address public agentFactory;
 
@@ -65,7 +62,6 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
 
     /**
      * @dev Initializes the contract
-     * @param name The name of the governance
      * @param _bep007Token The address of the BEP007 token contract
      * @param _owner The address of the initial owner
      * @param _votingPeriod The voting period in days
@@ -73,7 +69,6 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
      * @param _executionDelay The execution delay in days
      */
     function initialize(
-        string memory name,
         address payable _bep007Token,
         address _owner,
         uint256 _votingPeriod,
@@ -216,17 +211,6 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
 
         emit ProposalCanceled(proposalId);
     }
-
-    /**
-     * @dev Sets the treasury address
-     * @param _treasury The new treasury address
-     */
-    function setTreasury(address _treasury) external onlyOwner {
-        require(_treasury != address(0), "BEP007Governance: treasury is zero address");
-        treasury = _treasury;
-        emit TreasuryUpdated(_treasury);
-    }
-
     /**
      * @dev Sets the agent factory address
      * @param _agentFactory The new agent factory address

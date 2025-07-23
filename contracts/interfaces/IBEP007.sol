@@ -64,11 +64,6 @@ interface IBEP007 {
     event MetadataUpdated(uint256 indexed tokenId, string metadataURI);
 
     /**
-     * @dev Emitted when a experience module is registered
-     */
-    event ExperienceModuleRegistered(uint256 indexed tokenId, address indexed moduleAddress);
-
-    /**
      * @dev Creates a new agent token with extended metadata
      * @param to The address that will own the agent
      * @param logicAddress The address of the logic contract
@@ -95,13 +90,6 @@ interface IBEP007 {
         address logicAddress,
         string memory metadataURI
     ) external returns (uint256 tokenId);
-
-    /**
-     * @dev Executes an action using the agent's logic
-     * @param tokenId The ID of the agent token
-     * @param data The encoded function call to execute
-     */
-    function executeAction(uint256 tokenId, bytes calldata data) external;
 
     /**
      * @dev Updates the logic address for the agent
@@ -149,30 +137,9 @@ interface IBEP007 {
     function getAgentMetadata(uint256 tokenId) external view returns (AgentMetadata memory);
 
     /**
-     * @dev Updates the agent's extended metadata
-     * @param tokenId The ID of the agent token
-     * @param metadata The new metadata
-     */
-    function updateAgentMetadata(uint256 tokenId, AgentMetadata memory metadata) external;
-
-    /**
-     * @dev Registers an experience module for the agent
-     * @param tokenId The ID of the agent token
-     * @param moduleAddress The address of the experience module
-     */
-    function registerExperienceModule(uint256 tokenId, address moduleAddress) external;
-
-    /**
      * @dev Withdraws BNB from the agent
      * @param tokenId The ID of the agent token
      * @param amount The amount to withdraw
      */
     function withdrawFromAgent(uint256 tokenId, uint256 amount) external;
-
-    /**
-     * @dev Updates the agent's metadata URI
-     * @param tokenId The ID of the agent token
-     * @param newMetadataURI The new metadata URI
-     */
-    function setAgentMetadataURI(uint256 tokenId, string memory newMetadataURI) external;
 }
