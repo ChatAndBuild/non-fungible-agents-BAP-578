@@ -73,29 +73,4 @@ interface ILearningModule {
      * @return The Merkle root of the learning tree
      */
     function getLearningRoot(uint256 tokenId) external view returns (bytes32);
-
-    /**
-     * @dev Checks if an agent has learning enabled
-     * @param tokenId The ID of the agent token
-     * @return Whether learning is enabled
-     */
-    function isLearningEnabled(uint256 tokenId) external view returns (bool);
-
-    /**
-     * @dev Gets the learning module version
-     * @return The version string
-     */
-    function getVersion() external pure returns (string memory);
-
-    /**
-     * @dev Records an interaction for learning metrics
-     * @param tokenId The ID of the agent token
-     * @param interactionType The type of interaction
-     * @param success Whether the interaction was successful
-     */
-    function recordInteraction(
-        uint256 tokenId,
-        string calldata interactionType,
-        bool success
-    ) external;
 }
