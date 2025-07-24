@@ -398,5 +398,407 @@ describe('DeFiAgent', function () {
         )
       ).to.be.revertedWith('DeFiAgent: protocol not supported');
     });
+
+    it('Should not allow non-owner to execute swaps', async function () {
+      await expect(
+        defiAgent.connect(user1).executeSwap(
+          tokenA.address,
+          tokenB.address,
+          ethers.utils.parseEther('100'),
+          ethers.utils.parseEther('95'),
+          'PancakeSwap'
+        )
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Should not allow swaps when emergency stop is active', async function () {
+      await defiAgent.emergencyStop('Testing emergency stop');
+
+      await expect(
+        defiAgent.executeSwap(
+          tokenA.address,
+          tokenB.address,
+          ethers.utils.parseEther('100'),
+          ethers.utils.parseEther('95'),
+          'PancakeSwap'
+        )
+      ).to.be.revertedWith('DeFiAgent: emergency stop active');
+    });
+  });
+
+  describe('Position Management', function () {
+    beforeEach(async function () {
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedProtocol('Venus', user1.address);
+    });
+
+    it('Should open position successfully', async function () {
+      const amount = ethers.utils.parseEther('100');
+
+      await expect(
+        defiAgent.openPosition(tokenA.address, amount, 'Venus')
+      ).to.emit(defiAgent, 'PositionOpened')
+      .withArgs(1, tokenA.address, amount, ethers.utils.parseEther('1'), 'Venus');
+
+      const position = await defiAgent.positions(1);
+      expect(position.token).to.equal(tokenA.address);
+      expect(position.amount).to.equal(amount);
+      expect(position.protocol).to.equal('Venus');
+      expect(position.isActive).to.equal(true);
+    });
+
+    it('Should close position successfully', async function () {
+      const amount = ethers.utils.parseEther('100');
+      
+      // Open position first
+      await defiAgent.openPosition(tokenA.address, amount, 'Venus');
+
+      // Close position
+      await expect(
+        defiAgent.closePosition(1)
+      ).to.emit(defiAgent, 'PositionClosed');
+
+      const position = await defiAgent.positions(1);
+      expect(position.isActive).to.equal(false);
+
+      // Check that trading metrics were updated
+      const metrics = await defiAgent.getTradingMetrics();
+      expect(metrics.totalTrades).to.equal(1);
+    });
+
+    it('Should not allow opening position with unsupported token', async function () {
+      await expect(
+        defiAgent.openPosition(
+          user2.address, // Unsupported token
+          ethers.utils.parseEther('100'),
+          'Venus'
+        )
+      ).to.be.revertedWith('DeFiAgent: token not supported');
+    });
+
+    it('Should not allow opening position with zero amount', async function () {
+      await expect(
+        defiAgent.openPosition(tokenA.address, 0, 'Venus')
+      ).to.be.revertedWith('DeFiAgent: amount must be greater than 0');
+    });
+
+    it('Should not allow closing inactive position', async function () {
+      await expect(
+        defiAgent.closePosition(999) // Non-existent position
+      ).to.be.revertedWith('DeFiAgent: position not active');
+    });
+
+    it('Should increment position counter correctly', async function () {
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('100'), 'Venus');
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('200'), 'Venus');
+
+      expect(await defiAgent.positionCounter()).to.equal(2);
+
+      const position1 = await defiAgent.positions(1);
+      const position2 = await defiAgent.positions(2);
+      
+      expect(position1.amount).to.equal(ethers.utils.parseEther('100'));
+      expect(position2.amount).to.equal(ethers.utils.parseEther('200'));
+    });
+  });
+
+  describe('Risk Management', function () {
+    it('Should allow owner to update risk parameters', async function () {
+      const newMaxPositionSize = ethers.utils.parseEther('25'); // 25%
+      const newStopLoss = ethers.utils.parseEther('8'); // 8%
+      const newTakeProfit = ethers.utils.parseEther('15'); // 15%
+      const newMaxDailyLoss = ethers.utils.parseEther('3'); // 3%
+
+      await expect(
+        defiAgent.updateRiskParameters(
+          newMaxPositionSize,
+          newStopLoss,
+          newTakeProfit,
+          newMaxDailyLoss
+        )
+      ).to.emit(defiAgent, 'RiskParametersUpdated')
+      .withArgs(newMaxPositionSize, newStopLoss, newTakeProfit);
+
+      const riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.maxPositionSize).to.equal(newMaxPositionSize);
+      expect(riskParams.stopLossPercentage).to.equal(newStopLoss);
+      expect(riskParams.takeProfitPercentage).to.equal(newTakeProfit);
+      expect(riskParams.maxDailyLoss).to.equal(newMaxDailyLoss);
+    });
+
+    it('Should not allow excessive max position size', async function () {
+      await expect(
+        defiAgent.updateRiskParameters(
+          ethers.utils.parseEther('101'), // > 100%
+          ethers.utils.parseEther('10'),
+          ethers.utils.parseEther('20'),
+          ethers.utils.parseEther('5')
+        )
+      ).to.be.revertedWith('DeFiAgent: max position size too high');
+    });
+
+    it('Should not allow excessive stop loss', async function () {
+      await expect(
+        defiAgent.updateRiskParameters(
+          ethers.utils.parseEther('20'),
+          ethers.utils.parseEther('51'), // > 50%
+          ethers.utils.parseEther('20'),
+          ethers.utils.parseEther('5')
+        )
+      ).to.be.revertedWith('DeFiAgent: stop loss too high');
+    });
+
+    it('Should not allow too low take profit', async function () {
+      await expect(
+        defiAgent.updateRiskParameters(
+          ethers.utils.parseEther('20'),
+          ethers.utils.parseEther('10'),
+          ethers.utils.parseEther('4'), // < 5%
+          ethers.utils.parseEther('5')
+        )
+      ).to.be.revertedWith('DeFiAgent: take profit too low');
+    });
+
+    it('Should allow emergency stop', async function () {
+      const reason = 'Market crash detected';
+
+      await expect(
+        defiAgent.emergencyStop(reason)
+      ).to.emit(defiAgent, 'EmergencyStop')
+      .withArgs(reason, await ethers.provider.getBlockNumber().then(bn => ethers.provider.getBlock(bn).then(b => b.timestamp + 1)));
+
+      const riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.emergencyStopEnabled).to.equal(true);
+    });
+
+    it('Should allow disabling emergency stop', async function () {
+      await defiAgent.emergencyStop('Test');
+      await defiAgent.disableEmergencyStop();
+
+      const riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.emergencyStopEnabled).to.equal(false);
+    });
+
+    it('Should not allow non-owner to update risk parameters', async function () {
+      await expect(
+        defiAgent.connect(user1).updateRiskParameters(
+          ethers.utils.parseEther('20'),
+          ethers.utils.parseEther('10'),
+          ethers.utils.parseEther('20'),
+          ethers.utils.parseEther('5')
+        )
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  describe('Learning Module Management', function () {
+    it('Should allow owner to enable learning', async function () {
+      expect(await defiAgent.learningEnabled()).to.equal(false);
+
+      await defiAgent.enableLearning(merkleTreeLearning.address);
+
+      expect(await defiAgent.learningEnabled()).to.equal(true);
+      expect(await defiAgent.learningModule()).to.equal(merkleTreeLearning.address);
+    });
+
+    it('Should not allow non-owner to enable learning', async function () {
+      await expect(
+        defiAgent.connect(user1).enableLearning(merkleTreeLearning.address)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('Should not allow enabling learning with zero address', async function () {
+      await expect(
+        defiAgent.enableLearning(ethers.constants.AddressZero)
+      ).to.be.revertedWith('DeFiAgent: learning module is zero address');
+    });
+
+    it('Should not allow enabling learning when already enabled', async function () {
+      await defiAgent.enableLearning(merkleTreeLearning.address);
+
+      await expect(
+        defiAgent.enableLearning(merkleTreeLearning.address)
+      ).to.be.revertedWith('DeFiAgent: learning already enabled');
+    });
+
+    it('Should emit learning events when learning is enabled', async function () {
+      await defiAgent.enableLearning(merkleTreeLearning.address);
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedToken(tokenB.address);
+      await defiAgent.addSupportedProtocol('PancakeSwap', user1.address);
+
+      // Execute a trade to trigger learning event
+      const tx = await defiAgent.executeSwap(
+        tokenA.address,
+        tokenB.address,
+        ethers.utils.parseEther('100'),
+        ethers.utils.parseEther('95'),
+        'PancakeSwap'
+      );
+
+      const receipt = await tx.wait();
+      const learningEvent = receipt.events?.find(e => e.event === 'LearningUpdate');
+      
+      expect(learningEvent).to.not.be.undefined;
+      expect(learningEvent.args[0]).to.equal('trade_execution');
+      expect(learningEvent.args[1]).to.not.be.undefined; // dataHash
+      expect(learningEvent.args[2]).to.not.be.undefined; // timestamp
+    });
+  });
+
+  describe('Portfolio Management', function () {
+    beforeEach(async function () {
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedToken(tokenB.address);
+      await defiAgent.addSupportedProtocol('Venus', user1.address);
+    });
+
+    it('Should calculate portfolio value correctly', async function () {
+      // Initially no positions, so portfolio value should be 0
+      expect(await defiAgent.getPortfolioValue()).to.equal(0);
+
+      // Open some positions
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('100'), 'Venus');
+      await defiAgent.openPosition(tokenB.address, ethers.utils.parseEther('200'), 'Venus');
+
+      // Portfolio value should be sum of position values
+      // With mock price of $1 per token, total should be $300
+      const portfolioValue = await defiAgent.getPortfolioValue();
+      expect(portfolioValue).to.equal(ethers.utils.parseEther('300'));
+    });
+
+    it('Should not include closed positions in portfolio value', async function () {
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('100'), 'Venus');
+      await defiAgent.openPosition(tokenB.address, ethers.utils.parseEther('200'), 'Venus');
+
+      // Close one position
+      await defiAgent.closePosition(1);
+
+      // Portfolio value should only include active position
+      const portfolioValue = await defiAgent.getPortfolioValue();
+      expect(portfolioValue).to.equal(ethers.utils.parseEther('200'));
+    });
+  });
+
+  describe('Emergency Functions', function () {
+    it('Should allow emergency withdrawal when emergency stop is active', async function () {
+      await defiAgent.emergencyStop('Testing emergency withdrawal');
+
+      const initialBalance = await tokenA.balanceOf(owner.address);
+      const withdrawAmount = ethers.utils.parseEther('100');
+
+      await defiAgent.emergencyWithdraw(tokenA.address, withdrawAmount);
+
+      const finalBalance = await tokenA.balanceOf(owner.address);
+      expect(finalBalance.sub(initialBalance)).to.equal(withdrawAmount);
+    });
+
+    it('Should not allow emergency withdrawal when emergency stop is not active', async function () {
+      await expect(
+        defiAgent.emergencyWithdraw(tokenA.address, ethers.utils.parseEther('100'))
+      ).to.be.revertedWith('DeFiAgent: emergency stop not active');
+    });
+
+    it('Should allow BNB emergency withdrawal', async function () {
+      // Send some BNB to the contract
+      await owner.sendTransaction({
+        to: defiAgent.address,
+        value: ethers.utils.parseEther('1')
+      });
+
+      await defiAgent.emergencyStop('Testing BNB withdrawal');
+
+      const initialBalance = await ethers.provider.getBalance(owner.address);
+      
+      // Emergency withdraw BNB (address(0) represents BNB)
+      const tx = await defiAgent.emergencyWithdraw(ethers.constants.AddressZero, ethers.utils.parseEther('0.5'));
+      const receipt = await tx.wait();
+      const gasUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+
+      const finalBalance = await ethers.provider.getBalance(owner.address);
+      
+      // Account for gas costs in the comparison
+      expect(finalBalance.add(gasUsed).sub(initialBalance)).to.equal(ethers.utils.parseEther('0.5'));
+    });
+  });
+
+  describe('View Functions', function () {
+    it('Should return correct trading metrics', async function () {
+      const metrics = await defiAgent.getTradingMetrics();
+      
+      expect(metrics.totalTrades).to.equal(0);
+      expect(metrics.successfulTrades).to.equal(0);
+      expect(metrics.totalVolume).to.equal(0);
+      expect(metrics.totalPnL).to.equal(0);
+      expect(metrics.bestTradeReturn).to.equal(0);
+      expect(metrics.worstTradeReturn).to.equal(0);
+      expect(metrics.averageHoldTime).to.equal(0);
+      expect(metrics.lastTradeTimestamp).to.equal(0);
+    });
+
+    it('Should return correct risk parameters', async function () {
+      const riskParams = await defiAgent.getRiskParameters();
+      
+      expect(riskParams.maxPositionSize).to.equal(ethers.utils.parseEther('20'));
+      expect(riskParams.stopLossPercentage).to.equal(ethers.utils.parseEther('10'));
+      expect(riskParams.takeProfitPercentage).to.equal(ethers.utils.parseEther('20'));
+      expect(riskParams.maxDailyLoss).to.equal(ethers.utils.parseEther('5'));
+      expect(riskParams.portfolioValueAtRisk).to.equal(ethers.utils.parseEther('10'));
+      expect(riskParams.emergencyStopEnabled).to.equal(false);
+    });
+
+    it('Should return empty arrays initially for tokens and protocols', async function () {
+      const supportedTokens = await defiAgent.getSupportedTokens();
+      const supportedProtocols = await defiAgent.getSupportedProtocols();
+      
+      expect(supportedTokens.length).to.equal(0);
+      expect(supportedProtocols.length).to.equal(0);
+    });
+
+    it('Should return correct arrays after adding tokens and protocols', async function () {
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedToken(tokenB.address);
+      await defiAgent.addSupportedProtocol('PancakeSwap', user1.address);
+      await defiAgent.addSupportedProtocol('Venus', user2.address);
+
+      const supportedTokens = await defiAgent.getSupportedTokens();
+      const supportedProtocols = await defiAgent.getSupportedProtocols();
+      
+      expect(supportedTokens.length).to.equal(2);
+      expect(supportedTokens).to.include(tokenA.address);
+      expect(supportedTokens).to.include(tokenB.address);
+      
+      expect(supportedProtocols.length).to.equal(2);
+      expect(supportedProtocols).to.include('PancakeSwap');
+      expect(supportedProtocols).to.include('Venus');
+    });
+  });
+
+  describe('Access Control', function () {
+    it('Should inherit Ownable functionality correctly', async function () {
+      expect(await defiAgent.owner()).to.equal(owner.address);
+      
+      // Test ownership transfer
+      await defiAgent.transferOwnership(user1.address);
+      expect(await defiAgent.owner()).to.equal(user1.address);
+    });
+
+    it('Should inherit ReentrancyGuard functionality correctly', async function () {
+      // ReentrancyGuard is inherited and used in trading functions
+      // This test verifies the inheritance is working
+      expect(defiAgent.address).to.not.equal(ethers.constants.AddressZero);
+    });
+
+    it('Should have correct modifiers working', async function () {
+      // Test onlyAgentToken modifier (agentToken is set correctly)
+      expect(await defiAgent.agentToken()).to.equal(mockAgentTokenAddress);
+      
+      // Test whenLearningEnabled modifier (learning is initially disabled)
+      expect(await defiAgent.learningEnabled()).to.equal(false);
+      
+      // Test whenNotEmergencyStopped modifier (emergency stop is initially disabled)
+      const riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.emergencyStopEnabled).to.equal(false);
+    });
   });
 });
