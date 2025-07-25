@@ -316,6 +316,10 @@ describe('DeFiAgent', function () {
       await expect(
         defiAgent.connect(user1).addSupportedToken(tokenA.address)
       ).to.be.revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        defiAgent.addSupportedToken(ethers.constants.AddressZero)
+      ).to.be.revertedWith('DeFiAgent: token address is zero');
     });
   });
 
@@ -325,6 +329,10 @@ describe('DeFiAgent', function () {
       await defiAgent.addSupportedToken(tokenA.address);
       await defiAgent.addSupportedToken(tokenB.address);
       await defiAgent.addSupportedProtocol('PancakeSwap', user1.address);
+
+      await expect(
+        defiAgent.addSupportedToken(ethers.constants.AddressZero)
+      ).to.be.revertedWith('DeFiAgent: token address is zero');
     });
 
     it('Should execute token swap successfully', async function () {
@@ -345,6 +353,10 @@ describe('DeFiAgent', function () {
       const metrics = await defiAgent.getTradingMetrics();
       expect(metrics.totalTrades).to.equal(1);
       expect(metrics.lastTradeTimestamp).to.be.gt(0);
+
+      await expect(
+        defiAgent.addSupportedToken(ethers.constants.AddressZero)
+      ).to.be.revertedWith('DeFiAgent: token address is zero');
     });
 
     it('Should not allow swap with unsupported input token', async function () {
@@ -801,4 +813,108 @@ describe('DeFiAgent', function () {
       expect(riskParams.emergencyStopEnabled).to.equal(false);
     });
   });
+
+  describe('Edge Cases and Error Handling', function () {
+    it('Should handle multiple profile updates correctly', async function () {
+      // Update profile multiple times
+      for (let i = 0; i < 3; i++) {
+        await defiAgent.updateProfile(
+          `Agent ${i}`,
+          'Balanced',
+          50 + i,
+          60 + i,
+          100 + i * 10,
+          i % 2 === 0
+        );
+        
+        const profile = await defiAgent.profile();
+        expect(profile.name).to.equal(`Agent ${i}`);
+        expect(profile.riskTolerance).to.equal(50 + i);
+      }
+    });
+
+    it('Should handle adding and removing multiple tokens', async function () {
+      const tokens = [tokenA.address, tokenB.address, user1.address, user2.address];
+      
+      // Add multiple tokens
+      for (const token of tokens) {
+        await defiAgent.addSupportedToken(token);
+      }
+      
+      let supportedTokens = await defiAgent.getSupportedTokens();
+      expect(supportedTokens.length).to.equal(4);
+      
+      // Remove some tokens
+      await defiAgent.removeSupportedToken(tokenA.address);
+      await defiAgent.removeSupportedToken(user1.address);
+      
+      supportedTokens = await defiAgent.getSupportedTokens();
+      expect(supportedTokens.length).to.equal(2);
+      expect(supportedTokens).to.include(tokenB.address);
+      expect(supportedTokens).to.include(user2.address);
+    });
+
+    it('Should handle boundary values for risk parameters', async function () {
+      // Test minimum values
+      await defiAgent.updateRiskParameters(
+        ethers.utils.parseEther('1'), // 1% min position size
+        ethers.utils.parseEther('1'), // 1% min stop loss
+        ethers.utils.parseEther('5'), // 5% min take profit
+        ethers.utils.parseEther('1')  // 1% min daily loss
+      );
+      
+      let riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.maxPositionSize).to.equal(ethers.utils.parseEther('1'));
+      
+      // Test maximum values
+      await defiAgent.updateRiskParameters(
+        ethers.utils.parseEther('100'), // 100% max position size
+        ethers.utils.parseEther('50'),  // 50% max stop loss
+        ethers.utils.parseEther('100'), // 100% take profit
+        ethers.utils.parseEther('50')   // 50% max daily loss
+      );
+      
+      riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.maxPositionSize).to.equal(ethers.utils.parseEther('100'));
+    });
+
+    it('Should handle contract receiving BNB', async function () {
+      const sendAmount = ethers.utils.parseEther('1');
+      
+      await expect(
+        owner.sendTransaction({
+          to: defiAgent.address,
+          value: sendAmount
+        })
+      ).to.not.be.reverted;
+      
+      const contractBalance = await ethers.provider.getBalance(defiAgent.address);
+      expect(contractBalance).to.equal(sendAmount);
+    });
+
+    it('Should handle zero portfolio value correctly', async function () {
+      const portfolioValue = await defiAgent.getPortfolioValue();
+      expect(portfolioValue).to.equal(0);
+    });
+
+    it('Should handle position management with different protocols', async function () {
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedProtocol('Venus', user1.address);
+      await defiAgent.addSupportedProtocol('PancakeSwap', user2.address);
+      
+      // Open positions with different protocols
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('100'), 'Venus');
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('200'), 'PancakeSwap');
+      
+      const position1 = await defiAgent.positions(1);
+      const position2 = await defiAgent.positions(2);
+      
+      expect(position1.protocol).to.equal('Venus');
+      expect(position2.protocol).to.equal('PancakeSwap');
+      expect(position1.amount).to.equal(ethers.utils.parseEther('100'));
+      expect(position2.amount).to.equal(ethers.utils.parseEther('200'));
+    });
+  });
+
+  
 });
