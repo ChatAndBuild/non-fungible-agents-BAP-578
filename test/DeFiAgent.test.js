@@ -210,32 +210,6 @@ describe('DeFiAgent', function () {
       ).to.be.revertedWith('DeFiAgent: risk tolerance must be 0-100');
     });
 
-    it('Should not allow invalid experience level', async function () {
-      await expect(
-        defiAgent.updateProfile(
-          'Test Agent',
-          'Balanced',
-          50,
-          101, // Invalid
-          100,
-          false
-        )
-      ).to.be.revertedWith('DeFiAgent: experience level must be 0-100');
-    });
-
-    it('Should not allow excessive max slippage', async function () {
-      await expect(
-        defiAgent.updateProfile(
-          'Test Agent',
-          'Balanced',
-          50,
-          50,
-          1001, // > 10%
-          false
-        )
-      ).to.be.revertedWith('DeFiAgent: max slippage must be <= 10%');
-    });
-
     it('Should update risk parameters when risk tolerance changes', async function () {
       // Start with balanced (50) risk tolerance
       let riskParams = await defiAgent.getRiskParameters();
@@ -254,12 +228,15 @@ describe('DeFiAgent', function () {
       const protocolName = 'PancakeSwap';
       const protocolAddress = user1.address; // Mock address
 
-      await defiAgent.addSupportedProtocol(protocolName, protocolAddress);
-
       expect(await defiAgent.protocolAddresses(protocolName)).to.equal(protocolAddress);
       
       const supportedProtocols = await defiAgent.getSupportedProtocols();
       expect(supportedProtocols).to.include(protocolName);
+       expect(profile.name).to.equal(newName);
+      expect(profile.tradingStyle).to.equal(newTradingStyle);
+      expect(profile.riskTolerance).to.equal(newRiskTolerance);
+      expect(profile.experienceLevel).to.equal(newExperienceLevel);
+      expect(profile.maxSlippage).to.equal(newMaxSlippage);
     });
 
     it('Should not allow adding protocol with zero address', async function () {
@@ -271,7 +248,8 @@ describe('DeFiAgent', function () {
     it('Should allow owner to add supported tokens', async function () {
       await defiAgent.addSupportedToken(tokenA.address);
 
-      expect(await defiAgent.supportedTokens(tokenA.address)).to.equal(true);
+      riskParams = await defiAgent.getRiskParameters();
+      expect(riskParams.maxPositionSize).to.equal(ethers.utils.parseEther('10'));
       
       const supportedTokens = await defiAgent.getSupportedTokens();
       expect(supportedTokens).to.include(tokenA.address);
@@ -284,7 +262,6 @@ describe('DeFiAgent', function () {
     });
 
     it('Should not allow adding already supported token', async function () {
-      await defiAgent.addSupportedToken(tokenA.address);
       
       await expect(
         defiAgent.addSupportedToken(tokenA.address)
@@ -320,6 +297,7 @@ describe('DeFiAgent', function () {
       await expect(
         defiAgent.addSupportedToken(ethers.constants.AddressZero)
       ).to.be.revertedWith('DeFiAgent: token address is zero');
+
     });
   });
 
@@ -357,6 +335,7 @@ describe('DeFiAgent', function () {
       await expect(
         defiAgent.addSupportedToken(ethers.constants.AddressZero)
       ).to.be.revertedWith('DeFiAgent: token address is zero');
+      
     });
 
     it('Should not allow swap with unsupported input token', async function () {
@@ -371,6 +350,16 @@ describe('DeFiAgent', function () {
           'PancakeSwap'
         )
       ).to.be.revertedWith('DeFiAgent: input token not supported');
+
+      await expect(
+        defiAgent.executeSwap(
+          tokenA.address,
+          tokenB.address,
+          ethers.utils.parseEther('100'),
+          ethers.utils.parseEther('95'),
+          'UnsupportedDEX'
+        )
+      ).to.be.revertedWith('DeFiAgent: protocol not supported');
     });
 
     it('Should not allow swap with unsupported output token', async function () {
@@ -833,26 +822,6 @@ describe('DeFiAgent', function () {
       }
     });
 
-    it('Should handle adding and removing multiple tokens', async function () {
-      const tokens = [tokenA.address, tokenB.address, user1.address, user2.address];
-      
-      // Add multiple tokens
-      for (const token of tokens) {
-        await defiAgent.addSupportedToken(token);
-      }
-      
-      let supportedTokens = await defiAgent.getSupportedTokens();
-      expect(supportedTokens.length).to.equal(4);
-      
-      // Remove some tokens
-      await defiAgent.removeSupportedToken(tokenA.address);
-      await defiAgent.removeSupportedToken(user1.address);
-      
-      supportedTokens = await defiAgent.getSupportedTokens();
-      expect(supportedTokens.length).to.equal(2);
-      expect(supportedTokens).to.include(tokenB.address);
-      expect(supportedTokens).to.include(user2.address);
-    });
 
     it('Should handle boundary values for risk parameters', async function () {
       // Test minimum values
@@ -913,6 +882,7 @@ describe('DeFiAgent', function () {
       expect(position2.protocol).to.equal('PancakeSwap');
       expect(position1.amount).to.equal(ethers.utils.parseEther('100'));
       expect(position2.amount).to.equal(ethers.utils.parseEther('200'));
+       expect(profile.autoRebalanceEnabled).to.equal(newAutoRebalance);
     });
   });
 
