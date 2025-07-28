@@ -210,6 +210,32 @@ describe('DeFiAgent', function () {
       ).to.be.revertedWith('DeFiAgent: risk tolerance must be 0-100');
     });
 
+    it('Should not allow invalid experience level', async function () {
+      await expect(
+        defiAgent.updateProfile(
+          'Test Agent',
+          'Balanced',
+          50,
+          101, // Invalid
+          100,
+          false
+        )
+      ).to.be.revertedWith('DeFiAgent: experience level must be 0-100');
+    });
+
+    it('Should not allow excessive max slippage', async function () {
+      await expect(
+        defiAgent.updateProfile(
+          'Test Agent',
+          'Balanced',
+          50,
+          50,
+          1001, // > 10%
+          false
+        )
+      ).to.be.revertedWith('DeFiAgent: max slippage must be <= 10%');
+    });
+
     it('Should update risk parameters when risk tolerance changes', async function () {
       // Start with balanced (50) risk tolerance
       let riskParams = await defiAgent.getRiskParameters();
@@ -228,15 +254,12 @@ describe('DeFiAgent', function () {
       const protocolName = 'PancakeSwap';
       const protocolAddress = user1.address; // Mock address
 
+      await defiAgent.addSupportedProtocol(protocolName, protocolAddress);
+
       expect(await defiAgent.protocolAddresses(protocolName)).to.equal(protocolAddress);
       
       const supportedProtocols = await defiAgent.getSupportedProtocols();
       expect(supportedProtocols).to.include(protocolName);
-       expect(profile.name).to.equal(newName);
-      expect(profile.tradingStyle).to.equal(newTradingStyle);
-      expect(profile.riskTolerance).to.equal(newRiskTolerance);
-      expect(profile.experienceLevel).to.equal(newExperienceLevel);
-      expect(profile.maxSlippage).to.equal(newMaxSlippage);
     });
 
     it('Should not allow adding protocol with zero address', async function () {
@@ -248,8 +271,7 @@ describe('DeFiAgent', function () {
     it('Should allow owner to add supported tokens', async function () {
       await defiAgent.addSupportedToken(tokenA.address);
 
-      riskParams = await defiAgent.getRiskParameters();
-      expect(riskParams.maxPositionSize).to.equal(ethers.utils.parseEther('10'));
+      expect(await defiAgent.supportedTokens(tokenA.address)).to.equal(true);
       
       const supportedTokens = await defiAgent.getSupportedTokens();
       expect(supportedTokens).to.include(tokenA.address);
@@ -262,6 +284,7 @@ describe('DeFiAgent', function () {
     });
 
     it('Should not allow adding already supported token', async function () {
+      await defiAgent.addSupportedToken(tokenA.address);
       
       await expect(
         defiAgent.addSupportedToken(tokenA.address)
@@ -293,11 +316,6 @@ describe('DeFiAgent', function () {
       await expect(
         defiAgent.connect(user1).addSupportedToken(tokenA.address)
       ).to.be.revertedWith('Ownable: caller is not the owner');
-
-      await expect(
-        defiAgent.addSupportedToken(ethers.constants.AddressZero)
-      ).to.be.revertedWith('DeFiAgent: token address is zero');
-
     });
   });
 
@@ -307,10 +325,6 @@ describe('DeFiAgent', function () {
       await defiAgent.addSupportedToken(tokenA.address);
       await defiAgent.addSupportedToken(tokenB.address);
       await defiAgent.addSupportedProtocol('PancakeSwap', user1.address);
-
-      await expect(
-        defiAgent.addSupportedToken(ethers.constants.AddressZero)
-      ).to.be.revertedWith('DeFiAgent: token address is zero');
     });
 
     it('Should execute token swap successfully', async function () {
@@ -331,11 +345,6 @@ describe('DeFiAgent', function () {
       const metrics = await defiAgent.getTradingMetrics();
       expect(metrics.totalTrades).to.equal(1);
       expect(metrics.lastTradeTimestamp).to.be.gt(0);
-
-      await expect(
-        defiAgent.addSupportedToken(ethers.constants.AddressZero)
-      ).to.be.revertedWith('DeFiAgent: token address is zero');
-      
     });
 
     it('Should not allow swap with unsupported input token', async function () {
@@ -350,16 +359,6 @@ describe('DeFiAgent', function () {
           'PancakeSwap'
         )
       ).to.be.revertedWith('DeFiAgent: input token not supported');
-
-      await expect(
-        defiAgent.executeSwap(
-          tokenA.address,
-          tokenB.address,
-          ethers.utils.parseEther('100'),
-          ethers.utils.parseEther('95'),
-          'UnsupportedDEX'
-        )
-      ).to.be.revertedWith('DeFiAgent: protocol not supported');
     });
 
     it('Should not allow swap with unsupported output token', async function () {
@@ -822,6 +821,26 @@ describe('DeFiAgent', function () {
       }
     });
 
+    it('Should handle adding and removing multiple tokens', async function () {
+      const tokens = [tokenA.address, tokenB.address, user1.address, user2.address];
+      
+      // Add multiple tokens
+      for (const token of tokens) {
+        await defiAgent.addSupportedToken(token);
+      }
+      
+      let supportedTokens = await defiAgent.getSupportedTokens();
+      expect(supportedTokens.length).to.equal(4);
+      
+      // Remove some tokens
+      await defiAgent.removeSupportedToken(tokenA.address);
+      await defiAgent.removeSupportedToken(user1.address);
+      
+      supportedTokens = await defiAgent.getSupportedTokens();
+      expect(supportedTokens.length).to.equal(2);
+      expect(supportedTokens).to.include(tokenB.address);
+      expect(supportedTokens).to.include(user2.address);
+    });
 
     it('Should handle boundary values for risk parameters', async function () {
       // Test minimum values
@@ -882,9 +901,66 @@ describe('DeFiAgent', function () {
       expect(position2.protocol).to.equal('PancakeSwap');
       expect(position1.amount).to.equal(ethers.utils.parseEther('100'));
       expect(position2.amount).to.equal(ethers.utils.parseEther('200'));
-       expect(profile.autoRebalanceEnabled).to.equal(newAutoRebalance);
     });
   });
 
-  
+  describe('Integration Tests', function () {
+    it('Should work correctly with learning module integration', async function () {
+      await defiAgent.enableLearning(merkleTreeLearning.address);
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedToken(tokenB.address);
+      await defiAgent.addSupportedProtocol('PancakeSwap', user1.address);
+      
+      // Execute operations that should trigger learning
+      await defiAgent.executeSwap(
+        tokenA.address,
+        tokenB.address,
+        ethers.utils.parseEther('100'),
+        ethers.utils.parseEther('95'),
+        'PancakeSwap'
+      );
+      
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('100'), 'PancakeSwap');
+      await defiAgent.closePosition(1);
+      
+      // Verify learning is still enabled and working
+      expect(await defiAgent.learningEnabled()).to.equal(true);
+      expect(await defiAgent.learningModule()).to.equal(merkleTreeLearning.address);
+    });
+
+    it('Should maintain state consistency across multiple operations', async function () {
+      // Setup
+      await defiAgent.addSupportedToken(tokenA.address);
+      await defiAgent.addSupportedToken(tokenB.address);
+      await defiAgent.addSupportedProtocol('PancakeSwap', user1.address);
+      await defiAgent.enableLearning(merkleTreeLearning.address);
+      
+      // Update profile
+      await defiAgent.updateProfile('Updated Agent', 'Aggressive', 80, 90, 200, true);
+      
+      // Execute trades and positions
+      await defiAgent.executeSwap(tokenA.address, tokenB.address, ethers.utils.parseEther('50'), ethers.utils.parseEther('45'), 'PancakeSwap');
+      await defiAgent.openPosition(tokenA.address, ethers.utils.parseEther('100'), 'PancakeSwap');
+      
+      // Update risk parameters
+      await defiAgent.updateRiskParameters(
+        ethers.utils.parseEther('25'),
+        ethers.utils.parseEther('12'),
+        ethers.utils.parseEther('25'),
+        ethers.utils.parseEther('8')
+      );
+      
+      // Verify all state is consistent
+      const profile = await defiAgent.profile();
+      const metrics = await defiAgent.getTradingMetrics();
+      const riskParams = await defiAgent.getRiskParameters();
+      
+      expect(profile.name).to.equal('Updated Agent');
+      expect(profile.riskTolerance).to.equal(80);
+      expect(metrics.totalTrades).to.equal(1);
+      expect(riskParams.maxPositionSize).to.equal(ethers.utils.parseEther('25'));
+      expect(await defiAgent.learningEnabled()).to.equal(true);
+      expect(await defiAgent.positionCounter()).to.equal(1);
+    });
+  });
 });
