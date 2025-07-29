@@ -312,6 +312,17 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
         // Execute the swap (simplified - in real implementation, this would integrate with actual DEX)
         amountOut = _performSwap(_tokenIn, _tokenOut, _amountIn, _minAmountOut, _protocol);
 
+        // Track losses if trade resulted in a loss
+        uint256 inputPrice = _getTokenPrice(_tokenIn);
+        uint256 outputPrice = _getTokenPrice(_tokenOut);
+        uint256 inputValue = _amountIn.mul(inputPrice).div(1e18);
+        uint256 outputValue = amountOut.mul(outputPrice).div(1e18);
+
+        if (outputValue < inputValue) {
+            uint256 lossAmount = inputValue.sub(outputValue);
+            _updateDailyLoss(lossAmount);
+        }
+
         // Update trading metrics
         _updateTradingMetrics(_tokenIn, _tokenOut, _amountIn, amountOut, tradeStartTime);
 
@@ -384,6 +395,12 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
 
         // Update position
         position.isActive = false;
+
+        // Track losses if position resulted in a loss
+        if (pnl < 0) {
+            uint256 lossAmount = uint256(-pnl);
+            _updateDailyLoss(lossAmount);
+        }
 
         // Update trading metrics
         tradingMetrics.totalTrades++;
@@ -497,6 +514,24 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
      */
     function getSupportedProtocols() external view returns (string[] memory protocols) {
         return profile.supportedProtocols;
+    }
+
+    /**
+     * @dev Gets daily loss for a specific day
+     * @param _day Day timestamp (in days since epoch)
+     * @return loss Daily loss amount for the specified day
+     */
+    function getDailyLoss(uint256 _day) external view returns (uint256 loss) {
+        return dailyLoss[_day];
+    }
+
+    /**
+     * @dev Gets current day's loss
+     * @return loss Current day's loss amount
+     */
+    function getCurrentDayLoss() external view returns (uint256 loss) {
+        uint256 today = block.timestamp / 86400;
+        return dailyLoss[today];
     }
 
     // Internal functions
@@ -735,6 +770,21 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
         uint256 todayLoss = dailyLoss[today];
 
         require(todayLoss < riskParameters.maxDailyLoss, "DeFiAgent: daily loss limit exceeded");
+    }
+
+    /**
+     * @dev Updates daily loss tracking
+     * @param _lossAmount Amount of loss to add to daily tracking
+     */
+    function _updateDailyLoss(uint256 _lossAmount) internal {
+        uint256 today = block.timestamp / 86400; // Get current day
+        dailyLoss[today] = dailyLoss[today].add(_lossAmount);
+
+        // Ensure we don't exceed daily loss limits after update
+        require(
+            dailyLoss[today] <= riskParameters.maxDailyLoss,
+            "DeFiAgent: daily loss limit exceeded"
+        );
     }
 
     /**
