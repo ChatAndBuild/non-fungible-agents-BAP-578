@@ -2,13 +2,13 @@ const { expect } = require('chai');
 const { ethers, upgrades } = require('hardhat');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
-describe('BEP007Governance', function () {
-  let BEP007Governance;
+describe('BAP700Governance', function () {
+  let BAP700Governance;
   let governance;
   let CircuitBreaker;
   let circuitBreaker;
-  let BEP007;
-  let bep007Token;
+  let BAP700;
+  let bap700Token;
   let MockTarget;
   let mockTarget;
   let owner;
@@ -24,8 +24,8 @@ describe('BEP007Governance', function () {
 
   beforeEach(async function () {
     // Get the ContractFactory and Signers
-    BEP007Governance = await ethers.getContractFactory('BEP007Governance');
-    BEP007 = await ethers.getContractFactory('BEP007');
+    BAP700Governance = await ethers.getContractFactory('BAP700Governance');
+    BAP700 = await ethers.getContractFactory('BAP700');
     CircuitBreaker = await ethers.getContractFactory('CircuitBreaker');
     MockTarget = await ethers.getContractFactory('MockTarget');
     [owner, proposer, voter1, voter2, voter3, ...addrs] = await ethers.getSigners();
@@ -36,19 +36,19 @@ describe('BEP007Governance', function () {
     });
     await circuitBreaker.deployed();
 
-    // Deploy BEP007 token first (needed for governance)
-    bep007Token = await upgrades.deployProxy(
-      BEP007,
-      ['BEP007 Token', 'BEP007', await circuitBreaker.address],
+    // Deploy BAP700 token first (needed for governance)
+    bap700Token = await upgrades.deployProxy(
+      BAP700,
+      ['BAP700 Token', 'BAP700', await circuitBreaker.address],
       { initializer: 'initialize', kind: 'uups' },
     );
-    await bep007Token.deployed();
+    await bap700Token.deployed();
 
-    // Deploy BEP007Governance - note the correct parameter order
+    // Deploy BAP700Governance - note the correct parameter order
     governance = await upgrades.deployProxy(
-      BEP007Governance,
+      BAP700Governance,
       [
-        await bep007Token.address,
+        await bap700Token.address,
         owner.address,
         VOTING_PERIOD,
         QUORUM_PERCENTAGE,
@@ -63,7 +63,7 @@ describe('BEP007Governance', function () {
     await mockTarget.deployed();
 
     // Mint some tokens to voters for testing
-    // Note: BEP007 is an NFT, so we need to create agents for voting weight
+    // Note: BAP700 is an NFT, so we need to create agents for voting weight
     const metadataURI = 'ipfs://QmTest';
     const extendedMetadata = {
       persona: 'Test Persona',
@@ -76,19 +76,19 @@ describe('BEP007Governance', function () {
 
     // Create multiple agents for different voters to simulate voting weight
     for (let i = 0; i < 5; i++) {
-      await bep007Token[
+      await bap700Token[
         'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
       ](voter1.address, await mockTarget.address, metadataURI, extendedMetadata);
     }
 
     for (let i = 0; i < 3; i++) {
-      await bep007Token[
+      await bap700Token[
         'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
       ](voter2.address, await mockTarget.address, metadataURI, extendedMetadata);
     }
 
     for (let i = 0; i < 2; i++) {
-      await bep007Token[
+      await bap700Token[
         'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
       ](voter3.address, await mockTarget.address, metadataURI, extendedMetadata);
     }
@@ -97,7 +97,7 @@ describe('BEP007Governance', function () {
   describe('Deployment', function () {
     it('Should set the correct initial parameters', async function () {
       expect(await governance.owner()).to.equal(owner.address);
-      expect(await governance.bep007Token()).to.equal(await bep007Token.address);
+      expect(await governance.bap700Token()).to.equal(await bap700Token.address);
       expect(await governance.votingPeriod()).to.equal(VOTING_PERIOD);
       expect(await governance.quorumPercentage()).to.equal(QUORUM_PERCENTAGE);
       expect(await governance.executionDelay()).to.equal(EXECUTION_DELAY);
@@ -229,20 +229,20 @@ describe('BEP007Governance', function () {
       await governance.connect(voter1).castVote(proposalId, true);
 
       await expect(governance.connect(voter1).castVote(proposalId, true)).to.be.revertedWith(
-        'BEP007Governance: already voted',
+        'BAP700Governance: already voted',
       );
     });
 
     it('Should prevent voting with zero weight', async function () {
       // Use an address that has no tokens
       await expect(governance.connect(addrs[0]).castVote(proposalId, true)).to.be.revertedWith(
-        'BEP007Governance: no voting weight',
+        'BAP700Governance: no voting weight',
       );
     });
 
     it('Should prevent voting on non-existent proposal', async function () {
       await expect(governance.connect(voter1).castVote(999, true)).to.be.revertedWith(
-        'BEP007Governance: proposal does not exist',
+        'BAP700Governance: proposal does not exist',
       );
     });
 
@@ -251,7 +251,7 @@ describe('BEP007Governance', function () {
       await time.increase(time.duration.days(VOTING_PERIOD + 1));
 
       await expect(governance.connect(voter1).castVote(proposalId, true)).to.be.revertedWith(
-        'BEP007Governance: voting period ended',
+        'BAP700Governance: voting period ended',
       );
     });
 
@@ -329,7 +329,7 @@ describe('BEP007Governance', function () {
       await time.increase(time.duration.days(VOTING_PERIOD + EXECUTION_DELAY + 1));
 
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: quorum not reached',
+        'BAP700Governance: quorum not reached',
       );
     });
 
@@ -342,7 +342,7 @@ describe('BEP007Governance', function () {
       await time.increase(time.duration.days(VOTING_PERIOD + EXECUTION_DELAY + 1));
 
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: proposal rejected',
+        'BAP700Governance: proposal rejected',
       );
     });
 
@@ -350,7 +350,7 @@ describe('BEP007Governance', function () {
       await governance.connect(voter1).castVote(proposalId, true);
 
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: voting period not ended',
+        'BAP700Governance: voting period not ended',
       );
     });
 
@@ -361,7 +361,7 @@ describe('BEP007Governance', function () {
       await time.increase(time.duration.days(VOTING_PERIOD + 1));
 
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: execution delay not passed',
+        'BAP700Governance: execution delay not passed',
       );
     });
 
@@ -374,13 +374,13 @@ describe('BEP007Governance', function () {
 
       // Try to execute again
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: proposal already executed',
+        'BAP700Governance: proposal already executed',
       );
     });
 
     it('Should not execute non-existent proposal', async function () {
       await expect(governance.executeProposal(999)).to.be.revertedWith(
-        'BEP007Governance: proposal does not exist',
+        'BAP700Governance: proposal does not exist',
       );
     });
 
@@ -408,7 +408,7 @@ describe('BEP007Governance', function () {
 
       // Should revert with execution failed
       await expect(governance.executeProposal(failingProposalId)).to.be.revertedWith(
-        'BEP007Governance: execution failed',
+        'BAP700Governance: execution failed',
       );
     });
   });
@@ -461,7 +461,7 @@ describe('BEP007Governance', function () {
 
     it('Should not allow others to cancel proposal', async function () {
       await expect(governance.connect(voter1).cancelProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: not proposer or owner',
+        'BAP700Governance: not proposer or owner',
       );
     });
 
@@ -471,7 +471,7 @@ describe('BEP007Governance', function () {
       await governance.executeProposal(proposalId);
 
       await expect(governance.connect(proposer).cancelProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: proposal already executed',
+        'BAP700Governance: proposal already executed',
       );
     });
 
@@ -479,13 +479,13 @@ describe('BEP007Governance', function () {
       await governance.connect(proposer).cancelProposal(proposalId);
 
       await expect(governance.connect(voter1).castVote(proposalId, true)).to.be.revertedWith(
-        'BEP007Governance: proposal canceled',
+        'BAP700Governance: proposal canceled',
       );
     });
 
     it('Should not cancel non-existent proposal', async function () {
       await expect(governance.connect(proposer).cancelProposal(999)).to.be.revertedWith(
-        'BEP007Governance: proposal does not exist',
+        'BAP700Governance: proposal does not exist',
       );
     });
 
@@ -493,7 +493,7 @@ describe('BEP007Governance', function () {
       await governance.connect(proposer).cancelProposal(proposalId);
 
       await expect(governance.connect(proposer).cancelProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: proposal already canceled',
+        'BAP700Governance: proposal already canceled',
       );
     });
   });
@@ -553,7 +553,7 @@ describe('BEP007Governance', function () {
     it('Should not allow setting quorum percentage above 100', async function () {
       await expect(
         governance.connect(owner).updateVotingParameters(VOTING_PERIOD, 101, EXECUTION_DELAY),
-      ).to.be.revertedWith('BEP007Governance: quorum percentage exceeds 100');
+      ).to.be.revertedWith('BAP700Governance: quorum percentage exceeds 100');
     });
 
     it('Should not allow non-owner to update voting parameters', async function () {
@@ -675,7 +675,7 @@ describe('BEP007Governance', function () {
 
       // Tie should be rejected (not more votes for than against)
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: proposal rejected',
+        'BAP700Governance: proposal rejected',
       );
     });
 
@@ -769,7 +769,7 @@ describe('BEP007Governance', function () {
 
       // Should not be able to execute yet (need execution delay)
       await expect(governance.executeProposal(proposalId)).to.be.revertedWith(
-        'BEP007Governance: execution delay not passed',
+        'BAP700Governance: execution delay not passed',
       );
 
       // Fast forward to exactly when execution delay passes

@@ -7,7 +7,7 @@ import "./interfaces/ICircuitBreaker.sol";
 
 /**
  * @title CircuitBreaker
- * @dev Emergency shutdown mechanism for the BEP-007 ecosystem
+ * @dev Emergency shutdown mechanism for the BAP-700 ecosystem
  */
 contract CircuitBreaker is ICircuitBreaker, Initializable, OwnableUpgradeable {
     // The address of the governance contract

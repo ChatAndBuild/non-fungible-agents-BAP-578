@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This directory contains GitHub Actions workflows for the BEP-007 Non-Fungible Agents project. These workflows automate testing, deployment, and maintenance tasks.
+This directory contains GitHub Actions workflows for the BAP-700 Non-Fungible Agents project. These workflows automate testing, deployment, and maintenance tasks.
 
 ## Workflows Overview
 

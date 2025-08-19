@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 /**
  * @title ILearningModule
- * @dev Interface for learning modules in the BEP007 ecosystem
+ * @dev Interface for learning modules in the BAP700 ecosystem
  */
 interface ILearningModule {
     /**

@@ -1,6 +1,6 @@
 # Agent Lifecycle
 
-The BEP-007 standard defines a comprehensive, standardized lifecycle for Non-Fungible Agents, ensuring consistent behavior across implementations while supporting both traditional and learning-enabled agents throughout their evolution.
+The BAP-700 standard defines a comprehensive, standardized lifecycle for Non-Fungible Agents, ensuring consistent behavior across implementations while supporting both traditional and learning-enabled agents throughout their evolution.
 
 ## Creation and Minting
 
@@ -13,7 +13,7 @@ Creators choose from standardized agent templates (DeFi, Game, DAO, Lifestyle, S
 - **Path 2 (Learning)**: Advanced agents with learning capabilities enabled from creation
 
 ### 2. Enhanced Metadata Configuration
-The BEP-007 standard extends traditional NFT metadata to include agent-specific fields:
+The BAP-700 standard extends traditional NFT metadata to include agent-specific fields:
 
 ```solidity
 struct AgentMetadata {
@@ -33,7 +33,7 @@ struct AgentMetadata {
 ```
 
 ### 3. Secure Minting Process
-The AgentFactory contract creates new BEP-007 tokens with comprehensive validation:
+The AgentFactory contract creates new BAP-700 tokens with comprehensive validation:
 - Metadata integrity verification
 - Learning module compatibility checks
 - Initial state validation
@@ -78,7 +78,7 @@ For learning-enabled agents, the execution framework includes:
 
 ## Evolution and Upgrades
 
-The BEP-007 standard supports multiple evolution pathways:
+The BAP-700 standard supports multiple evolution pathways:
 
 ### 1. Logic Upgrades
 Agents can evolve their capabilities through controlled logic updates:
@@ -166,7 +166,7 @@ Protocol-level governance manages:
 
 ## Standardized Lifecycle Events
 
-The BEP-007 standard defines comprehensive events for all lifecycle stages:
+The BAP-700 standard defines comprehensive events for all lifecycle stages:
 
 ### Creation Events
 ```solidity
@@ -236,6 +236,6 @@ The standardized lifecycle includes quality mechanisms:
 - Behavior bounds enforcement
 - User feedback integration
 
-This comprehensive lifecycle framework ensures that all BEP-007 tokens, whether standard or learning-enabled, behave consistently and securely throughout their entire lifespan. It enables ecosystem participants to build tools and services that can interact with any BEP-007 token while supporting the full spectrum of agent capabilities from simple utility to advanced AI companions.
+This comprehensive lifecycle framework ensures that all BAP-700 tokens, whether standard or learning-enabled, behave consistently and securely throughout their entire lifespan. It enables ecosystem participants to build tools and services that can interact with any BAP-700 token while supporting the full spectrum of agent capabilities from simple utility to advanced AI companions.
 
 The standardized lifecycle also provides clear upgrade paths, ensuring that the ecosystem can evolve while maintaining backward compatibility and user trust. This foundation enables the development of increasingly sophisticated agent experiences while preserving the security and reliability that users expect from blockchain-based systems.

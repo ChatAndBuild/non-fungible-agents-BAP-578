@@ -1,7 +1,7 @@
-# BEP007 Treasury
+# BAP700 Treasury
 
 ## Overview
-The BEP007Treasury contract manages the collection, storage, and distribution of protocol fees and funds. It serves as the financial backbone of the BEP007 ecosystem, handling revenue from agent creation, upgrades, and transactions.
+The BAP700Treasury contract manages the collection, storage, and distribution of protocol fees and funds. It serves as the financial backbone of the BAP700 ecosystem, handling revenue from agent creation, upgrades, and transactions.
 
 ## Key Features
 - **Fee Collection**: Collects fees from various protocol operations
@@ -76,7 +76,7 @@ struct DistributionParams {
 - Checks-Effects-Interactions pattern to prevent reentrancy attacks
 - Governance timelock for sensitive parameter changes
 
-## Integration with BEP007 Ecosystem
+## Integration with BAP700 Ecosystem
 - Collects fees from AgentFactory for agent creation
 - Receives transaction fees from agent operations
 - Distributes rewards to $NFA token stakers

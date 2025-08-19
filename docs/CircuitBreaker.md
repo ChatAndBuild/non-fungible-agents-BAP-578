@@ -1,7 +1,7 @@
 # CircuitBreaker
 
 ## Overview
-The CircuitBreaker contract provides an emergency shutdown mechanism for the BEP-007 ecosystem. It allows authorized entities to pause functionality at both the global level and for specific contracts, serving as a safety measure in case of vulnerabilities or attacks.
+The CircuitBreaker contract provides an emergency shutdown mechanism for the BAP-700 ecosystem. It allows authorized entities to pause functionality at both the global level and for specific contracts, serving as a safety measure in case of vulnerabilities or attacks.
 
 ## Key Features
 - Global pause functionality for the entire ecosystem

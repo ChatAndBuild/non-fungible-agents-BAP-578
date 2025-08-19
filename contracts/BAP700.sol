@@ -8,15 +8,15 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
-import "./interfaces/IBEP007.sol";
+import "./interfaces/IBAP700.sol";
 import "./interfaces/ICircuitBreaker.sol";
 
 /**
- * @title BEP007 - Non-Fungible Agent (NFA) Token Standard
- * @dev Implementation of the BEP-007 standard for autonomous agent tokens
+ * @title BAP700 - Non-Fungible Agent (NFA) Token Standard
+ * @dev Implementation of the BAP-700 standard for autonomous agent tokens
  */
-contract BEP007 is
-    IBEP007,
+contract BAP700 is
+    IBAP700,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
@@ -41,7 +41,7 @@ contract BEP007 is
      * @dev Modifier to check if the caller is the owner of the token
      */
     modifier onlyAgentOwner(uint256 tokenId) {
-        require(ownerOf(tokenId) == msg.sender, "BEP007: caller is not agent owner");
+        require(ownerOf(tokenId) == msg.sender, "BAP700: caller is not agent owner");
         _;
     }
 
@@ -49,8 +49,8 @@ contract BEP007 is
      * @dev Modifier to check if the agent is active
      */
     modifier whenAgentActive(uint256 tokenId) {
-        require(!ICircuitBreaker(circuitBreaker).globalPause(), "BEP007: global pause active");
-        require(_agentStates[tokenId].status == Status.Active, "BEP007: agent not active");
+        require(!ICircuitBreaker(circuitBreaker).globalPause(), "BAP700: global pause active");
+        require(_agentStates[tokenId].status == Status.Active, "BAP700: agent not active");
         _;
     }
 
@@ -63,7 +63,7 @@ contract BEP007 is
         string memory symbol,
         address circuitBreakerAddress
     ) public initializer {
-        require(circuitBreakerAddress != address(0), "BEP007: Circuit Breaker address is zero");
+        require(circuitBreakerAddress != address(0), "BAP700: Circuit Breaker address is zero");
 
         __ERC721_init(name, symbol);
         __ERC721Enumerable_init();
@@ -92,7 +92,7 @@ contract BEP007 is
         string memory metadataURI,
         AgentMetadata memory extendedMetadata
     ) external returns (uint256 tokenId) {
-        require(logicAddress != address(0), "BEP007: logic address is zero");
+        require(logicAddress != address(0), "BAP700: logic address is zero");
 
         _tokenIdCounter.increment();
         tokenId = _tokenIdCounter.current();
@@ -144,7 +144,7 @@ contract BEP007 is
      * @param newLogic The address of the new logic contract
      */
     function setLogicAddress(uint256 tokenId, address newLogic) external onlyAgentOwner(tokenId) {
-        require(newLogic != address(0), "BEP007: new logic address is zero");
+        require(newLogic != address(0), "BAP700: new logic address is zero");
 
         address oldLogic = _agentStates[tokenId].logicAddress;
         _agentStates[tokenId].logicAddress = newLogic;
@@ -157,7 +157,7 @@ contract BEP007 is
      * @param tokenId The ID of the agent token
      */
     function fundAgent(uint256 tokenId) external payable {
-        require(_exists(tokenId), "BEP007: agent does not exist");
+        require(_exists(tokenId), "BAP700: agent does not exist");
 
         _agentStates[tokenId].balance += msg.value;
 
@@ -170,7 +170,7 @@ contract BEP007 is
      * @return The agent's state
      */
     function getState(uint256 tokenId) external view returns (State memory) {
-        require(_exists(tokenId), "BEP007: agent does not exist");
+        require(_exists(tokenId), "BAP700: agent does not exist");
         return _agentStates[tokenId];
     }
 
@@ -180,7 +180,7 @@ contract BEP007 is
      * @return The agent's extended metadata
      */
     function getAgentMetadata(uint256 tokenId) external view returns (AgentMetadata memory) {
-        require(_exists(tokenId), "BEP007: agent does not exist");
+        require(_exists(tokenId), "BAP700: agent does not exist");
         return _agentExtendedMetadata[tokenId];
     }
 
@@ -189,7 +189,7 @@ contract BEP007 is
      * @param tokenId The ID of the agent token
      */
     function pause(uint256 tokenId) external onlyAgentOwner(tokenId) {
-        require(_agentStates[tokenId].status == Status.Active, "BEP007: agent not active");
+        require(_agentStates[tokenId].status == Status.Active, "BAP700: agent not active");
 
         _agentStates[tokenId].status = Status.Paused;
 
@@ -201,7 +201,7 @@ contract BEP007 is
      * @param tokenId The ID of the agent token
      */
     function unpause(uint256 tokenId) external onlyAgentOwner(tokenId) {
-        require(_agentStates[tokenId].status == Status.Paused, "BEP007: agent not paused");
+        require(_agentStates[tokenId].status == Status.Paused, "BAP700: agent not paused");
 
         _agentStates[tokenId].status = Status.Active;
 
@@ -215,7 +215,7 @@ contract BEP007 is
     function terminate(uint256 tokenId) external onlyAgentOwner(tokenId) {
         require(
             _agentStates[tokenId].status != Status.Terminated,
-            "BEP007: agent already terminated"
+            "BAP700: agent already terminated"
         );
 
         _agentStates[tokenId].status = Status.Terminated;
@@ -236,7 +236,7 @@ contract BEP007 is
      * @param amount The amount to withdraw
      */
     function withdrawFromAgent(uint256 tokenId, uint256 amount) external onlyAgentOwner(tokenId) {
-        require(amount <= _agentStates[tokenId].balance, "BEP007: insufficient balance");
+        require(amount <= _agentStates[tokenId].balance, "BAP700: insufficient balance");
 
         _agentStates[tokenId].balance -= amount;
         payable(msg.sender).transfer(amount);
@@ -253,7 +253,7 @@ contract BEP007 is
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
-        return interfaceId == type(IBEP007).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IBAP700).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /**

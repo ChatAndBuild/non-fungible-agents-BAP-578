@@ -1,9 +1,9 @@
 const { expect } = require('chai');
 const { ethers, upgrades } = require('hardhat');
 
-describe('BEP007 Non-Fungible Agent', function () {
-  let BEP007;
-  let bep007;
+describe('BAP700 Non-Fungible Agent', function () {
+  let BAP700;
+  let bap700;
   let CircuitBreaker;
   let circuitBreaker;
   let owner;
@@ -28,45 +28,45 @@ describe('BEP007 Non-Fungible Agent', function () {
     );
     await circuitBreaker.deployed();
 
-    // Deploy BEP007 with CircuitBreaker as governance
-    BEP007 = await ethers.getContractFactory('BEP007');
-    bep007 = await upgrades.deployProxy(
-      BEP007,
+    // Deploy BAP700 with CircuitBreaker as governance
+    BAP700 = await ethers.getContractFactory('BAP700');
+    bap700 = await upgrades.deployProxy(
+      BAP700,
       ['Non-Fungible Agent', 'NFA', circuitBreaker.address],
       { initializer: 'initialize', kind: 'uups' },
     );
-    await bep007.deployed();
+    await bap700.deployed();
   });
 
   describe('Deployment', function () {
     it('Should set the right owner', async function () {
       // Ownership is transferred to governance (CircuitBreaker) during initialization
-      expect(await bep007.owner()).to.equal(circuitBreaker.address);
+      expect(await bap700.owner()).to.equal(circuitBreaker.address);
     });
 
     it('Should set the right name and symbol', async function () {
-      expect(await bep007.name()).to.equal('Non-Fungible Agent');
-      expect(await bep007.symbol()).to.equal('NFA');
+      expect(await bap700.name()).to.equal('Non-Fungible Agent');
+      expect(await bap700.symbol()).to.equal('NFA');
     });
 
     it('Should set the right circuit breaker', async function () {
-      expect(await bep007.circuitBreaker()).to.equal(circuitBreaker.address);
+      expect(await bap700.circuitBreaker()).to.equal(circuitBreaker.address);
     });
 
     it('Should not allow initialization with zero Circuit Breaker address', async function () {
-      const BEP007Factory = await ethers.getContractFactory('BEP007');
+      const BAP700Factory = await ethers.getContractFactory('BAP700');
       await expect(
-        upgrades.deployProxy(BEP007Factory, ['Test', 'TEST', ethers.constants.AddressZero], {
+        upgrades.deployProxy(BAP700Factory, ['Test', 'TEST', ethers.constants.AddressZero], {
           initializer: 'initialize',
           kind: 'uups',
         }),
-      ).to.be.revertedWith('BEP007: Circuit Breaker address is zero');
+      ).to.be.revertedWith('BAP700: Circuit Breaker address is zero');
     });
 
-    it('Should support IBEP007 interface', async function () {
-      // Check if contract supports the IBEP007 interface
+    it('Should support IBAP700 interface', async function () {
+      // Check if contract supports the IBAP700 interface
       const interfaceId = '0x01ffc9a7'; // ERC165 interface ID
-      expect(await bep007.supportsInterface(interfaceId)).to.equal(true);
+      expect(await bap700.supportsInterface(interfaceId)).to.equal(true);
     });
   });
 
@@ -82,15 +82,15 @@ describe('BEP007 Non-Fungible Agent', function () {
         vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
       };
 
-      await bep007[
+      await bap700[
         'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
       ](addr1.address, mockLogicAddress, metadataURI, extendedMetadata);
 
       const tokenId = 1; // First token ID
-      expect(await bep007.ownerOf(tokenId)).to.equal(addr1.address);
-      expect(await bep007.tokenURI(tokenId)).to.equal(metadataURI);
+      expect(await bap700.ownerOf(tokenId)).to.equal(addr1.address);
+      expect(await bap700.tokenURI(tokenId)).to.equal(metadataURI);
 
-      const agentMetadata = await bep007.getAgentMetadata(tokenId);
+      const agentMetadata = await bap700.getAgentMetadata(tokenId);
       expect(agentMetadata.persona).to.equal(extendedMetadata.persona);
       expect(agentMetadata.experience).to.equal(extendedMetadata.experience);
       expect(agentMetadata.voiceHash).to.equal(extendedMetadata.voiceHash);
@@ -98,7 +98,7 @@ describe('BEP007 Non-Fungible Agent', function () {
       expect(agentMetadata.vaultURI).to.equal(extendedMetadata.vaultURI);
       expect(agentMetadata.vaultHash).to.equal(extendedMetadata.vaultHash);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.logicAddress).to.equal(mockLogicAddress);
       expect(agentState.status).to.equal(1); // Active status
       expect(agentState.owner).to.equal(addr1.address);
@@ -108,17 +108,17 @@ describe('BEP007 Non-Fungible Agent', function () {
     it('Should create an agent with basic metadata', async function () {
       const metadataURI = 'ipfs://QmTestBasic';
 
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
       );
 
       const tokenId = 1;
-      expect(await bep007.ownerOf(tokenId)).to.equal(addr1.address);
-      expect(await bep007.tokenURI(tokenId)).to.equal(metadataURI);
+      expect(await bap700.ownerOf(tokenId)).to.equal(addr1.address);
+      expect(await bap700.tokenURI(tokenId)).to.equal(metadataURI);
 
-      const agentMetadata = await bep007.getAgentMetadata(tokenId);
+      const agentMetadata = await bap700.getAgentMetadata(tokenId);
       expect(agentMetadata.persona).to.equal('');
       expect(agentMetadata.experience).to.equal('');
       expect(agentMetadata.voiceHash).to.equal('');
@@ -131,34 +131,34 @@ describe('BEP007 Non-Fungible Agent', function () {
       const metadataURI = 'ipfs://QmTest';
 
       await expect(
-        bep007['createAgent(address,address,string)'](
+        bap700['createAgent(address,address,string)'](
           addr1.address,
           ethers.constants.AddressZero,
           metadataURI,
         ),
-      ).to.be.revertedWith('BEP007: logic address is zero');
+      ).to.be.revertedWith('BAP700: logic address is zero');
     });
 
     it('Should increment token IDs correctly', async function () {
       const metadataURI = 'ipfs://QmTest';
 
       // Create first agent
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
       );
 
       // Create second agent
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr2.address,
         mockLogicAddress,
         metadataURI,
       );
 
-      expect(await bep007.ownerOf(1)).to.equal(addr1.address);
-      expect(await bep007.ownerOf(2)).to.equal(addr2.address);
-      expect(await bep007.totalSupply()).to.equal(2);
+      expect(await bap700.ownerOf(1)).to.equal(addr1.address);
+      expect(await bap700.ownerOf(2)).to.equal(addr2.address);
+      expect(await bap700.totalSupply()).to.equal(2);
     });
   });
 
@@ -167,7 +167,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     beforeEach(async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
@@ -177,57 +177,57 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     it('Should pause and unpause an agent', async function () {
       // Initially active
-      let agentState = await bep007.getState(tokenId);
+      let agentState = await bap700.getState(tokenId);
       expect(agentState.status).to.equal(1); // Active
 
       // Pause the agent
-      await expect(bep007.connect(addr1).pause(tokenId))
-        .to.emit(bep007, 'StatusChanged')
-        .withArgs(bep007.address, 0); // Paused
+      await expect(bap700.connect(addr1).pause(tokenId))
+        .to.emit(bap700, 'StatusChanged')
+        .withArgs(bap700.address, 0); // Paused
 
-      agentState = await bep007.getState(tokenId);
+      agentState = await bap700.getState(tokenId);
       expect(agentState.status).to.equal(0); // Paused
 
       // Unpause the agent
-      await expect(bep007.connect(addr1).unpause(tokenId))
-        .to.emit(bep007, 'StatusChanged')
-        .withArgs(bep007.address, 1); // Active
+      await expect(bap700.connect(addr1).unpause(tokenId))
+        .to.emit(bap700, 'StatusChanged')
+        .withArgs(bap700.address, 1); // Active
 
-      agentState = await bep007.getState(tokenId);
+      agentState = await bap700.getState(tokenId);
       expect(agentState.status).to.equal(1); // Active
     });
 
     it('Should not allow non-owner to pause agent', async function () {
-      await expect(bep007.connect(addr2).pause(tokenId)).to.be.revertedWith(
-        'BEP007: caller is not agent owner',
+      await expect(bap700.connect(addr2).pause(tokenId)).to.be.revertedWith(
+        'BAP700: caller is not agent owner',
       );
     });
 
     it('Should not allow pausing already paused agent', async function () {
-      await bep007.connect(addr1).pause(tokenId);
+      await bap700.connect(addr1).pause(tokenId);
 
-      await expect(bep007.connect(addr1).pause(tokenId)).to.be.revertedWith(
-        'BEP007: agent not active',
+      await expect(bap700.connect(addr1).pause(tokenId)).to.be.revertedWith(
+        'BAP700: agent not active',
       );
     });
 
     it('Should not allow unpausing active agent', async function () {
-      await expect(bep007.connect(addr1).unpause(tokenId)).to.be.revertedWith(
-        'BEP007: agent not paused',
+      await expect(bap700.connect(addr1).unpause(tokenId)).to.be.revertedWith(
+        'BAP700: agent not paused',
       );
     });
 
     it('Should terminate an agent', async function () {
       // Fund the agent first
-      await bep007.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
+      await bap700.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
 
       const initialBalance = await ethers.provider.getBalance(addr1.address);
 
-      await expect(bep007.connect(addr1).terminate(tokenId))
-        .to.emit(bep007, 'StatusChanged')
-        .withArgs(bep007.address, 2); // Terminated
+      await expect(bap700.connect(addr1).terminate(tokenId))
+        .to.emit(bap700, 'StatusChanged')
+        .withArgs(bap700.address, 2); // Terminated
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.status).to.equal(2); // Terminated
       expect(agentState.balance).to.equal(0); // Balance should be returned
 
@@ -237,10 +237,10 @@ describe('BEP007 Non-Fungible Agent', function () {
     });
 
     it('Should not allow terminating already terminated agent', async function () {
-      await bep007.connect(addr1).terminate(tokenId);
+      await bap700.connect(addr1).terminate(tokenId);
 
-      await expect(bep007.connect(addr1).terminate(tokenId)).to.be.revertedWith(
-        'BEP007: agent already terminated',
+      await expect(bap700.connect(addr1).terminate(tokenId)).to.be.revertedWith(
+        'BAP700: agent already terminated',
       );
     });
   });
@@ -250,7 +250,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     beforeEach(async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
@@ -261,11 +261,11 @@ describe('BEP007 Non-Fungible Agent', function () {
     it('Should fund an agent', async function () {
       const fundAmount = ethers.utils.parseEther('1.0');
 
-      await expect(bep007.connect(addr1).fundAgent(tokenId, { value: fundAmount }))
-        .to.emit(bep007, 'AgentFunded')
-        .withArgs(bep007.address, addr1.address, fundAmount);
+      await expect(bap700.connect(addr1).fundAgent(tokenId, { value: fundAmount }))
+        .to.emit(bap700, 'AgentFunded')
+        .withArgs(bap700.address, addr1.address, fundAmount);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.balance).to.equal(fundAmount);
     });
 
@@ -273,27 +273,27 @@ describe('BEP007 Non-Fungible Agent', function () {
       const fundAmount1 = ethers.utils.parseEther('1.0');
       const fundAmount2 = ethers.utils.parseEther('0.5');
 
-      await bep007.connect(addr1).fundAgent(tokenId, { value: fundAmount1 });
-      await bep007.connect(addr1).fundAgent(tokenId, { value: fundAmount2 });
+      await bap700.connect(addr1).fundAgent(tokenId, { value: fundAmount1 });
+      await bap700.connect(addr1).fundAgent(tokenId, { value: fundAmount2 });
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.balance).to.equal(fundAmount1.add(fundAmount2));
     });
 
     it('Should not allow funding non-existent agent', async function () {
       await expect(
-        bep007.connect(addr1).fundAgent(999, { value: ethers.utils.parseEther('1.0') }),
-      ).to.be.revertedWith('BEP007: agent does not exist');
+        bap700.connect(addr1).fundAgent(999, { value: ethers.utils.parseEther('1.0') }),
+      ).to.be.revertedWith('BAP700: agent does not exist');
     });
 
     it('Should allow anyone to fund an agent', async function () {
       const fundAmount = ethers.utils.parseEther('1.0');
 
-      await expect(bep007.connect(addr2).fundAgent(tokenId, { value: fundAmount }))
-        .to.emit(bep007, 'AgentFunded')
-        .withArgs(bep007.address, addr2.address, fundAmount);
+      await expect(bap700.connect(addr2).fundAgent(tokenId, { value: fundAmount }))
+        .to.emit(bap700, 'AgentFunded')
+        .withArgs(bap700.address, addr2.address, fundAmount);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.balance).to.equal(fundAmount);
     });
   });
@@ -303,7 +303,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     beforeEach(async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
@@ -311,16 +311,16 @@ describe('BEP007 Non-Fungible Agent', function () {
       tokenId = 1;
 
       // Fund the agent
-      await bep007.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('2.0') });
+      await bap700.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('2.0') });
     });
 
     it('Should allow owner to withdraw from agent', async function () {
       const withdrawAmount = ethers.utils.parseEther('1.0');
       const initialBalance = await ethers.provider.getBalance(addr1.address);
 
-      await bep007.connect(addr1).withdrawFromAgent(tokenId, withdrawAmount);
+      await bap700.connect(addr1).withdrawFromAgent(tokenId, withdrawAmount);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.balance).to.equal(ethers.utils.parseEther('1.0'));
 
       const finalBalance = await ethers.provider.getBalance(addr1.address);
@@ -331,25 +331,25 @@ describe('BEP007 Non-Fungible Agent', function () {
       const withdrawAmount = ethers.utils.parseEther('3.0');
 
       await expect(
-        bep007.connect(addr1).withdrawFromAgent(tokenId, withdrawAmount),
-      ).to.be.revertedWith('BEP007: insufficient balance');
+        bap700.connect(addr1).withdrawFromAgent(tokenId, withdrawAmount),
+      ).to.be.revertedWith('BAP700: insufficient balance');
     });
 
     it('Should not allow non-owner to withdraw', async function () {
       const withdrawAmount = ethers.utils.parseEther('1.0');
 
       await expect(
-        bep007.connect(addr2).withdrawFromAgent(tokenId, withdrawAmount),
-      ).to.be.revertedWith('BEP007: caller is not agent owner');
+        bap700.connect(addr2).withdrawFromAgent(tokenId, withdrawAmount),
+      ).to.be.revertedWith('BAP700: caller is not agent owner');
     });
 
     it('Should allow withdrawing entire balance', async function () {
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       const fullBalance = agentState.balance;
 
-      await bep007.connect(addr1).withdrawFromAgent(tokenId, fullBalance);
+      await bap700.connect(addr1).withdrawFromAgent(tokenId, fullBalance);
 
-      const updatedState = await bep007.getState(tokenId);
+      const updatedState = await bap700.getState(tokenId);
       expect(updatedState.balance).to.equal(0);
     });
   });
@@ -359,7 +359,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     beforeEach(async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
@@ -370,11 +370,11 @@ describe('BEP007 Non-Fungible Agent', function () {
     it('Should allow owner to update logic address', async function () {
       const newLogicAddress = '0x0987654321098765432109876543210987654321';
 
-      await expect(bep007.connect(addr1).setLogicAddress(tokenId, newLogicAddress))
-        .to.emit(bep007, 'LogicUpgraded')
-        .withArgs(bep007.address, mockLogicAddress, newLogicAddress);
+      await expect(bap700.connect(addr1).setLogicAddress(tokenId, newLogicAddress))
+        .to.emit(bap700, 'LogicUpgraded')
+        .withArgs(bap700.address, mockLogicAddress, newLogicAddress);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.logicAddress).to.equal(newLogicAddress);
     });
 
@@ -382,14 +382,14 @@ describe('BEP007 Non-Fungible Agent', function () {
       const newLogicAddress = '0x0987654321098765432109876543210987654321';
 
       await expect(
-        bep007.connect(addr2).setLogicAddress(tokenId, newLogicAddress),
-      ).to.be.revertedWith('BEP007: caller is not agent owner');
+        bap700.connect(addr2).setLogicAddress(tokenId, newLogicAddress),
+      ).to.be.revertedWith('BAP700: caller is not agent owner');
     });
 
     it('Should not allow setting logic address to zero', async function () {
       await expect(
-        bep007.connect(addr1).setLogicAddress(tokenId, ethers.constants.AddressZero),
-      ).to.be.revertedWith('BEP007: new logic address is zero');
+        bap700.connect(addr1).setLogicAddress(tokenId, ethers.constants.AddressZero),
+      ).to.be.revertedWith('BAP700: new logic address is zero');
     });
   });
 
@@ -398,7 +398,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     beforeEach(async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
@@ -408,32 +408,32 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     it('Should update agent state owner on transfer', async function () {
       // Transfer token from addr1 to addr2
-      await bep007.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
+      await bap700.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
 
-      expect(await bep007.ownerOf(tokenId)).to.equal(addr2.address);
+      expect(await bap700.ownerOf(tokenId)).to.equal(addr2.address);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.owner).to.equal(addr2.address);
     });
 
     it('Should allow new owner to manage agent after transfer', async function () {
       // Transfer token
-      await bep007.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
+      await bap700.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
 
       // New owner should be able to pause the agent
-      await bep007.connect(addr2).pause(tokenId);
+      await bap700.connect(addr2).pause(tokenId);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.status).to.equal(0); // Paused
     });
 
     it('Should not allow old owner to manage agent after transfer', async function () {
       // Transfer token
-      await bep007.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
+      await bap700.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
 
       // Old owner should not be able to pause the agent
-      await expect(bep007.connect(addr1).pause(tokenId)).to.be.revertedWith(
-        'BEP007: caller is not agent owner',
+      await expect(bap700.connect(addr1).pause(tokenId)).to.be.revertedWith(
+        'BAP700: caller is not agent owner',
       );
     });
   });
@@ -443,7 +443,7 @@ describe('BEP007 Non-Fungible Agent', function () {
 
     beforeEach(async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
@@ -475,14 +475,14 @@ describe('BEP007 Non-Fungible Agent', function () {
         vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
       };
 
-      await bep007[
+      await bap700[
         'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
       ](addr1.address, mockLogicAddress, metadataURI, extendedMetadata);
       tokenId = 1;
     });
 
     it('Should return correct agent state', async function () {
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
 
       expect(agentState.balance).to.equal(0);
       expect(agentState.status).to.equal(1); // Active
@@ -492,7 +492,7 @@ describe('BEP007 Non-Fungible Agent', function () {
     });
 
     it('Should return correct agent metadata', async function () {
-      const agentMetadata = await bep007.getAgentMetadata(tokenId);
+      const agentMetadata = await bap700.getAgentMetadata(tokenId);
 
       expect(agentMetadata.persona).to.equal('Test Persona');
       expect(agentMetadata.experience).to.equal('Test Experience');
@@ -503,11 +503,11 @@ describe('BEP007 Non-Fungible Agent', function () {
     });
 
     it('Should revert when getting state of non-existent agent', async function () {
-      await expect(bep007.getState(999)).to.be.revertedWith('BEP007: agent does not exist');
+      await expect(bap700.getState(999)).to.be.revertedWith('BAP700: agent does not exist');
     });
 
     it('Should revert when getting metadata of non-existent agent', async function () {
-      await expect(bep007.getAgentMetadata(999)).to.be.revertedWith('BEP007: agent does not exist');
+      await expect(bap700.getAgentMetadata(999)).to.be.revertedWith('BAP700: agent does not exist');
     });
   });
 
@@ -517,7 +517,7 @@ describe('BEP007 Non-Fungible Agent', function () {
       // This test would require deploying a new implementation
       // For now, we just test that non-owners cannot call upgrade functions
 
-      await expect(bep007.connect(addr1).upgradeTo(addr2.address)).to.be.revertedWith(
+      await expect(bap700.connect(addr1).upgradeTo(addr2.address)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -529,12 +529,12 @@ describe('BEP007 Non-Fungible Agent', function () {
 
       await expect(
         addr1.sendTransaction({
-          to: bep007.address,
+          to: bap700.address,
           value: sendAmount,
         }),
       ).to.not.be.reverted;
 
-      const contractBalance = await ethers.provider.getBalance(bep007.address);
+      const contractBalance = await ethers.provider.getBalance(bap700.address);
       expect(contractBalance).to.equal(sendAmount);
     });
   });
@@ -542,33 +542,33 @@ describe('BEP007 Non-Fungible Agent', function () {
   describe('Edge Cases', function () {
     it('Should handle zero value funding', async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
       );
       const tokenId = 1;
 
-      await expect(bep007.connect(addr1).fundAgent(tokenId, { value: 0 }))
-        .to.emit(bep007, 'AgentFunded')
-        .withArgs(bep007.address, addr1.address, 0);
+      await expect(bap700.connect(addr1).fundAgent(tokenId, { value: 0 }))
+        .to.emit(bap700, 'AgentFunded')
+        .withArgs(bap700.address, addr1.address, 0);
 
-      const agentState = await bep007.getState(tokenId);
+      const agentState = await bap700.getState(tokenId);
       expect(agentState.balance).to.equal(0);
     });
 
     it('Should handle zero amount withdrawal', async function () {
       const metadataURI = 'ipfs://QmTest';
-      await bep007['createAgent(address,address,string)'](
+      await bap700['createAgent(address,address,string)'](
         addr1.address,
         mockLogicAddress,
         metadataURI,
       );
       const tokenId = 1;
 
-      await bep007.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
+      await bap700.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
 
-      await expect(bep007.connect(addr1).withdrawFromAgent(tokenId, 0)).to.not.be.reverted;
+      await expect(bap700.connect(addr1).withdrawFromAgent(tokenId, 0)).to.not.be.reverted;
     });
   });
 });

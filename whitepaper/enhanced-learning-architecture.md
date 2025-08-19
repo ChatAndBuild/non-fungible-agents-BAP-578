@@ -2,16 +2,16 @@
 
 ## Abstract
 
-The enhanced BEP-007 standard introduces an optional Merkle tree-based learning system that allows Non-Fungible Agents to evolve and improve over time while maintaining full backward compatibility with existing implementations. This dual-path architecture provides developers with the flexibility to choose between simple static agents and sophisticated learning agents based on their specific use cases and technical requirements.
+The enhanced BAP-700 standard introduces an optional Merkle tree-based learning system that allows Non-Fungible Agents to evolve and improve over time while maintaining full backward compatibility with existing implementations. This dual-path architecture provides developers with the flexibility to choose between simple static agents and sophisticated learning agents based on their specific use cases and technical requirements.
 
 ## Introduction
 
-Traditional NFTs, including the original BEP-007 specification, provide static metadata and fixed functionality. While this approach works well for many use cases, it limits the potential for agents to adapt, learn, and improve based on their interactions and experiences. The enhanced BEP-007 standard addresses this limitation by introducing an optional learning layer that maintains the simplicity of the original standard while enabling advanced capabilities for developers who need them.
+Traditional NFTs, including the original BAP-700 specification, provide static metadata and fixed functionality. While this approach works well for many use cases, it limits the potential for agents to adapt, learn, and improve based on their interactions and experiences. The enhanced BAP-700 standard addresses this limitation by introducing an optional learning layer that maintains the simplicity of the original standard while enabling advanced capabilities for developers who need them.
 
 ## Design Principles
 
 ### 1. Backward Compatibility
-The enhanced standard maintains 100% backward compatibility with existing BEP-007 implementations. All existing agents continue to function without modification, and developers can continue using the familiar patterns they already know.
+The enhanced standard maintains 100% backward compatibility with existing BAP-700 implementations. All existing agents continue to function without modification, and developers can continue using the familiar patterns they already know.
 
 ### 2. Optional Adoption
 Learning capabilities are entirely optional. Developers can choose to:
@@ -38,7 +38,7 @@ All learning claims are cryptographically verifiable through:
 
 ### Dual-Path System
 
-The enhanced BEP-007 standard provides two distinct development paths:
+The enhanced BAP-700 standard provides two distinct development paths:
 
 #### Path 1: JSON Light Experience (Default)
 ```
@@ -62,9 +62,9 @@ Cryptographically verifiable evolution
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    BEP007Enhanced Contract                  │
+│                    BAP700Enhanced Contract                  │
 ├─────────────────────────────────────────────────────────────┤
-│  Core NFT Functionality (ERC721 + BEP007 extensions)        │
+│  Core NFT Functionality (ERC721 + BAP700 extensions)        │
 │  ├── Token Management                                       │
 │  ├── Agent State Management                                 │
 │  ├── Action Execution                                       │
@@ -108,11 +108,11 @@ Cryptographically verifiable evolution
 
 ## Enhanced Metadata Structure
 
-The enhanced metadata structure extends the original BEP-007 metadata with learning-specific fields:
+The enhanced metadata structure extends the original BAP-700 metadata with learning-specific fields:
 
 ```solidity
 struct AgentMetadata {
-    // Original BEP-007 fields
+    // Original BAP-700 fields
     string persona;           // JSON-encoded character traits
     string experience;            // Agent's role/purpose summary
     string voiceHash;         // Audio profile reference
@@ -343,7 +343,7 @@ Existing simple agents can be upgraded to support learning:
 
 ```javascript
 // Enable learning on existing agent
-await bep007Enhanced.enableLearning(
+await bap700Enhanced.enableLearning(
   tokenId,
   merkleTreeLearning.address,
   initialMerkleRoot
@@ -449,6 +449,6 @@ The learning overhead is minimal for most operations, with the largest impact on
 
 ## Conclusion
 
-The enhanced BEP-007 standard with optional Merkle tree learning provides a flexible foundation for the future of Non-Fungible Agents. By offering both simple and sophisticated development paths, the standard accommodates current needs while enabling future innovation. The cryptographically verifiable learning system ensures that agent evolution is transparent, secure, and valuable, while the backward compatibility guarantees that existing investments in BEP-007 agents remain protected.
+The enhanced BAP-700 standard with optional Merkle tree learning provides a flexible foundation for the future of Non-Fungible Agents. By offering both simple and sophisticated development paths, the standard accommodates current needs while enabling future innovation. The cryptographically verifiable learning system ensures that agent evolution is transparent, secure, and valuable, while the backward compatibility guarantees that existing investments in BAP-700 agents remain protected.
 
-This dual-path architecture positions BEP-007 as the definitive standard for autonomous agents on the blockchain, capable of supporting everything from simple automated tasks to sophisticated AI-powered assistants that learn and evolve with their users.
+This dual-path architecture positions BAP-700 as the definitive standard for autonomous agents on the blockchain, capable of supporting everything from simple automated tasks to sophisticated AI-powered assistants that learn and evolve with their users.

@@ -1,6 +1,6 @@
-# BEP-007 Non-Fungible Agent Whitepaper
+# BAP-700 Non-Fungible Agent Whitepaper
 
-This directory contains the complete whitepaper for the BEP-007 Non-Fungible Agent standard with enhanced learning capabilities. The whitepaper is divided into multiple sections for easier navigation and maintenance.
+This directory contains the complete whitepaper for the BAP-700 Non-Fungible Agent standard with enhanced learning capabilities. The whitepaper is divided into multiple sections for easier navigation and maintenance.
 
 ## Table of Contents
 
@@ -85,7 +85,7 @@ The new [Enhanced Learning Architecture](./enhanced-learning-architecture.md) se
 **Key Features**:
 - **Cryptographic Verification**: All learning claims are verifiable through Merkle proofs
 - **Gas Efficiency**: Only 32-byte Merkle roots stored on-chain
-- **Backward Compatibility**: 100% compatibility with existing BEP-007 implementations
+- **Backward Compatibility**: 100% compatibility with existing BAP-700 implementations
 - **Optional Adoption**: Developers choose the complexity level they need
 
 **Learning Capabilities**:
@@ -195,7 +195,7 @@ const learningAgent = await agentFactory.createAgent(
 
 ## Contributing
 
-This whitepaper is a living document that evolves with the BEP-007 standard. We welcome contributions, suggestions, and feedback through the project's GitHub repository.
+This whitepaper is a living document that evolves with the BAP-700 standard. We welcome contributions, suggestions, and feedback through the project's GitHub repository.
 
 ### How to Contribute
 1. **Technical Feedback**: Review the enhanced learning architecture and provide implementation suggestions
@@ -213,4 +213,4 @@ This whitepaper is a living document that evolves with the BEP-007 standard. We 
 
 **Legend**: ✅ Completed | 🔄 In Progress | 📋 Planned
 
-The BEP-007 standard with enhanced learning capabilities represents the next evolution of blockchain-based intelligence, providing a flexible foundation that supports both immediate deployment needs and future innovation in AI-powered agents.
+The BAP-700 standard with enhanced learning capabilities represents the next evolution of blockchain-based intelligence, providing a flexible foundation that supports both immediate deployment needs and future innovation in AI-powered agents.

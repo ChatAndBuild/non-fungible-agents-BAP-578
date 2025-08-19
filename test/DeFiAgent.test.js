@@ -14,7 +14,7 @@ describe('DeFiAgent', function () {
   let user2;
   let addrs;
 
-  // Mock BEP007 token address for testing
+  // Mock BAP700 token address for testing
   const mockAgentTokenAddress = '0x1234567890123456789012345678901234567890';
 
   // DeFi agent profile data
