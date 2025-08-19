@@ -1,6 +1,6 @@
 # BAP-700: Non-Fungible Agent (NFA) Token Standard
 
-![BAP-700 Non-Fungible Agents](https://github.com/christelbuchanan/BAP700-non-fungible-agents-nfa/blob/main/NFA-ReadMe-Header.png)
+![BAP-700 Non-Fungible Agents](https://github.com/christelbuchanan/bep007-non-fungible-agents-nfa/blob/main/NFA-ReadMe-Header.png)
 
 ## Overview
 
