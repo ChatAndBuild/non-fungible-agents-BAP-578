@@ -1,14 +1,14 @@
 # BAP-700: Non-Fungible Agent (NFA) Token Standard
 
-![BAP-700 Non-Fungible Agents](https://github.com/christelbuchanan/bap700-non-fungible-agents-nfa/blob/main/NFA-ReadMe-Header.png)
+![BAP-700 Non-Fungible Agents](https://github.com/christelbuchanan/bep007-non-fungible-agents-nfa/blob/main/NFA-ReadMe-Header.png)
 
 ## Overview
 
-BAP-700 introduces Non-Fungible Agents (NFAs)—programmable, autonomous tokens that act as on-chain "agents" capable of executing tasks, evolving, and interacting with other contracts. Inspired by the iconic "007" designation for elite agents, this standard merges the uniqueness of NFTs with autonomous functionality, positioning BNB Chain as the home for decentralized automation.
+BAP-700 introduces Non-Fungible Agents (NFAs)—programmable, autonomous tokens that act as on-chain "agents" capable of executing tasks, evolving, and interacting with other contracts. This standard merges the uniqueness of NFTs with autonomous functionality, positioning BNB Chain as the home for decentralized automation.
 
 This implementation provides a complete framework for creating, managing, and governing autonomous agent tokens on the BNB Chain with **optional learning capabilities** that allow agents to evolve and improve over time.
 
-For a comprehensive technical breakdown, read the [Whitepaper](https://github.com/christelbuchanan/bap700-non-fungible-agents-nfa/tree/main/whitepaper)
+For a comprehensive technical breakdown, read the [Whitepaper](https://nfa.xyz/)
 
 ## 🚀 Enhanced Learning Capabilities
 
@@ -44,7 +44,7 @@ For advanced developers wanting truly evolving agents:
 
 ### The Need for Standardization
 
-While traditional NFTs (BAP-721) provide uniqueness and ownership, they lack the standardized interfaces needed for autonomous behavior and cross-platform agent interactions. BAP-700 addresses this gap by defining:
+While traditional NFTs (BEP-721) provide uniqueness and ownership, they lack the standardized interfaces needed for autonomous behavior and cross-platform agent interactions. BAP-700 addresses this gap by defining:
 
 1. **Consistent Agent Interfaces**: Standardized methods for action execution, state management, and logic upgrades that enable predictable interactions across platforms.
 
@@ -205,8 +205,8 @@ BAP-700 tokens include an enhanced metadata structure with:
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/bap700.git
-cd bap700
+git clone https://github.com/ChatAndBuild/non-fungible-agents-BAP700.git
+cd non-fungible-agents-BAP700
 ```
 
 2. Install dependencies:
