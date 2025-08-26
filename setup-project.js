@@ -60,7 +60,7 @@ function askQuestion(question) {
 // Main setup function
 async function setupProject() {
   log('\n====================================', 'bright');
-  log('BAP-700 Non-Fungible Agents Setup', 'bright');
+  log('BAP-578 Non-Fungible Agents Setup', 'bright');
   log('====================================\n', 'bright');
 
   // Step 1: Check Node.js version

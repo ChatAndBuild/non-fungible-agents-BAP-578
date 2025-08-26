@@ -1,21 +1,21 @@
 # Tokenomics
 
-The BAP-700 standard implements a comprehensive tokenomics model that supports both simple and learning agents while aligning incentives across the ecosystem to ensure the protocol's long-term sustainability and growth.
+The BAP-578 standard implements a comprehensive tokenomics model that supports both simple and learning agents while aligning incentives across the ecosystem to ensure the protocol's long-term sustainability and growth.
 
 ## Core Protocol Fee Structure
 
-The protocol implements a standardized fee structure based on the BAP700Treasury contract:
+The protocol implements a standardized fee structure based on the BAP578Treasury contract:
 
 ### 1. Protocol Minting Fee
 
-**Fixed Protocol Minting Fee**: 0.01 BNB per agent minted (applies to all BAP-700 agents)
-- Automatically collected by the BAP700Treasury contract
+**Fixed Protocol Minting Fee**: 0.01 BNB per agent minted (applies to all BAP-578 agents)
+- Automatically collected by the BAP578Treasury contract
 - Distributed across three ecosystem entities:
   - **60% → NFA/ChatAndBuild Foundation** (for ongoing R&D + grants)
   - **25% → Community Treasury** (for ecosystem growth initiatives)
   - **15% → $NFA Staking Reward Pool** (to reward long-term token holders)
 
-This structure ensures that every BAP-700 agent minted generates protocol revenue for the ecosystem, creating sustainable funding for development and rewarding stakeholders.
+This structure ensures that every BAP-578 agent minted generates protocol revenue for the ecosystem, creating sustainable funding for development and rewarding stakeholders.
 
 ### 2. Agent Creation Process
 
@@ -43,7 +43,7 @@ This structure ensures that every BAP-700 agent minted generates protocol revenu
 
 ## Treasury Management and Distribution
 
-The BAP700Treasury contract provides automated fee collection and distribution:
+The BAP578Treasury contract provides automated fee collection and distribution:
 
 ### 1. Automatic Fee Distribution
 
@@ -89,7 +89,7 @@ uint256 public constant STAKING_PERCENTAGE = 1500;     // 15%
 
 ## Enhanced Learning Agent Economics
 
-The BAP700Enhanced contract introduces additional economic mechanisms for learning-capable agents:
+The BAP578Enhanced contract introduces additional economic mechanisms for learning-capable agents:
 
 ### 1. Learning Module Integration
 
@@ -140,12 +140,12 @@ struct AgentMetadata {
 
 ## Governance Economics
 
-The BAP700Governance contract implements democratic control over economic parameters:
+The BAP578Governance contract implements democratic control over economic parameters:
 
 ### 1. Governance Token Integration
 
 **Voting Power Calculation**:
-- 1 BAP-700 token = 1 vote
+- 1 BAP-578 token = 1 vote
 - Proposal creation requirements
 - Quorum thresholds for proposal execution
 - Time-locked execution for security
@@ -412,4 +412,4 @@ The agent creation process is managed through factory contracts with standardize
 - Market expansion initiatives
 - Technology licensing deals
 
-This enhanced tokenomics model ensures sustainable growth while providing value to all ecosystem participants. The combination of fixed protocol fees, learning-based value creation, and democratic governance creates a robust economic foundation for the BAP-700 ecosystem's long-term success.
+This enhanced tokenomics model ensures sustainable growth while providing value to all ecosystem participants. The combination of fixed protocol fees, learning-based value creation, and democratic governance creates a robust economic foundation for the BAP-578 ecosystem's long-term success.

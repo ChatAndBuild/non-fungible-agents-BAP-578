@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title IBAP700 - Interface for Non-Fungible Agent (NFA) tokens
- * @dev This interface defines the core functionality for BAP-700 compliant tokens
+ * @title IBAP578 - Interface for Non-Fungible Agent (NFA) tokens
+ * @dev This interface defines the core functionality for BAP-578 compliant tokens
  */
-interface IBAP700 {
+interface IBAP578 {
     /**
      * @dev Enum representing the current status of an agent
      */

@@ -1,24 +1,24 @@
-# BAP-700 Contract Documentation
+# BAP-578 Contract Documentation
 
-This document provides detailed documentation for the key contracts in the BAP-700 Non-Fungible Agent (NFA) standard. It explains the purpose, functionality, and usage of each contract.
+This document provides detailed documentation for the key contracts in the BAP-578 Non-Fungible Agent (NFA) standard. It explains the purpose, functionality, and usage of each contract.
 
 ## Table of Contents
 
-1. [BAP700.sol](#bap700sol)
+1. [BAP578.sol](#bap578sol)
 2. [AgentFactory.sol](#agentfactorysol)
-3. [BAP700Governance.sol](#bap700governancesol)
+3. [BAP578Governance.sol](#bap578governancesol)
 4. [ExperienceModuleRegistry.sol](#experiencemoduleregistrysol)
 5. [VaultPermissionManager.sol](#vaultpermissionmanagersol)
 6. [CircuitBreaker.sol](#circuitbreakersol)
-7. [BAP700Treasury.sol](#bap700treasurysol)
+7. [BAP578Treasury.sol](#bap578treasurysol)
 8. [Template Contracts](#template-contracts)
 
-## BAP700.sol
+## BAP578.sol
 
 The core contract implementing the Non-Fungible Agent (NFA) token standard.
 
 ### Purpose
-BAP700.sol extends ERC-721 to create a token standard specifically designed for autonomous agents. It provides functionality for agent creation, state management, action execution, and metadata handling.
+BAP578.sol extends ERC-721 to create a token standard specifically designed for autonomous agents. It provides functionality for agent creation, state management, action execution, and metadata handling.
 
 ### Key Features
 - Agent creation with extended metadata
@@ -44,12 +44,12 @@ const extendedMetadata = {
   persona: "Strategic crypto analyst",
   experience: "crypto intelligence, FUD scanner",
   voiceHash: "bafkreigh2akiscaildc...",
-  animationURI: "ipfs://Qm.../nfa700_intro.mp4",
-  vaultURI: "ipfs://Qm.../nfa700_vault.json",
+  animationURI: "ipfs://Qm.../nfa578_intro.mp4",
+  vaultURI: "ipfs://Qm.../nfa578_vault.json",
   vaultHash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("vault_content"))
 };
 
-const tokenId = await bap700.createAgent(
+const tokenId = await bap578.createAgent(
   ownerAddress,
   logicAddress,
   "ipfs://metadata-uri",
@@ -57,11 +57,11 @@ const tokenId = await bap700.createAgent(
 );
 
 // Fund the agent
-await bap700.fundAgent(tokenId, { value: ethers.utils.parseEther("0.1") });
+await bap578.fundAgent(tokenId, { value: ethers.utils.parseEther("0.1") });
 
 // Execute an action
 const data = logicContract.interface.encodeFunctionData("performAction", [param1, param2]);
-await bap700.executeAction(tokenId, data);
+await bap578.executeAction(tokenId, data);
 ```
 
 ## AgentFactory.sol
@@ -77,7 +77,7 @@ AgentFactory.sol provides a standardized way to create new agent contracts with 
 - Version tracking for templates
 
 ### Key Functions
-- `createAgent(string memory name, string memory symbol, address logicAddress, string memory metadataURI, IBAP700.AgentMetadata memory extendedMetadata)`: Creates a new agent with extended metadata
+- `createAgent(string memory name, string memory symbol, address logicAddress, string memory metadataURI, IBAP578.AgentMetadata memory extendedMetadata)`: Creates a new agent with extended metadata
 - `approveTemplate(address template, string memory category, string memory version)`: Approves a new template
 - `revokeTemplate(address template)`: Revokes approval for a template
 - `getLatestTemplate(string memory category)`: Gets the latest template for a category
@@ -102,12 +102,12 @@ const agentCreatedEvent = receipt.events.find(e => e.event === "AgentCreated");
 const agentAddress = agentCreatedEvent.args.agent;
 ```
 
-## BAP700Governance.sol
+## BAP578Governance.sol
 
-Governance contract for the BAP-700 ecosystem.
+Governance contract for the BAP-578 ecosystem.
 
 ### Purpose
-BAP700Governance.sol manages the governance of the BAP-700 ecosystem, including protocol upgrades, parameter changes, and emergency actions.
+BAP578Governance.sol manages the governance of the BAP-578 ecosystem, including protocol upgrades, parameter changes, and emergency actions.
 
 ### Key Features
 - Proposal creation and voting
@@ -161,7 +161,7 @@ ExperienceModuleRegistry.sol allows agents to register approved external experie
 ```javascript
 // Create module metadata
 const moduleMetadata = JSON.stringify({
-  context_id: "nfa700-experience-001",
+  context_id: "nfa578-experience-001",
   owner: ownerAddress,
   created: new Date().toISOString(),
   persona: "Strategic crypto analyst"
@@ -224,7 +224,7 @@ await vaultManager.delegateAccess(
 
 ## CircuitBreaker.sol
 
-Emergency shutdown mechanism for the BAP-700 ecosystem.
+Emergency shutdown mechanism for the BAP-578 ecosystem.
 
 ### Purpose
 CircuitBreaker.sol provides a way to pause the system in case of emergencies, protecting users and their assets from potential exploits.
@@ -252,12 +252,12 @@ await circuitBreaker.setContractPause(vulnerableContract.address, true);
 const isPaused = await circuitBreaker.isContractPaused(someContract.address);
 ```
 
-## BAP700Treasury.sol
+## BAP578Treasury.sol
 
-Treasury management for the BAP-700 ecosystem.
+Treasury management for the BAP-578 ecosystem.
 
 ### Purpose
-BAP700Treasury.sol manages the funds allocated for ecosystem development, grants, and other initiatives.
+BAP578Treasury.sol manages the funds allocated for ecosystem development, grants, and other initiatives.
 
 ### Key Features
 - Fund allocation and distribution
@@ -290,7 +290,7 @@ await treasury.executeAllocation(allocationId);
 
 ## Template Contracts
 
-The BAP-700 ecosystem includes several template contracts for creating specialized agent types.
+The BAP-578 ecosystem includes several template contracts for creating specialized agent types.
 
 ### DeFiAgent.sol
 

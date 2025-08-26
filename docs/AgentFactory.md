@@ -2,7 +2,7 @@
 
 ## **🔍 Quick Overview**
 
-**AgentFactory.sol** is the central hub for creating and managing AI agents in the BAP700 ecosystem. Think of it as the "agent creation factory" that:
+**AgentFactory.sol** is the central hub for creating and managing AI agents in the BAP578 ecosystem. Think of it as the "agent creation factory" that:
 
 - **Creates new AI agents** with different capabilities (simple or learning-enabled)
 - **Manages templates** for different types of agents (like blueprints)
@@ -37,7 +37,7 @@
                   │ Creates & Configures
                   ▼
 ┌─────────────────────────────────────────┐
-│          BAP700Enhanced                 │
+│          BAP578Enhanced                 │
 │        (Individual Agents)              │
 ├─────────────────────────────────────────┤
 │ • Agent Token Implementation            │
@@ -48,7 +48,7 @@
                   ▲
                   │ Governed by
 ┌─────────────────────────────────────────┐
-│       BAP700GovernanceEnhanced          │
+│       BAP578GovernanceEnhanced          │
 │           (The Approver)                │
 ├─────────────────────────────────────────┤
 │ • Template Approval                     │
@@ -60,7 +60,7 @@
 **Relationship Flow:**
 1. **Governance** approves templates and learning modules
 2. **Factory** creates agents using approved components
-3. **BAP700Enhanced** executes as individual agent instances
+3. **BAP578Enhanced** executes as individual agent instances
 
 ---
 
@@ -116,7 +116,7 @@ struct AgentCreationParams {
     string symbol;                  // Agent collection symbol
     address logicAddress;           // Logic contract template
     string metadataURI;            // Basic metadata URI
-    IBAP700.AgentMetadata extendedMetadata; // Enhanced metadata
+    IBAP578.AgentMetadata extendedMetadata; // Enhanced metadata
     bool enableLearning;           // Learning capability flag
     address learningModule;        // Learning module address
     bytes32 initialLearningRoot;   // Initial learning tree root
@@ -507,7 +507,7 @@ The AgentFactory is designed for extensibility with planned features:
 
 ## **📝 Summary**
 
-**AgentFactory.sol** serves as the **central hub for AI agent creation and management** in the BAP700 ecosystem, providing:
+**AgentFactory.sol** serves as the **central hub for AI agent creation and management** in the BAP578 ecosystem, providing:
 
 ✅ **Streamlined Agent Creation** - Simple and advanced creation patterns  
 ✅ **Template Management** - Versioned, categorized agent templates  
@@ -515,7 +515,7 @@ The AgentFactory is designed for extensibility with planned features:
 ✅ **Comprehensive Analytics** - Real-time performance monitoring  
 ✅ **Batch Operations** - Efficient multi-agent deployment  
 ✅ **Security & Governance** - Approved templates and modules only  
-✅ **Backward Compatibility** - Supports existing BAP700 patterns  
+✅ **Backward Compatibility** - Supports existing BAP578 patterns  
 ✅ **Future-Proof Architecture** - Extensible and upgradeable design  
 
 The factory makes it easy to deploy sophisticated AI agents at scale while maintaining security, quality, and performance standards across the entire ecosystem.

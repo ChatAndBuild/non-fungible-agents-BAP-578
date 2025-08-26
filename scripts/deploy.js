@@ -1,12 +1,12 @@
 const { ethers } = require('hardhat');
 
 async function main() {
-  console.log('Deploying BAP-700 Non-Fungible Agent contracts...');
+  console.log('Deploying BAP-578 Non-Fungible Agent contracts...');
 
   // Get the contract factories
   const CircuitBreaker = await ethers.getContractFactory('CircuitBreaker');
-  const BAP700Treasury = await ethers.getContractFactory('BAP700Treasury');
-  const BAP700Governance = await ethers.getContractFactory('BAP700Governance');
+  const BAP578Treasury = await ethers.getContractFactory('BAP578Treasury');
+  const BAP578Governance = await ethers.getContractFactory('BAP578Governance');
   const ExperienceModuleRegistry = await ethers.getContractFactory('ExperienceModuleRegistry');
   const VaultPermissionManager = await ethers.getContractFactory('VaultPermissionManager');
   const AgentFactory = await ethers.getContractFactory('AgentFactory');
@@ -18,16 +18,16 @@ async function main() {
   console.log('CircuitBreaker deployed to:', circuitBreaker.address);
 
   // Deploy Treasury
-  console.log('Deploying BAP700Treasury...');
-  const treasury = await BAP700Treasury.deploy();
+  console.log('Deploying BAP578Treasury...');
+  const treasury = await BAP578Treasury.deploy();
   await treasury.deployed();
-  console.log('BAP700Treasury deployed to:', treasury.address);
+  console.log('BAP578Treasury deployed to:', treasury.address);
 
   // Deploy Governance
-  console.log('Deploying BAP700Governance...');
-  const governance = await BAP700Governance.deploy(circuitBreaker.address, treasury.address);
+  console.log('Deploying BAP578Governance...');
+  const governance = await BAP578Governance.deploy(circuitBreaker.address, treasury.address);
   await governance.deployed();
-  console.log('BAP700Governance deployed to:', governance.address);
+  console.log('BAP578Governance deployed to:', governance.address);
 
   // Set governance as admin in CircuitBreaker
   console.log('Setting governance as admin in CircuitBreaker...');
@@ -86,8 +86,8 @@ async function main() {
   console.log('----------------------------------------------------');
   console.log('Contract Addresses:');
   console.log('CircuitBreaker:', circuitBreaker.address);
-  console.log('BAP700Treasury:', treasury.address);
-  console.log('BAP700Governance:', governance.address);
+  console.log('BAP578Treasury:', treasury.address);
+  console.log('BAP578Governance:', governance.address);
   console.log('ExperienceModuleRegistry:', experienceRegistry.address);
   console.log('VaultPermissionManager:', vaultManager.address);
   console.log('AgentFactory:', agentFactory.address);

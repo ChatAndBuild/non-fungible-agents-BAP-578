@@ -1,10 +1,10 @@
 # Token Standard Architecture
 
-BAP-700 defines an enhanced metadata structure for NFTs that supports both traditional static agents and sophisticated learning-enabled agents with cryptographically verifiable evolution.
+BAP-578 defines an enhanced metadata structure for NFTs that supports both traditional static agents and sophisticated learning-enabled agents with cryptographically verifiable evolution.
 
 ## Enhanced Dual-Path Architecture
 
-The enhanced BAP-700 standard provides two distinct development paths while maintaining full backward compatibility:
+The enhanced BAP-578 standard provides two distinct development paths while maintaining full backward compatibility:
 
 ### Path 1: Simple Agents (JSON Light Experience)
 Traditional NFT functionality with agent-specific extensions:
@@ -24,7 +24,7 @@ Advanced agents with cryptographically verifiable learning capabilities:
 
 ## Enhanced Metadata Structure
 
-The enhanced metadata structure extends the original BAP-700 specification with learning-specific fields:
+The enhanced metadata structure extends the original BAP-578 specification with learning-specific fields:
 
 ### Core Metadata Fields
 
@@ -82,7 +82,7 @@ The enhanced metadata structure extends the original BAP-700 specification with 
 
 ## Standardized Component Architecture
 
-The enhanced BAP-700 standard carefully balances which components belong on-chain versus off-chain, with special considerations for learning data:
+The enhanced BAP-578 standard carefully balances which components belong on-chain versus off-chain, with special considerations for learning data:
 
 ### On-Chain Components
 
@@ -118,13 +118,13 @@ This enhanced hybrid approach ensures that:
 
 ## Enhanced Standardized Interfaces
 
-BAP-700 defines several enhanced interfaces that all compliant tokens must implement:
+BAP-578 defines several enhanced interfaces that all compliant tokens must implement:
 
 ### 1. Core Agent Interface (Enhanced)
 
 ```solidity
-interface IBAP700Enhanced {
-    // Original BAP-700 functions
+interface IBAP578Enhanced {
+    // Original BAP-578 functions
     function executeAction(uint256 tokenId, bytes calldata actionData) external returns (bytes memory);
     function getAgentMetadata(uint256 tokenId) external view returns (EnhancedAgentMetadata memory);
     function updateMetadata(uint256 tokenId, EnhancedAgentMetadata calldata newMetadata) external;
@@ -409,7 +409,7 @@ function verifyFederatedLearning(
 #### Metadata Portability
 ```json
 {
-  "bap700_version": "2.0",
+  "bap578_version": "2.0",
   "compatibility": {
     "simple_agents": true,
     "learning_agents": true,
@@ -501,4 +501,4 @@ struct CompressedLearningUpdate {
 - **Incremental Updates**: Update only changed branches
 - **Compression**: Use efficient encoding for tree data
 
-This enhanced token standard architecture provides a comprehensive foundation for both simple and sophisticated learning agents, ensuring backward compatibility while enabling advanced AI capabilities through cryptographically verifiable learning systems. The dual-path approach allows developers to choose the appropriate level of complexity for their use cases while maintaining the security and standardization benefits of the BAP-700 standard.
+This enhanced token standard architecture provides a comprehensive foundation for both simple and sophisticated learning agents, ensuring backward compatibility while enabling advanced AI capabilities through cryptographically verifiable learning systems. The dual-path approach allows developers to choose the appropriate level of complexity for their use cases while maintaining the security and standardization benefits of the BAP-578 standard.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Experience Module Registry is a critical component of the BAP-700 Non-Fungible Agent (NFA) ecosystem that allows agents to register and manage external experience sources. This registry provides a secure and flexible way to extend an agent's capabilities without modifying the core contract.
+The Experience Module Registry is a critical component of the BAP-578 Non-Fungible Agent (NFA) ecosystem that allows agents to register and manage external experience sources. This registry provides a secure and flexible way to extend an agent's capabilities without modifying the core contract.
 
 ## Purpose
 
@@ -20,8 +20,8 @@ The ExperienceModuleRegistry is implemented as an upgradeable contract with the 
 
 ```solidity
 contract ExperienceModuleRegistry is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    // BAP700 token contract
-    BAP700 public bap700Token;
+    // BAP578 token contract
+    BAP578 public bap578Token;
     
     // Mapping from token ID to registered experience modules
     mapping(uint256 => address[]) private _registeredModules;
@@ -38,7 +38,7 @@ contract ExperienceModuleRegistry is Initializable, OwnableUpgradeable, Reentran
     event ModuleMetadataUpdated(uint256 indexed tokenId, address indexed moduleAddress, string metadata);
     
     // Functions
-    function initialize(address _bap700Token) public initializer;
+    function initialize(address _bap578Token) public initializer;
     function registerModule(uint256 tokenId, address moduleAddress, string memory metadata, bytes memory signature) external nonReentrant;
     function setModuleApproval(uint256 tokenId, address moduleAddress, bool approved) external;
     function updateModuleMetadata(uint256 tokenId, address moduleAddress, string memory metadata) external;
@@ -74,7 +74,7 @@ function setModuleApproval(
     bool approved
 ) external {
     // Only the token owner can approve or revoke modules
-    require(bap700Token.ownerOf(tokenId) == msg.sender, "ExperienceModuleRegistry: not token owner");
+    require(bap578Token.ownerOf(tokenId) == msg.sender, "ExperienceModuleRegistry: not token owner");
     
     _approvedModules[tokenId][moduleAddress] = approved;
     
@@ -93,7 +93,7 @@ function updateModuleMetadata(
     string memory metadata
 ) external {
     // Only the token owner can update module metadata
-    require(bap700Token.ownerOf(tokenId) == msg.sender, "ExperienceModuleRegistry: not token owner");
+    require(bap578Token.ownerOf(tokenId) == msg.sender, "ExperienceModuleRegistry: not token owner");
     require(_approvedModules[tokenId][moduleAddress], "ExperienceModuleRegistry: module not approved");
     
     _moduleMetadata[tokenId][moduleAddress] = metadata;
@@ -108,7 +108,7 @@ Experience modules are structured as JSON documents that include structured expe
 
 ```json
 {
-  "context_id": "nfa700-experience-001",
+  "context_id": "nfa578-experience-001",
   "owner": "0xUserWalletAddress",
   "created": "2025-05-12T10:00:00Z",
   "persona": "Strategic crypto analyst",
@@ -141,7 +141,7 @@ Experience modules are structured as JSON documents that include structured expe
 ```javascript
 // Create module metadata
 const moduleMetadata = JSON.stringify({
-  context_id: "nfa700-experience-001",
+  context_id: "nfa578-experience-001",
   owner: ownerAddress,
   created: new Date().toISOString(),
   persona: "Strategic crypto analyst",
@@ -209,9 +209,9 @@ Only the agent owner can approve or revoke modules and update module metadata. T
 
 The registry uses OpenZeppelin's ReentrancyGuard to protect against reentrancy attacks during module registration.
 
-## Integration with BAP-700 Ecosystem
+## Integration with BAP-578 Ecosystem
 
-The Experience Module Registry integrates with the BAP-700 ecosystem in the following ways:
+The Experience Module Registry integrates with the BAP-578 ecosystem in the following ways:
 
 1. **Agent Creation**: When an agent is created, it can register experience modules to extend its capabilities.
 2. **Agent Logic**: Agent logic contracts can query the registry to access registered modules.
@@ -229,4 +229,4 @@ The Experience Module Registry is designed to be extensible and can be enhanced 
 
 ## Conclusion
 
-The Experience Module Registry is a powerful component of the BAP-700 ecosystem that enables agents to extend their capabilities through external experience sources. By providing a secure and flexible way to register and manage experience modules, the registry enables agents to evolve and adapt to new use cases without requiring changes to the core contract.
+The Experience Module Registry is a powerful component of the BAP-578 ecosystem that enables agents to extend their capabilities through external experience sources. By providing a secure and flexible way to register and manage experience modules, the registry enables agents to evolve and adapt to new use cases without requiring changes to the core contract.

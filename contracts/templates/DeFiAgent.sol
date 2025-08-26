@@ -17,7 +17,7 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    // The address of the BAP700 token that owns this logic
+    // The address of the BAP578 token that owns this logic
     address public agentToken;
 
     // Learning module integration
@@ -128,7 +128,7 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
 
     /**
      * @dev Initializes the DeFi agent contract
-     * @param _agentToken The address of the BAP700 token
+     * @param _agentToken The address of the BAP578 token
      * @param _name The agent's name
      * @param _tradingStyle The trading style (Conservative, Aggressive, Balanced)
      * @param _riskTolerance Risk tolerance level (0-100)

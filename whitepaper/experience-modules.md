@@ -1,10 +1,10 @@
 # Experience Modules
 
-Experience Modules represent a fundamental component of the BAP-700 standard, enabling agents to maintain rich, evolving experience while optimizing for gas efficiency, privacy, and interoperability. The standardized experience architecture supports both traditional static experience and advanced learning-enabled experience systems, providing a flexible foundation for diverse agent capabilities.
+Experience Modules represent a fundamental component of the BAP-578 standard, enabling agents to maintain rich, evolving experience while optimizing for gas efficiency, privacy, and interoperability. The standardized experience architecture supports both traditional static experience and advanced learning-enabled experience systems, providing a flexible foundation for diverse agent capabilities.
 
 ## Standardized Experience Architecture
 
-The BAP-700 standard defines a comprehensive, layered approach to agent experience that balances on-chain security with off-chain flexibility:
+The BAP-578 standard defines a comprehensive, layered approach to agent experience that balances on-chain security with off-chain flexibility:
 
 ### 1. Multi-Layer Experience Structure
 
@@ -681,6 +681,6 @@ Expanding experience across blockchain networks:
 - Universal experience addressing
 - Protocol-agnostic experience access
 
-The Experience Modules framework of BAP-700 provides a comprehensive, secure, and scalable foundation for agent experience that supports both traditional static experience and advanced learning capabilities. This standardized approach ensures that all BAP-700 agents can maintain rich, evolving experience while preserving user privacy and control.
+The Experience Modules framework of BAP-578 provides a comprehensive, secure, and scalable foundation for agent experience that supports both traditional static experience and advanced learning capabilities. This standardized approach ensures that all BAP-578 agents can maintain rich, evolving experience while preserving user privacy and control.
 
-By supporting multiple experience types and providing clear upgrade paths, the framework enables agents to start with simple experience systems and evolve to sophisticated learning architectures as needed. This flexibility, combined with robust security and privacy protections, makes BAP-700 the ideal foundation for the next generation of intelligent, experience-enabled digital agents.
+By supporting multiple experience types and providing clear upgrade paths, the framework enables agents to start with simple experience systems and evolve to sophisticated learning architectures as needed. This flexibility, combined with robust security and privacy protections, makes BAP-578 the ideal foundation for the next generation of intelligent, experience-enabled digital agents.

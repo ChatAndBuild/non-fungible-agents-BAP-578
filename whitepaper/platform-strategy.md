@@ -1,6 +1,6 @@
 # Platform Strategy
 
-The BAP-700 standard is designed to support a vibrant ecosystem of applications, services, and integrations built around Non-Fungible Agents with enhanced learning capabilities.
+The BAP-578 standard is designed to support a vibrant ecosystem of applications, services, and integrations built around Non-Fungible Agents with enhanced learning capabilities.
 
 ## Enhanced Learning Architecture Benefits
 
@@ -22,7 +22,7 @@ The introduction of optional Merkle tree-based learning creates unprecedented op
 
 ### 2. Standardization Benefits
 
-The standardized nature of BAP-700's enhanced learning creates several strategic advantages:
+The standardized nature of BAP-578's enhanced learning creates several strategic advantages:
 
 **Reduced Integration Costs**: Applications can integrate once with the standard rather than with multiple proprietary implementations, supporting both simple and learning agents seamlessly.
 
@@ -150,7 +150,7 @@ The go-to-market strategy leverages the benefits of the dual-path architecture:
 
 ## Long-Term Vision
 
-The long-term vision for BAP-700 with enhanced learning is to become the foundational standard for on-chain intelligence:
+The long-term vision for BAP-578 with enhanced learning is to become the foundational standard for on-chain intelligence:
 
 ### 1. Cross-Chain Intelligence Network
 
@@ -250,4 +250,4 @@ The long-term vision for BAP-700 with enhanced learning is to become the foundat
 - Strong governance model ensuring long-term stability
 - Innovation pipeline maintaining competitive edge
 
-This enhanced platform strategy positions BAP-700 as the definitive standard for intelligent agents on the blockchain, capable of supporting the full spectrum from simple automation to sophisticated AI-powered assistants that learn and evolve with their users. The dual-path architecture ensures immediate utility while enabling future innovation, creating a sustainable foundation for the next generation of blockchain-based intelligence.
+This enhanced platform strategy positions BAP-578 as the definitive standard for intelligent agents on the blockchain, capable of supporting the full spectrum from simple automation to sophisticated AI-powered assistants that learn and evolve with their users. The dual-path architecture ensures immediate utility while enabling future innovation, creating a sustainable foundation for the next generation of blockchain-based intelligence.

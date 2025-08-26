@@ -1,17 +1,17 @@
 # Governance Model
 
-The BAP-700 standard includes a comprehensive governance framework designed to ensure the protocol's long-term sustainability, security, and evolution while supporting both standard and learning-enabled agents. This governance model balances innovation with stability, enabling the ecosystem to adapt to emerging technologies while maintaining trust and security.
+The BAP-578 standard includes a comprehensive governance framework designed to ensure the protocol's long-term sustainability, security, and evolution while supporting both standard and learning-enabled agents. This governance model balances innovation with stability, enabling the ecosystem to adapt to emerging technologies while maintaining trust and security.
 
 ## Standardized Governance Architecture
 
 The governance model is implemented through a multi-layered architecture that addresses different aspects of the protocol:
 
-### 1. Core Protocol Governance (BAP700Governance)
+### 1. Core Protocol Governance (BAP578Governance)
 
 The primary governance contract manages protocol-level decisions:
 
 ```solidity
-contract BAP700Governance {
+contract BAP578Governance {
     struct Proposal {
         uint256 id;
         address proposer;
@@ -90,7 +90,7 @@ The governance model includes multiple tiers of authority with different respons
 
 ### 3. Protocol Governance (Tier 3)
 **Purpose**: Community-driven protocol evolution
-**Composition**: All BAP-700 token holders and ecosystem participants
+**Composition**: All BAP-578 token holders and ecosystem participants
 **Powers**:
 - Vote on protocol parameters and upgrades
 - Approve new agent templates
@@ -228,7 +228,7 @@ enum ThreatLevel {
 Balanced approach to voting power allocation:
 
 #### Token-Based Voting (60% weight)
-- Based on BAP-700 token holdings
+- Based on BAP-578 token holdings
 - Includes both standard and learning agents
 - Weighted by agent activity and engagement
 
@@ -454,6 +454,6 @@ Evolution toward fully autonomous governance:
 - Collective intelligence integration
 - Distributed consensus mechanisms
 
-The BAP-700 governance model provides a robust, flexible, and secure framework for managing the evolution of the Non-Fungible Agent ecosystem. By balancing innovation with stability, community participation with expert guidance, and transparency with security, this governance model ensures that the protocol can adapt and grow while maintaining the trust and confidence of all ecosystem participants.
+The BAP-578 governance model provides a robust, flexible, and secure framework for managing the evolution of the Non-Fungible Agent ecosystem. By balancing innovation with stability, community participation with expert guidance, and transparency with security, this governance model ensures that the protocol can adapt and grow while maintaining the trust and confidence of all ecosystem participants.
 
-The specialized governance mechanisms for learning capabilities ensure that the advancement of AI within the ecosystem is managed responsibly, with appropriate safeguards and community oversight. This comprehensive approach to governance positions BAP-700 as a sustainable, community-driven standard that can evolve with the rapidly advancing field of artificial intelligence while maintaining its core principles of security, decentralization, and user empowerment.
+The specialized governance mechanisms for learning capabilities ensure that the advancement of AI within the ecosystem is managed responsibly, with appropriate safeguards and community oversight. This comprehensive approach to governance positions BAP-578 as a sustainable, community-driven standard that can evolve with the rapidly advancing field of artificial intelligence while maintaining its core principles of security, decentralization, and user empowerment.

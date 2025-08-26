@@ -2,7 +2,7 @@
 
 ## Overview
 
-The DeFi Agent is a specialized template for creating DeFi-focused agents with learning capabilities that serve as personalized DeFi assistants and portfolio managers. It extends the BAP-700 Non-Fungible Agent standard with DeFi-specific functionality including trading, portfolio management, risk assessment, and adaptive learning.
+The DeFi Agent is a specialized template for creating DeFi-focused agents with learning capabilities that serve as personalized DeFi assistants and portfolio managers. It extends the BAP-578 Non-Fungible Agent standard with DeFi-specific functionality including trading, portfolio management, risk assessment, and adaptive learning.
 
 ## Architecture
 
@@ -266,7 +266,7 @@ await defiAgent.emergencyStop("Market crash detected");
 
 ### Access Control
 - **Owner-only functions**: All critical operations require owner authorization
-- **Agent token integration**: Compatible with BAP-700 agent token ownership
+- **Agent token integration**: Compatible with BAP-578 agent token ownership
 - **Emergency controls**: Circuit breakers for risk management
 
 ### Risk Management
@@ -280,7 +280,7 @@ await defiAgent.emergencyStop("Market crash detected");
 - **Rate limiting**: Prevents spam and gaming of learning system
 - **Privacy protection**: Learning data access is controlled and auditable
 
-## Integration with BAP-700 Ecosystem
+## Integration with BAP-578 Ecosystem
 
 ### Agent Factory Integration
 The DeFi Agent can be deployed through the AgentFactory with template approval:
@@ -304,7 +304,7 @@ const agent = await agentFactory.createAgent(
 ```
 
 ### Learning Module Compatibility
-Compatible with all approved learning modules in the BAP-700 ecosystem:
+Compatible with all approved learning modules in the BAP-578 ecosystem:
 
 - **MerkleTreeLearning**: Default cryptographically verifiable learning
 - **Custom Learning Modules**: Extensible for specialized DeFi strategies

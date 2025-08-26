@@ -1,10 +1,10 @@
 # Smart Contract Architecture
 
-The BAP-700 token standard builds upon ERC-721 to introduce a composable framework for intelligent, evolving agents with enhanced learning capabilities. The smart contract architecture has been designed to accommodate both static NFT functionality and dynamic extensions critical for agent behavior, media, experience, and cryptographically verifiable learning progression.
+The BAP-578 token standard builds upon ERC-721 to introduce a composable framework for intelligent, evolving agents with enhanced learning capabilities. The smart contract architecture has been designed to accommodate both static NFT functionality and dynamic extensions critical for agent behavior, media, experience, and cryptographically verifiable learning progression.
 
 ## Enhanced Architecture Overview
 
-BAP-700 maintains ERC-721 compatibility by inheriting core functionality: unique token IDs, safe transfers, ownership tracking, and metadata URI referencing. This ensures NFAs remain interoperable with existing NFT infrastructure and marketplaces while supporting advanced learning capabilities.
+BAP-578 maintains ERC-721 compatibility by inheriting core functionality: unique token IDs, safe transfers, ownership tracking, and metadata URI referencing. This ensures NFAs remain interoperable with existing NFT infrastructure and marketplaces while supporting advanced learning capabilities.
 
 The enhanced architecture provides two distinct development paths:
 
@@ -26,7 +26,7 @@ Advanced architecture with cryptographically verifiable learning:
 
 The extended metadata schema includes both original and learning-specific fields:
 
-### Core BAP-700 Fields
+### Core BAP-578 Fields
 - **persona**: a JSON-encoded string representing character traits, style, tone, and behavioral intent.
 - **experience**: a short summary string describing the agent's default role or purpose.
 - **voiceHash**: a reference ID to a stored audio profile (e.g., via IPFS or Arweave).
@@ -40,7 +40,7 @@ The extended metadata schema includes both original and learning-specific fields
 
 ```solidity
 struct EnhancedAgentMetadata {
-    // Original BAP-700 fields
+    // Original BAP-578 fields
     string persona;           // JSON-encoded character traits
     string experience;            // Agent's role/purpose summary
     string voiceHash;         // Audio profile reference
@@ -59,15 +59,15 @@ struct EnhancedAgentMetadata {
 
 ## Standardized Contract Components
 
-The enhanced BAP-700 standard consists of the following core components:
+The enhanced BAP-578 standard consists of the following core components:
 
 ### Core Contracts
 
-#### **BAP700Enhanced.sol**: The Enhanced Main NFT Contract
+#### **BAP578Enhanced.sol**: The Enhanced Main NFT Contract
 The primary contract implementing the enhanced agent token standard with dual-path support:
 
 ```solidity
-contract BAP700Enhanced is ERC721, IBAP700Enhanced {
+contract BAP578Enhanced is ERC721, IBAP578Enhanced {
     mapping(uint256 => EnhancedAgentMetadata) public agentMetadata;
     mapping(uint256 => address) public agentLogic;
     mapping(uint256 => bool) public learningEnabled;
@@ -167,7 +167,7 @@ contract AgentFactory {
         string symbol;
         address logicAddress;
         string metadataURI;
-        IBAP700.AgentMetadata extendedMetadata;
+        IBAP578.AgentMetadata extendedMetadata;
         bool enableLearning;
         address learningModule;
         bytes32 initialLearningRoot;
@@ -232,7 +232,7 @@ contract AgentFactory {
         string memory symbol,
         address logicAddress,
         string memory metadataURI,
-        IBAP700.AgentMetadata memory extendedMetadata
+        IBAP578.AgentMetadata memory extendedMetadata
     ) external returns (address agent);
 
     function enableAgentLearning(
@@ -297,11 +297,11 @@ contract AgentFactory {
 }
 ```
 
-#### **BAP700Governance.sol**: Enhanced Governance with Learning Parameters
+#### **BAP578Governance.sol**: Enhanced Governance with Learning Parameters
 Governance contract for protocol-level decisions including learning module approval and parameters:
 
 ```solidity
-contract BAP700Governance {
+contract BAP578Governance {
     struct Proposal {
         uint256 id;
         address proposer;
@@ -316,7 +316,7 @@ contract BAP700Governance {
     }
 
     function governanceName() external view returns (string memory);
-    function bap700Token() external view returns (BAP700);
+    function bap578Token() external view returns (BAP578);
     function treasury() external view returns (address);
     function agentFactory() external view returns (address);
     function votingPeriod() external view returns (uint256);
@@ -350,7 +350,7 @@ contract BAP700Governance {
 
     function initialize(
         string memory name,
-        address payable _bap700Token,
+        address payable _bap578Token,
         address _owner,
         uint256 _votingPeriod,
         uint256 _quorumPercentage,
@@ -381,11 +381,11 @@ contract BAP700Governance {
 }
 ```
 
-#### **BAP700Treasury.sol**: Enhanced Treasury with Learning Incentives
+#### **BAP578Treasury.sol**: Enhanced Treasury with Learning Incentives
 Treasury management for fee collection and distribution, including learning-based rewards:
 
 ```solidity
-contract BAP700Treasury {
+contract BAP578Treasury {
     struct LearningRewards {
         uint256 totalRewardsPool;
         uint256 rewardsPerMilestone;
@@ -485,12 +485,12 @@ contract VaultPermissionManager {
 
 ### Enhanced Interfaces
 
-#### **IBAP700Enhanced.sol**: Enhanced Interface with Learning Support
-Interface defining the core functionality for enhanced BAP-700 compliant tokens:
+#### **IBAP578Enhanced.sol**: Enhanced Interface with Learning Support
+Interface defining the core functionality for enhanced BAP-578 compliant tokens:
 
 ```solidity
-interface IBAP700Enhanced is IERC721 {
-    // Original BAP-700 functions
+interface IBAP578Enhanced is IERC721 {
+    // Original BAP-578 functions
     function executeAction(uint256 tokenId, bytes calldata actionData) external returns (bytes memory);
     function getAgentMetadata(uint256 tokenId) external view returns (EnhancedAgentMetadata memory);
     function updateMetadata(uint256 tokenId, EnhancedAgentMetadata calldata newMetadata) external;
@@ -545,7 +545,7 @@ The standard includes enhanced template implementations for common agent types w
 Template for DeFi-focused agents with adaptive trading strategies:
 
 ```solidity
-contract DeFiAgent is BAP700Enhanced {
+contract DeFiAgent is BAP578Enhanced {
     struct TradingExperience {
         mapping(address => uint256) tokenPerformance;
         mapping(bytes32 => uint256) strategySuccess;
@@ -575,7 +575,7 @@ contract DeFiAgent is BAP700Enhanced {
 Template for gaming-focused agents with evolving NPCs and adaptive behavior:
 
 ```solidity
-contract GameAgent is BAP700Enhanced {
+contract GameAgent is BAP578Enhanced {
     struct GameExperience {
         mapping(bytes32 => uint256) skillLevels;
         mapping(address => uint256) playerInteractions;
@@ -596,7 +596,7 @@ contract GameAgent is BAP700Enhanced {
 Template for DAO-focused agents with adaptive governance participation:
 
 ```solidity
-contract DAOAgent is BAP700Enhanced {
+contract DAOAgent is BAP578Enhanced {
     struct GovernanceExperience {
         mapping(uint256 => bool) proposalVotes;
         mapping(bytes32 => uint256) topicExpertise;
@@ -617,7 +617,7 @@ contract DAOAgent is BAP700Enhanced {
 Template for creator-focused agents with adaptive content management:
 
 ```solidity
-contract CreatorAgent is BAP700Enhanced {
+contract CreatorAgent is BAP578Enhanced {
     struct CreativeExperience {
         mapping(bytes32 => uint256) contentPerformance;
         mapping(address => uint256) audienceEngagement;
@@ -638,7 +638,7 @@ contract CreatorAgent is BAP700Enhanced {
 Template for strategy-focused agents with adaptive market analysis:
 
 ```solidity
-contract StrategicAgent is BAP700Enhanced {
+contract StrategicAgent is BAP578Enhanced {
     struct StrategicExperience {
         mapping(bytes32 => uint256) marketPredictions;
         mapping(address => uint256) assetAnalysis;
@@ -1035,15 +1035,15 @@ function prepareCrossChainMigration(
 }
 ```
 
-## Sample Enhanced BAP-700 Metadata
+## Sample Enhanced BAP-578 Metadata
 
 ### Simple Agent Metadata
 ```json
 {
-  "name": "NFA700",
+  "name": "NFA578",
   "description": "A strategic intelligence agent specializing in crypto market analysis.",
-  "image": "ipfs://Qm.../nfa700_avatar.png",
-  "animation_url": "ipfs://Qm.../nfa700_intro.mp4",
+  "image": "ipfs://Qm.../nfa578_avatar.png",
+  "animation_url": "ipfs://Qm.../nfa578_intro.mp4",
   "voice_hash": "bafkreigh2akiscaildc...",
   "attributes": [
     {
@@ -1059,8 +1059,8 @@ function prepareCrossChainMigration(
       "value": false
     }
   ],
-  "external_url": "https://nfa.xyz/agent/nfa700",
-  "vault_uri": "ipfs://Qm.../nfa700_vault.json",
+  "external_url": "https://nfa.xyz/agent/nfa578",
+  "vault_uri": "ipfs://Qm.../nfa578_vault.json",
   "vault_hash": "0x74aef...94c3"
 }
 ```
@@ -1111,4 +1111,4 @@ function prepareCrossChainMigration(
 }
 ```
 
-This enhanced smart contract architecture provides a comprehensive foundation for both simple and learning-enabled agents, ensuring backward compatibility while enabling sophisticated AI capabilities through cryptographically verifiable learning systems. The modular design allows developers to choose the appropriate level of complexity for their use cases while maintaining the security and standardization benefits of the BAP-700 standard.
+This enhanced smart contract architecture provides a comprehensive foundation for both simple and learning-enabled agents, ensuring backward compatibility while enabling sophisticated AI capabilities through cryptographically verifiable learning systems. The modular design allows developers to choose the appropriate level of complexity for their use cases while maintaining the security and standardization benefits of the BAP-578 standard.

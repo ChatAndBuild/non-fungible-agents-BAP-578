@@ -1,7 +1,7 @@
-# BAP700 Treasury
+# BAP578 Treasury
 
 ## Overview
-The BAP700Treasury contract manages the collection, storage, and distribution of protocol fees and funds. It serves as the financial backbone of the BAP700 ecosystem, handling revenue from agent creation, upgrades, and transactions.
+The BAP578Treasury contract manages the collection, storage, and distribution of protocol fees and funds. It serves as the financial backbone of the BAP578 ecosystem, handling revenue from agent creation, upgrades, and transactions.
 
 ## Key Features
 - **Fee Collection**: Collects fees from various protocol operations
@@ -76,7 +76,7 @@ struct DistributionParams {
 - Checks-Effects-Interactions pattern to prevent reentrancy attacks
 - Governance timelock for sensitive parameter changes
 
-## Integration with BAP700 Ecosystem
+## Integration with BAP578 Ecosystem
 - Collects fees from AgentFactory for agent creation
 - Receives transaction fees from agent operations
 - Distributes rewards to $NFA token stakers
