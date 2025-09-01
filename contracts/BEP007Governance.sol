@@ -21,6 +21,9 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     // Agent factory contract
     address public agentFactory;
 
+    // Treasury contract
+    address public treasury;
+
     // Proposal counter
     CountersUpgradeable.Counter private _proposalIdCounter;
 
@@ -54,6 +57,7 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     event ProposalCanceled(uint256 indexed proposalId);
     event TreasuryUpdated(address indexed newTreasury);
     event AgentFactoryUpdated(address indexed newAgentFactory);
+    event TreasuryAddressUpdated(address indexed newTreasury);
     event VotingParametersUpdated(
         uint256 votingPeriod,
         uint256 quorumPercentage,
@@ -219,6 +223,16 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
         require(_agentFactory != address(0), "BEP007Governance: factory is zero address");
         agentFactory = _agentFactory;
         emit AgentFactoryUpdated(_agentFactory);
+    }
+
+    /**
+     * @dev Sets the treasury address
+     * @param _treasury The new treasury address
+     */
+    function setTreasury(address _treasury) external onlyOwner {
+        require(_treasury != address(0), "BEP007Governance: treasury is zero address");
+        treasury = _treasury;
+        emit TreasuryAddressUpdated(_treasury);
     }
 
     /**

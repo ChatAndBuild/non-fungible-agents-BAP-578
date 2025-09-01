@@ -45,11 +45,42 @@ describe('AgentFactory', function () {
     merkleTreeLearning = await MerkleTreeLearning.deploy();
     await merkleTreeLearning.deployed();
 
+    // Deploy StakingRewards for Treasury
+    const BEP007StakingRewards = await ethers.getContractFactory('BEP007StakingRewards');
+    stakingRewards = await upgrades.deployProxy(
+      BEP007StakingRewards,
+      [
+        circuitBreaker.address,
+        bep007Implementation.address,
+        1, // minimum stake amount
+        30, // staking period in days
+        100, // reward multiplier (1% daily)
+        owner.address
+      ],
+      { initializer: 'initialize' }
+    );
+    await stakingRewards.deployed();
+
+    // Deploy Treasury for AgentFactory
+    const BEP007Treasury = await ethers.getContractFactory('BEP007Treasury');
+    treasury = await upgrades.deployProxy(
+      BEP007Treasury,
+      [
+        circuitBreaker.address,
+        owner.address, // foundation address
+        owner.address, // community treasury address
+        stakingRewards.address, // staking rewards address
+        owner.address
+      ],
+      { initializer: 'initialize' }
+    );
+    await treasury.deployed();
+
     // Deploy AgentFactory
     AgentFactory = await ethers.getContractFactory('AgentFactory');
     agentFactory = await upgrades.deployProxy(
       AgentFactory,
-      [bep007Implementation.address, owner.address, merkleTreeLearning.address],
+      [bep007Implementation.address, owner.address, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
       { initializer: "initialize", kind: "uups" }
     );
     await agentFactory.deployed();
@@ -79,7 +110,7 @@ describe('AgentFactory', function () {
       await expect(
         upgrades.deployProxy(
           AgentFactoryFactory,
-          [ethers.constants.AddressZero, circuitBreaker.address, merkleTreeLearning.address],
+          [ethers.constants.AddressZero, circuitBreaker.address, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
           { initializer: "initialize", kind: "uups" }
         )
       ).to.be.revertedWith("AgentFactory: implementation is zero address");
@@ -90,7 +121,7 @@ describe('AgentFactory', function () {
       await expect(
         upgrades.deployProxy(
           AgentFactoryFactory,
-          [bep007Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address],
+          [bep007Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
           { initializer: "initialize", kind: "uups" }
         )
       ).to.be.revertedWith("AgentFactory: owner is zero address");
@@ -102,12 +133,14 @@ describe('AgentFactory', function () {
       const name = "Test Agent";
       const symbol = "TA";
       const metadataURI = "ipfs://QmTestAgent";
+      const feeAmount = ethers.utils.parseEther("0.01"); // 0.01 BNB fee
 
       const tx = await agentFactory.connect(addr1).createAgent(
         name,
         symbol,
         mockLogicAddress,
-        metadataURI
+        metadataURI,
+        { value: feeAmount }
       );
 
       const receipt = await tx.wait();
@@ -131,12 +164,15 @@ describe('AgentFactory', function () {
     });
 
     it('Should create multiple agents with different owners', async function () {
+      const feeAmount = ethers.utils.parseEther("0.01"); // 0.01 BNB fee
+      
       // Create first agent
       await agentFactory.connect(addr1).createAgent(
         "Agent 1",
         "A1",
         mockLogicAddress,
-        "ipfs://QmAgent1"
+        "ipfs://QmAgent1",
+        { value: feeAmount }
       );
 
       // Create second agent
@@ -144,7 +180,8 @@ describe('AgentFactory', function () {
         "Agent 2",
         "A2",
         mockLogicAddress,
-        "ipfs://QmAgent2"
+        "ipfs://QmAgent2",
+        { value: feeAmount }
       );
 
       // Both should succeed and emit events
@@ -155,12 +192,14 @@ describe('AgentFactory', function () {
       const name = "Extended Agent";
       const symbol = "EA";
       const metadataURI = "ipfs://QmExtendedAgent";
+      const feeAmount = ethers.utils.parseEther("0.01"); // 0.01 BNB fee
 
       const tx = await agentFactory.connect(addr1).createAgent(
         name,
         symbol,
         mockLogicAddress,
-        metadataURI
+        metadataURI,
+        { value: feeAmount }
       );
 
       const receipt = await tx.wait();
@@ -182,12 +221,14 @@ describe('AgentFactory', function () {
     });
 
     it('Should not allow creating agent with zero logic address', async function () {
+      const feeAmount = ethers.utils.parseEther("0.01"); // 0.01 BNB fee
       await expect(
         agentFactory.connect(addr1).createAgent(
           "Test Agent",
           "TA",
           ethers.constants.AddressZero,
-          "ipfs://QmTest"
+          "ipfs://QmTest",
+          { value: feeAmount }
         )
       ).to.be.reverted; // The revert will happen in the BEP007 contract
     });
@@ -550,13 +591,15 @@ const stats = await agentFactory.getGlobalLearningStats();
       const name = "Test Agent";
       const symbol = "TA";
       const metadataURI = "ipfs://QmTest";
+      const feeAmount = ethers.utils.parseEther("0.01"); // 0.01 BNB fee
 
       // Create first agent
       const tx1 = await agentFactory.connect(addr1).createAgent(
         name,
         symbol,
         mockLogicAddress,
-        metadataURI
+        metadataURI,
+        { value: feeAmount }
       );
 
       // Create second agent with same parameters
@@ -564,7 +607,8 @@ const stats = await agentFactory.getGlobalLearningStats();
         name,
         symbol,
         mockLogicAddress,
-        metadataURI
+        metadataURI,
+        { value: feeAmount }
       );
 
       // Both should succeed and create different contracts
@@ -580,11 +624,13 @@ const stats = await agentFactory.getGlobalLearningStats();
 
   describe('Events', function () {
     it('Should emit AgentCreated event with correct parameters', async function () {
+      const feeAmount = ethers.utils.parseEther("0.01"); // 0.01 BNB fee
       const tx = await agentFactory.connect(addr1).createAgent(
         "Test Agent",
         "TA",
         mockLogicAddress,
-        "ipfs://QmTest"
+        "ipfs://QmTest",
+        { value: feeAmount }
       );
 
       const receipt = await tx.wait();

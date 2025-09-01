@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./BEP007.sol";
 import "./interfaces/IBEP007.sol";
+import "./BEP007Treasury.sol";
 
 /**
  * @title AgentFactory
@@ -27,6 +28,15 @@ contract AgentFactory is
 
     // Default learning module for new agents
     address public defaultLearningModule;
+
+    // Treasury contract for fee collection
+    BEP007Treasury public treasury;
+
+    // Circuit breaker for new agents
+    address public circuitBreaker;
+
+    // Agent creation fee (0.01 BNB as specified in documentation)
+    uint256 public constant AGENT_CREATION_FEE = 0.01 ether;
 
     // Mapping of template addresses to their approval status
     mapping(address => bool) public approvedTemplates;
@@ -83,6 +93,7 @@ contract AgentFactory is
         address learningModule
     );
     event AgentLearningDisabled(address indexed agent, uint256 indexed tokenId);
+    event AgentCreationFeeCollected(address indexed creator, uint256 amount);
 
     /**
      * @dev Initializes the contract
@@ -94,10 +105,14 @@ contract AgentFactory is
     function initialize(
         address _implementation,
         address _owner,
-        address _defaultLearningModule
+        address _defaultLearningModule,
+        address payable _treasury,
+        address _circuitBreaker
     ) public initializer {
         require(_implementation != address(0), "AgentFactory: implementation is zero address");
         require(_owner != address(0), "AgentFactory: owner is zero address");
+        require(_treasury != address(0), "AgentFactory: treasury is zero address");
+        require(_circuitBreaker != address(0), "AgentFactory: circuit breaker is zero address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -105,6 +120,8 @@ contract AgentFactory is
 
         implementation = _implementation;
         defaultLearningModule = _defaultLearningModule;
+        treasury = BEP007Treasury(_treasury);
+        circuitBreaker = _circuitBreaker;
 
         // Initialize global stats
         globalLearningStats = LearningGlobalStats({
@@ -133,7 +150,7 @@ contract AgentFactory is
         string calldata symbol,
         address logicAddress,
         string calldata metadataURI
-    ) external returns (address agent) {
+    ) external payable returns (address agent) {
         // Create empty extended metadata
         IBEP007.AgentMetadata memory emptyMetadata = IBEP007.AgentMetadata({
             persona: "",
@@ -143,6 +160,15 @@ contract AgentFactory is
             vaultURI: "",
             vaultHash: bytes32(0)
         });
+
+        // Verify fee payment
+        require(msg.value == AGENT_CREATION_FEE, "AgentFactory: incorrect fee amount");
+
+        // Collect fee and distribute to treasury
+        (bool success, ) = payable(address(treasury)).call{value: AGENT_CREATION_FEE}("");
+        require(success, "AgentFactory: fee transfer failed");
+
+        emit AgentCreationFeeCollected(msg.sender, AGENT_CREATION_FEE);
 
         AgentCreationParams memory params = AgentCreationParams({
             name: name,
@@ -159,7 +185,7 @@ contract AgentFactory is
                     BEP007(payable(implementation)).initialize.selector,
                     params.name,
                     params.symbol,
-                    owner()
+                    circuitBreaker // Use the stored circuit breaker address
                 )
             )
         );
@@ -184,6 +210,15 @@ contract AgentFactory is
         emit AgentCreated(agent, msg.sender, tokenId, params.logicAddress);
 
         return agent;
+    }
+
+    /**
+     * @dev Sets the treasury contract address
+     * @param _treasury The new treasury contract address
+     */
+    function setTreasury(address payable _treasury) external onlyOwner {
+        require(_treasury != address(0), "AgentFactory: treasury is zero address");
+        treasury = BEP007Treasury(_treasury);
     }
 
     /**
