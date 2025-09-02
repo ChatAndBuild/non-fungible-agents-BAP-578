@@ -288,6 +288,138 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
         });
     });
 
+    describe("Individual Node Verification", function () {
+        const tokenId = 1;
+        const parentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("parent"));
+
+        beforeEach(async function () {
+            const nodes = [
+                {
+                    hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
+                    leftChild: ethers.constants.HashZero,
+                    rightChild: ethers.constants.HashZero,
+                    data: ethers.utils.toUtf8Bytes("leaf1_data"),
+                    level: 0,
+                    position: 0,
+                    isLeaf: true,
+                    timestamp: 0
+                },
+                {
+                    hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2")),
+                    leftChild: ethers.constants.HashZero,
+                    rightChild: ethers.constants.HashZero,
+                    data: ethers.utils.toUtf8Bytes("leaf2_data"),
+                    level: 0,
+                    position: 1,
+                    isLeaf: true,
+                    timestamp: 0
+                },
+                {
+                    hash: parentHash, // Use the parentHash variable
+                    leftChild: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
+                    rightChild: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2")),
+                    data: "0x",
+                    level: 1,
+                    position: 0,
+                    isLeaf: false,
+                    timestamp: 0
+                }
+            ];
+
+            await merkleTreeLearning.updateLearningRootWithNodes(tokenId, parentHash, nodes, "0x", "Setup for verification");
+        });
+
+        it("Should verify existing leaf node correctly", async function () {
+            const leafHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1"));
+            const [isValid, nodeInfo] = await merkleTreeLearning.verifyIndividualNode(tokenId, leafHash);
+            
+            expect(isValid).to.be.true;
+            expect(nodeInfo.exists).to.be.true;
+            expect(nodeInfo.isLeaf).to.be.true;
+            expect(nodeInfo.level).to.equal(0);
+            expect(nodeInfo.position).to.equal(0);
+            expect(nodeInfo.hasValidChildren).to.be.true; // Leaf nodes have no children, so this is valid
+            expect(nodeInfo.hasValidParent).to.be.true;
+            expect(nodeInfo.parentHash).to.equal(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("parent")));
+            expect(nodeInfo.leftChildHash).to.equal(ethers.constants.HashZero);
+            expect(nodeInfo.rightChildHash).to.equal(ethers.constants.HashZero);
+            expect(nodeInfo.timestamp).to.be.gt(0);
+            expect(nodeInfo.dataLength).to.equal(ethers.utils.toUtf8Bytes("leaf1_data").length);
+        });
+
+        it("Should verify existing parent node correctly", async function () {
+            const [isValid, nodeInfo] = await merkleTreeLearning.verifyIndividualNode(tokenId, parentHash);
+            
+            expect(isValid).to.be.true;
+            expect(nodeInfo.exists).to.be.true;
+            expect(nodeInfo.isLeaf).to.be.false;
+            expect(nodeInfo.level).to.equal(1);
+            expect(nodeInfo.position).to.equal(0);
+            expect(nodeInfo.hasValidChildren).to.be.true;
+            expect(nodeInfo.hasValidParent).to.be.true; // This node is the root, so it's considered valid
+            expect(nodeInfo.parentHash).to.equal(ethers.constants.HashZero); // Root has no parent
+            expect(nodeInfo.leftChildHash).to.equal(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")));
+            expect(nodeInfo.rightChildHash).to.equal(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2")));
+            expect(nodeInfo.timestamp).to.be.gt(0);
+            expect(nodeInfo.dataLength).to.equal(0);
+        });
+
+        it("Should verify root node correctly", async function () {
+            // The parentHash is the root of our tree
+            const [isValid, nodeInfo] = await merkleTreeLearning.verifyIndividualNode(tokenId, parentHash);
+            
+            expect(isValid).to.be.true;
+            expect(nodeInfo.exists).to.be.true;
+            expect(nodeInfo.isLeaf).to.be.false;
+            expect(nodeInfo.level).to.equal(1);
+            expect(nodeInfo.position).to.equal(0);
+            expect(nodeInfo.hasValidChildren).to.be.true;
+            expect(nodeInfo.hasValidParent).to.be.true; // Root is considered to have valid parent
+            expect(nodeInfo.parentHash).to.equal(ethers.constants.HashZero);
+            expect(nodeInfo.timestamp).to.be.gt(0);
+        });
+
+        it("Should return false for non-existent node", async function () {
+            const nonExistentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("nonexistent"));
+            const [isValid, nodeInfo] = await merkleTreeLearning.verifyIndividualNode(tokenId, nonExistentHash);
+            
+            expect(isValid).to.be.false;
+            expect(nodeInfo.exists).to.be.false;
+            expect(nodeInfo.isLeaf).to.be.false;
+            expect(nodeInfo.level).to.equal(0);
+            expect(nodeInfo.position).to.equal(0);
+            expect(nodeInfo.hasValidChildren).to.be.false;
+            expect(nodeInfo.hasValidParent).to.be.false;
+            expect(nodeInfo.parentHash).to.equal(ethers.constants.HashZero);
+            expect(nodeInfo.leftChildHash).to.equal(ethers.constants.HashZero);
+            expect(nodeInfo.rightChildHash).to.equal(ethers.constants.HashZero);
+            expect(nodeInfo.timestamp).to.equal(0);
+            expect(nodeInfo.dataLength).to.equal(0);
+        });
+
+        it("Should verify node relationships correctly", async function () {
+            const leaf1Hash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1"));
+            const leaf2Hash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2"));
+            const parentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("parent"));
+            
+            // Verify leaf1
+            const [isValid1, nodeInfo1] = await merkleTreeLearning.verifyIndividualNode(tokenId, leaf1Hash);
+            expect(isValid1).to.be.true;
+            expect(nodeInfo1.parentHash).to.equal(parentHash);
+            
+            // Verify leaf2
+            const [isValid2, nodeInfo2] = await merkleTreeLearning.verifyIndividualNode(tokenId, leaf2Hash);
+            expect(isValid2).to.be.true;
+            expect(nodeInfo2.parentHash).to.equal(parentHash);
+            
+            // Verify parent
+            const [isValid3, nodeInfo3] = await merkleTreeLearning.verifyIndividualNode(tokenId, parentHash);
+            expect(isValid3).to.be.true;
+            expect(nodeInfo3.leftChildHash).to.equal(leaf1Hash);
+            expect(nodeInfo3.rightChildHash).to.equal(leaf2Hash);
+        });
+    });
+
 
 
     describe("Complex Tree Structures", function () {

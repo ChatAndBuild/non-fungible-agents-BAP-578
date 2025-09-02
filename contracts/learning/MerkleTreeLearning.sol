@@ -59,7 +59,22 @@ contract MerkleTreeLearning is
         uint256 timestamp;      // When this node was added
     }
 
-
+    /**
+     * @dev Struct containing node verification details
+     */
+    struct NodeVerificationInfo {
+        bool exists;            // Whether the node exists
+        bool isLeaf;            // Whether the node is a leaf
+        uint256 level;          // Level in the tree
+        uint256 position;       // Position within the level
+        bool hasValidChildren;  // Whether children exist and are valid
+        bool hasValidParent;    // Whether parent exists and is valid
+        bytes32 parentHash;     // Hash of the parent node
+        bytes32 leftChildHash;  // Hash of the left child
+        bytes32 rightChildHash; // Hash of the right child
+        uint256 timestamp;      // When the node was added
+        uint256 dataLength;     // Length of the node's data
+    }
 
     /**
      * @dev Emitted when a tree node is added
@@ -438,6 +453,95 @@ contract MerkleTreeLearning is
      */
     function verifyNodeExists(uint256 tokenId, bytes32 nodeHash) external view returns (bool) {
         return _treeNodes[tokenId][nodeHash].hash != bytes32(0);
+    }
+
+    /**
+     * @dev Verifies an individual node's integrity and relationships
+     * @param tokenId The ID of the agent token
+     * @param nodeHash The hash of the node to verify
+     * @return isValid Whether the node is valid
+     * @return nodeInfo Struct containing node verification details
+     */
+    function verifyIndividualNode(uint256 tokenId, bytes32 nodeHash) external view returns (
+        bool isValid,
+        NodeVerificationInfo memory nodeInfo
+    ) {
+        TreeNode memory node = _treeNodes[tokenId][nodeHash];
+        
+        // Check if node exists
+        if (node.hash == bytes32(0)) {
+            return (false, NodeVerificationInfo({
+                exists: false,
+                isLeaf: false,
+                level: 0,
+                position: 0,
+                hasValidChildren: false,
+                hasValidParent: false,
+                parentHash: bytes32(0),
+                leftChildHash: bytes32(0),
+                rightChildHash: bytes32(0),
+                timestamp: 0,
+                dataLength: 0
+            }));
+        }
+        
+        // Check if children exist and are valid
+        bool hasValidChildren = true;
+        if (node.leftChild != bytes32(0)) {
+            TreeNode memory leftChild = _treeNodes[tokenId][node.leftChild];
+            hasValidChildren = hasValidChildren && leftChild.hash != bytes32(0);
+        }
+        if (node.rightChild != bytes32(0)) {
+            TreeNode memory rightChild = _treeNodes[tokenId][node.rightChild];
+            hasValidChildren = hasValidChildren && rightChild.hash != bytes32(0);
+        }
+        
+        // Check if parent exists
+        bool hasValidParent = false;
+        bytes32 parentHash = bytes32(0);
+        bytes32[] memory hashes = _nodeHashes[tokenId];
+        
+        for (uint256 i = 0; i < hashes.length; i++) {
+            TreeNode memory potentialParent = _treeNodes[tokenId][hashes[i]];
+            if (potentialParent.leftChild == nodeHash || potentialParent.rightChild == nodeHash) {
+                hasValidParent = true;
+                parentHash = potentialParent.hash;
+                break;
+            }
+        }
+        
+        // Root node doesn't have a parent
+        if (nodeHash == _learningRoots[tokenId]) {
+            hasValidParent = true;
+            parentHash = bytes32(0);
+        }
+        
+        // Calculate data length
+        uint256 dataLength = 0;
+        if (node.data.length > 0) {
+            dataLength = node.data.length;
+        }
+        
+        nodeInfo = NodeVerificationInfo({
+            exists: true,
+            isLeaf: node.isLeaf,
+            level: node.level,
+            position: node.position,
+            hasValidChildren: hasValidChildren,
+            hasValidParent: hasValidParent,
+            parentHash: parentHash,
+            leftChildHash: node.leftChild,
+            rightChildHash: node.rightChild,
+            timestamp: node.timestamp,
+            dataLength: dataLength
+        });
+        
+        // Node is valid if it exists and has valid relationships
+        isValid = nodeInfo.exists && 
+                  (nodeInfo.hasValidParent || nodeHash == _learningRoots[tokenId]) &&
+                  (nodeInfo.isLeaf || nodeInfo.hasValidChildren);
+        
+        return (isValid, nodeInfo);
     }
 
     /**
