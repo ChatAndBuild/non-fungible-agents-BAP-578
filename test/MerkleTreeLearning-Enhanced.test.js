@@ -82,7 +82,7 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
             expect(leaf1Node.level).to.equal(0);
         });
 
-        it("Should update existing tree nodes", async function () {
+        it("Should replace entire tree structure", async function () {
             const initialNodes = [
                 {
                     hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
@@ -96,12 +96,12 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
                 }
             ];
 
-            const updatedNodes = [
+            const newNodes = [
                 {
-                    hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
+                    hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2")),
                     leftChild: ethers.constants.HashZero,
                     rightChild: ethers.constants.HashZero,
-                    data: ethers.utils.toUtf8Bytes("updated_data"),
+                    data: ethers.utils.toUtf8Bytes("new_data"),
                     level: 0,
                     position: 0,
                     isLeaf: true,
@@ -115,15 +115,22 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
             // First update
             await merkleTreeLearning.updateLearningRootWithNodes(tokenId, root1, initialNodes, "0x", "Initial");
             
-            // Second update - should update existing node
+            // Second update - should replace entire tree
             await expect(
-                merkleTreeLearning.updateLearningRootWithNodes(tokenId, root2, updatedNodes, "0x", "Update")
-            ).to.emit(merkleTreeLearning, "TreeNodeUpdated");
+                merkleTreeLearning.updateLearningRootWithNodes(tokenId, root2, newNodes, "0x", "Replace")
+            ).to.emit(merkleTreeLearning, "TreeStructureReplaced");
 
-            // Verify node was updated
-            const updatedNode = await merkleTreeLearning.getTreeNode(tokenId, updatedNodes[0].hash);
-            // Check that the node was updated (data comparison is complex due to hex vs bytes)
-            expect(updatedNode.hash).to.equal(updatedNodes[0].hash);
+            // Verify old nodes are gone - should throw error since node was deleted
+            await expect(
+                merkleTreeLearning.getTreeNode(tokenId, initialNodes[0].hash)
+            ).to.be.revertedWith("MerkleTreeLearning: node not found");
+            
+            // Verify new nodes are present
+            const newNode = await merkleTreeLearning.getTreeNode(tokenId, newNodes[0].hash);
+            expect(newNode.hash).to.equal(newNodes[0].hash);
+            
+            // Verify node count is correct
+            expect(await merkleTreeLearning.getNodeCount(tokenId)).to.equal(1);
         });
 
         it("Should reject zero hash nodes", async function () {
@@ -281,78 +288,7 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
         });
     });
 
-    describe("Batch Operations with Tree Nodes", function () {
-        it("Should batch update multiple tokens with tree structures", async function () {
-            const tokenIds = [1, 2];
-            const newRoots = [
-                ethers.utils.keccak256(ethers.utils.toUtf8Bytes("root1")),
-                ethers.utils.keccak256(ethers.utils.toUtf8Bytes("root2"))
-            ];
-            
-            const nodesArray = [
-                [
-                    {
-                        hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
-                        leftChild: ethers.constants.HashZero,
-                        rightChild: ethers.constants.HashZero,
-                        data: ethers.utils.toUtf8Bytes("data1"),
-                        level: 0,
-                        position: 0,
-                        isLeaf: true,
-                        timestamp: 0
-                    }
-                ],
-                [
-                    {
-                        hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2")),
-                        leftChild: ethers.constants.HashZero,
-                        rightChild: ethers.constants.HashZero,
-                        data: ethers.utils.toUtf8Bytes("data2"),
-                        level: 0,
-                        position: 0,
-                        isLeaf: true,
-                        timestamp: 0
-                    }
-                ]
-            ];
-            
-            const proofs = ["0x", "0x"];
-            const reasons = ["Update 1", "Update 2"];
 
-            await expect(
-                merkleTreeLearning.batchUpdateLearningRootsWithNodes(tokenIds, newRoots, nodesArray, proofs, reasons)
-            ).to.emit(merkleTreeLearning, "TreeNodeAdded");
-
-            // Verify both tokens were updated
-            expect(await merkleTreeLearning.getNodeCount(1)).to.equal(1);
-            expect(await merkleTreeLearning.getNodeCount(2)).to.equal(1);
-        });
-
-        it("Should reject batch updates with mismatched array lengths", async function () {
-            const tokenIds = [1, 2];
-            const newRoots = [ethers.utils.keccak256(ethers.utils.toUtf8Bytes("root1"))];
-            const nodesArray = [
-                [
-                    {
-                        hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
-                        leftChild: ethers.constants.HashZero,
-                        rightChild: ethers.constants.HashZero,
-                        data: ethers.utils.toUtf8Bytes("data1"),
-                        level: 0,
-                        position: 0,
-                        isLeaf: true,
-                        timestamp: 0
-                    }
-                ]
-            ];
-            const proofs = ["0x", "0x"];
-            const reasons = ["Update 1", "Update 2"];
-
-            await expect(
-                merkleTreeLearning.batchUpdateLearningRootsWithNodes(tokenIds, newRoots, nodesArray, proofs, reasons)
-            ).to.be.revertedWith("MerkleTreeLearning: array lengths must match");
-        });
-    });
 
     describe("Complex Tree Structures", function () {
         const tokenId = 1;
@@ -598,7 +534,7 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
             .withArgs(tokenId, nodes[0].hash, nodes[0].leftChild, nodes[0].rightChild, nodes[0].level, nodes[0].position, nodes[0].isLeaf);
         });
 
-        it("Should emit TreeNodeUpdated events", async function () {
+        it("Should emit TreeStructureReplaced events", async function () {
             const initialNodes = [
                 {
                     hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
@@ -612,12 +548,12 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
                 }
             ];
 
-            const updatedNodes = [
+            const newNodes = [
                 {
-                    hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf1")),
+                    hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("leaf2")),
                     leftChild: ethers.constants.HashZero,
                     rightChild: ethers.constants.HashZero,
-                    data: ethers.utils.toUtf8Bytes("updated"),
+                    data: ethers.utils.toUtf8Bytes("new"),
                     level: 0,
                     position: 0,
                     isLeaf: true,
@@ -631,8 +567,18 @@ describe("Enhanced MerkleTreeLearning with Child Nodes", function () {
             await merkleTreeLearning.updateLearningRootWithNodes(tokenId, root1, initialNodes, "0x", "Initial");
             
             await expect(
-                merkleTreeLearning.updateLearningRootWithNodes(tokenId, root2, updatedNodes, "0x", "Update")
-            ).to.emit(merkleTreeLearning, "TreeNodeUpdated");
+                merkleTreeLearning.updateLearningRootWithNodes(tokenId, root2, newNodes, "0x", "Replace")
+            ).to.emit(merkleTreeLearning, "TreeStructureReplaced");
+            
+            // Verify the event arguments separately to avoid hash comparison issues
+            const filter = merkleTreeLearning.filters.TreeStructureReplaced(tokenId);
+            const events = await merkleTreeLearning.queryFilter(filter);
+            const event = events[events.length - 1];
+            expect(event.args.tokenId).to.equal(tokenId);
+            expect(event.args.previousNodeCount).to.equal(1);
+            expect(event.args.newNodeCount).to.equal(1);
+            expect(event.args.previousRoot).to.equal(root1);
+            expect(event.args.newRoot).to.equal(root2);
         });
     });
 });

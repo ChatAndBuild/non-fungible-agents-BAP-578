@@ -23,10 +23,10 @@ contract MerkleTreeLearning is
 
     // Mapping from token ID to learning tree root
     mapping(uint256 => bytes32) private _learningRoots;
-
+    
     // Mapping from token ID to learning metrics
     mapping(uint256 => LearningMetrics) private _learningMetrics;
-
+    
     // Mapping from token ID to learning update history
     mapping(uint256 => LearningUpdate[]) private _learningUpdates;
 
@@ -59,18 +59,7 @@ contract MerkleTreeLearning is
         uint256 timestamp;      // When this node was added
     }
 
-    /**
-     * @dev Struct representing a complete tree update
-     */
-    struct TreeUpdate {
-        bytes32 previousRoot;
-        bytes32 newRoot;
-        bytes32[] addedNodes;      // New nodes added in this update
-        bytes32[] removedNodes;    // Nodes removed in this update
-        bytes proof;
-        string reason;
-        uint256 timestamp;
-    }
+
 
     /**
      * @dev Emitted when a tree node is added
@@ -86,23 +75,14 @@ contract MerkleTreeLearning is
     );
 
     /**
-     * @dev Emitted when a tree node is updated
+     * @dev Emitted when a tree structure is completely replaced
      */
-    event TreeNodeUpdated(
+    event TreeStructureReplaced(
         uint256 indexed tokenId,
-        bytes32 indexed nodeHash,
-        bytes32 previousLeftChild,
-        bytes32 previousRightChild,
-        bytes32 newLeftChild,
-        bytes32 newRightChild
-    );
-
-    /**
-     * @dev Emitted when a tree node is removed
-     */
-    event TreeNodeRemoved(
-        uint256 indexed tokenId,
-        bytes32 indexed nodeHash
+        uint256 previousNodeCount,
+        uint256 newNodeCount,
+        bytes32 previousRoot,
+        bytes32 newRoot
     );
 
     /**
@@ -127,22 +107,6 @@ contract MerkleTreeLearning is
     ) external view override returns (bool) {
         bytes32 root = _learningRoots[tokenId];
         return proof.verify(root, claim);
-    }
-
-    /**
-     * @dev Updates the learning tree root for an agent when extended data changes
-     * @param tokenId The ID of the agent token
-     * @param newRoot The new Merkle root
-     * @param proof Optional proof of the update (can be empty bytes)
-     * @param reason Optional reason for the update
-     */
-    function updateLearningRoot(
-        uint256 tokenId,
-        bytes32 newRoot,
-        bytes calldata proof,
-        string calldata reason
-    ) external onlyOwner nonReentrant {
-        _updateLearningRootInternal(tokenId, newRoot, proof, reason);
     }
 
     /**
@@ -185,8 +149,8 @@ contract MerkleTreeLearning is
         // Update the root
         _learningRoots[tokenId] = newRoot;
         
-        // Add/update tree nodes
-        _updateTreeNodes(tokenId, nodes);
+        // Replace entire tree structure
+        _replaceTreeStructure(tokenId, nodes, newRoot, previousRoot);
         
         // Update learning metrics
         _updateLearningMetrics(tokenId);
@@ -214,167 +178,64 @@ contract MerkleTreeLearning is
     }
 
     /**
-     * @dev Internal function to update the learning tree root
+     * @dev Internal function to replace the entire tree structure
      * @param tokenId The ID of the agent token
-     * @param newRoot The new Merkle root
-     * @param proof Optional proof of the update (can be empty bytes)
+     * @param nodes Array of tree nodes for the new tree
+     * @return previousNodeCount The number of nodes in the previous tree
      */
-    function _updateLearningRootInternal(
-        uint256 tokenId,
-        bytes32 newRoot,
-        bytes calldata proof,
-        string calldata /* reason */
-    ) internal {
-        require(newRoot != bytes32(0), "MerkleTreeLearning: new root cannot be zero");
-        require(newRoot != _learningRoots[tokenId], "MerkleTreeLearning: new root must be different");
-
-        bytes32 previousRoot = _learningRoots[tokenId];
+    function _replaceTreeStructure(uint256 tokenId, TreeNode[] calldata nodes, bytes32 newRoot, bytes32 previousRoot) internal returns (uint256 previousNodeCount) {
+        // Store previous tree information
+        previousNodeCount = _nodeCounts[tokenId];
         
-        // Update the root
-        _learningRoots[tokenId] = newRoot;
+        // Clear existing tree structure
+        bytes32[] storage existingHashes = _nodeHashes[tokenId];
+        for (uint256 i = 0; i < existingHashes.length; i++) {
+            delete _treeNodes[tokenId][existingHashes[i]];
+        }
+        delete _nodeHashes[tokenId];
+        _nodeCounts[tokenId] = 0;
         
-        // Update learning metrics
-        _updateLearningMetrics(tokenId);
-        
-        // Record the learning update
-        LearningUpdate memory update = LearningUpdate({
-            previousRoot: previousRoot,
-            newRoot: newRoot,
-            proof: proof,
-            timestamp: block.timestamp
-        });
-        
-        _learningUpdates[tokenId].push(update);
-        _updateCounts[tokenId]++;
-        _lastUpdateTimestamps[tokenId] = block.timestamp;
-        
-        // Update confidence score after update count is incremented
-        _learningMetrics[tokenId].confidenceScore = _calculateConfidenceScore(tokenId);
-        
-        // Emit learning updated event
-        emit LearningUpdated(tokenId, previousRoot, newRoot, block.timestamp);
-        
-        // Check for learning milestones
-        _checkLearningMilestones(tokenId);
-    }
-
-    /**
-     * @dev Internal function to update tree nodes
-     * @param tokenId The ID of the agent token
-     * @param nodes Array of tree nodes to add/update
-     */
-    function _updateTreeNodes(uint256 tokenId, TreeNode[] calldata nodes) internal {
+        // Add new tree structure
         for (uint256 i = 0; i < nodes.length; i++) {
             TreeNode calldata node = nodes[i];
             
             // Validate node
             require(node.hash != bytes32(0), "MerkleTreeLearning: node hash cannot be zero");
             
-            // Check if node already exists
-            bool nodeExists = _treeNodes[tokenId][node.hash].hash != bytes32(0);
+            // Add new node
+            _treeNodes[tokenId][node.hash] = TreeNode({
+                hash: node.hash,
+                leftChild: node.leftChild,
+                rightChild: node.rightChild,
+                data: node.data,
+                level: node.level,
+                position: node.position,
+                isLeaf: node.isLeaf,
+                timestamp: block.timestamp
+            });
             
-            if (nodeExists) {
-                // Update existing node
-                TreeNode storage existingNode = _treeNodes[tokenId][node.hash];
-                bytes32 previousLeftChild = existingNode.leftChild;
-                bytes32 previousRightChild = existingNode.rightChild;
-                
-                existingNode.leftChild = node.leftChild;
-                existingNode.rightChild = node.rightChild;
-                existingNode.data = node.data;
-                existingNode.level = node.level;
-                existingNode.position = node.position;
-                existingNode.isLeaf = node.isLeaf;
-                existingNode.timestamp = block.timestamp;
-                
-                emit TreeNodeUpdated(
-                    tokenId,
-                    node.hash,
-                    previousLeftChild,
-                    previousRightChild,
-                    node.leftChild,
-                    node.rightChild
-                );
-            } else {
-                // Add new node
-                _treeNodes[tokenId][node.hash] = TreeNode({
-                    hash: node.hash,
-                    leftChild: node.leftChild,
-                    rightChild: node.rightChild,
-                    data: node.data,
-                    level: node.level,
-                    position: node.position,
-                    isLeaf: node.isLeaf,
-                    timestamp: block.timestamp
-                });
-                
-                _nodeHashes[tokenId].push(node.hash);
-                _nodeCounts[tokenId]++;
-                
-                emit TreeNodeAdded(
-                    tokenId,
-                    node.hash,
-                    node.leftChild,
-                    node.rightChild,
-                    node.level,
-                    node.position,
-                    node.isLeaf
-                );
-            }
+            _nodeHashes[tokenId].push(node.hash);
+            _nodeCounts[tokenId]++;
+            
+            emit TreeNodeAdded(
+                tokenId,
+                node.hash,
+                node.leftChild,
+                node.rightChild,
+                node.level,
+                node.position,
+                node.isLeaf
+            );
         }
-    }
-
-    /**
-     * @dev Batch updates multiple learning roots with tree structures
-     * @param tokenIds Array of token IDs
-     * @param newRoots Array of new Merkle roots
-     * @param nodesArray Array of node arrays for each token
-     * @param proofs Array of proofs (can be empty)
-     * @param reasons Array of reasons for updates
-     */
-    function batchUpdateLearningRootsWithNodes(
-        uint256[] calldata tokenIds,
-        bytes32[] calldata newRoots,
-        TreeNode[][] calldata nodesArray,
-        bytes[] calldata proofs,
-        string[] calldata reasons
-    ) external onlyOwner nonReentrant {
-        require(
-            tokenIds.length == newRoots.length &&
-            newRoots.length == nodesArray.length &&
-            nodesArray.length == proofs.length &&
-            proofs.length == reasons.length,
-            "MerkleTreeLearning: array lengths must match"
-        );
         
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            _updateLearningRootWithNodesInternal(tokenIds[i], newRoots[i], nodesArray[i], proofs[i], reasons[i]);
-        }
-    }
-
-    /**
-     * @dev Batch updates multiple learning roots (without tree structures)
-     * @param tokenIds Array of token IDs
-     * @param newRoots Array of new Merkle roots
-     * @param proofs Array of proofs (can be empty)
-     * @param reasons Array of reasons for updates
-     */
-    function batchUpdateLearningRoots(
-        uint256[] calldata tokenIds,
-        bytes32[] calldata newRoots,
-        bytes[] calldata proofs,
-        string[] calldata reasons
-    ) external onlyOwner nonReentrant {
-        require(
-            tokenIds.length == newRoots.length &&
-            newRoots.length == proofs.length &&
-            proofs.length == reasons.length,
-            "MerkleTreeLearning: array lengths must match"
+        // Emit tree structure replaced event
+        emit TreeStructureReplaced(
+            tokenId,
+            previousNodeCount,
+            nodes.length,
+            previousRoot, // The previous root that was passed in
+            newRoot // The new root being set
         );
-        
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            _updateLearningRootInternal(tokenIds[i], newRoots[i], proofs[i], reasons[i]);
-        }
     }
 
     /**
