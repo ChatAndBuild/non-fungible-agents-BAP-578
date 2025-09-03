@@ -635,8 +635,8 @@ contract MerkleTreeLearning is
         metrics.learningEvents++;
         metrics.lastUpdateTimestamp = block.timestamp;
 
-        // Calculate learning velocity (updates per day)
-        // Note: Block timestamp is used for learning metrics calculation
+        // ANALYTICS: Calculate learning velocity (updates per day)
+        // Block timestamp used for learning metrics calculation
         // This is for user experience and analytics, not for security decisions
         if (timeSinceLastUpdate > 0) {
             metrics.learningVelocity = (1 * 1 days) / timeSinceLastUpdate;
@@ -659,8 +659,8 @@ contract MerkleTreeLearning is
             return 0;
         }
 
-        // Add time-based score if we have update history
-        // Note: Block timestamp is used for learning analytics
+        // ANALYTICS: Add time-based score if we have update history
+        // Block timestamp used for learning analytics
         // This is for user experience and gamification, not for security
         uint256 timeScore = 0;
         if (_lastUpdateTimestamps[tokenId] > 0) {
@@ -688,8 +688,8 @@ contract MerkleTreeLearning is
             emit LearningMilestone(tokenId, "Millennium", 1000, block.timestamp);
         }
 
-        // Check for time-based milestones
-        // Note: Block timestamp is used for learning milestone tracking
+        // ANALYTICS: Check for time-based milestones
+        // Block timestamp used for learning milestone tracking
         // This is for user experience and gamification, not for security
         uint256 timeSinceLastUpdate = block.timestamp - _lastUpdateTimestamps[tokenId];
         if (timeSinceLastUpdate >= 30 days) {

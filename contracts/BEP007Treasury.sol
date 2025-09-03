@@ -157,8 +157,9 @@ contract BEP007Treasury is
      * @param donationId The ID of the donation to distribute
      */
     function distributeDonation(uint256 donationId) external onlyOwner whenNotPaused nonReentrant {
-        // Note: These checks use donation state, not block timestamp
+        // STATE: These checks use donation state, not block timestamp
         // The timestamp comparison is for donation existence and state validation
+        // This is a state check, not a time-based security decision
         require(donations[donationId].id != 0, "Treasury: donation does not exist");
         require(!donations[donationId].distributed, "Treasury: donation already distributed");
 
@@ -192,9 +193,10 @@ contract BEP007Treasury is
         totalDistributedToTreasury += treasuryAmount;
         totalDistributedToStaking += stakingAmount;
 
-        // Transfer funds to recipients AFTER state updates
-        // Note: Low-level calls are necessary for ETH transfers to contract addresses
+        // TRANSFER: Funds sent to recipients AFTER state updates
+        // SECURITY: Low-level calls required for ETH transfers to contract addresses
         // These addresses are controlled by the contract owner and are trusted
+        // Reentrancy protection ensures state consistency
         if (foundationAmount > 0) {
             (bool success1, ) = payable(foundationAddress).call{ value: foundationAmount }("");
             require(success1, "Treasury: foundation transfer failed");
@@ -248,8 +250,9 @@ contract BEP007Treasury is
         require(recipient != address(0), "Treasury: recipient is zero address");
         require(amount <= address(this).balance, "Treasury: insufficient balance");
 
-        // Low-level call is necessary for ETH transfers to arbitrary addresses
-        // This is the recommended pattern for ETH transfers in Solidity
+        // SECURITY: Low-level call required for ETH transfers
+        // This is the recommended Solidity pattern for ETH transfers
+        // Success is verified to ensure transfer completion
         (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Treasury: emergency withdrawal failed");
 
