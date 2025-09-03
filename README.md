@@ -339,14 +339,14 @@ To record interactions that help the agent learn:
 
 ```javascript
 // Record successful interaction
-await bap578Enhanced.recordInteraction(
+await BAP578Enhanced.recordInteraction(
   tokenId,
   "code_generation",
   true // success
 );
 
 // Record failed interaction
-await bap578Enhanced.recordInteraction(
+await BAP578Enhanced.recordInteraction(
   tokenId,
   "bug_fixing", 
   false // failure
@@ -360,7 +360,7 @@ console.log(`📊 Interactions recorded for learning`);
 To view an agent's learning metrics:
 
 ```javascript
-const { enabled, moduleAddress, metrics } = await bap578Enhanced.getLearningInfo(tokenId);
+const { enabled, moduleAddress, metrics } = await BAP578Enhanced.getLearningInfo(tokenId);
 
 if (enabled) {
   console.log(`🧠 Learning Module: ${moduleAddress}`);
