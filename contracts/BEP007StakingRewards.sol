@@ -91,7 +91,10 @@ contract BEP007StakingRewards is
         uint256 rewardMult,
         address ownerAddr
     ) public initializer {
-        require(circuitBreakerAddr != address(0), "StakingRewards: circuit breaker is zero address");
+        require(
+            circuitBreakerAddr != address(0),
+            "StakingRewards: circuit breaker is zero address"
+        );
         require(bep007TokenAddr != address(0), "StakingRewards: token is zero address");
         require(ownerAddr != address(0), "StakingRewards: owner is zero address");
 
