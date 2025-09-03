@@ -67,7 +67,7 @@ describe("Donation System", function () {
             [
                 bep007Implementation.address,
                 owner.address,
-                ethers.constants.AddressZero,
+                owner.address, // Use owner address as default learning module for testing
                 treasury.address,
                 circuitBreaker.address
             ],

@@ -76,36 +76,36 @@ contract BEP007StakingRewards is
 
     /**
      * @dev Initializes the contract
-     * @param _circuitBreaker The address of the circuit breaker contract
-     * @param _bep007Token The address of the BEP007 token contract
-     * @param _minimumStakeAmount Minimum amount required to stake
-     * @param _stakingPeriod Minimum staking period in days
-     * @param _rewardMultiplier Reward multiplier in basis points
-     * @param _owner The address of the contract owner
+     * @param circuitBreakerAddr The address of the circuit breaker contract
+     * @param bep007TokenAddr The address of the BEP007 token contract
+     * @param minStakeAmount Minimum amount required to stake
+     * @param stakePeriod Minimum staking period in days
+     * @param rewardMult Reward multiplier in basis points
+     * @param ownerAddr The address of the contract owner
      */
     function initialize(
-        address _circuitBreaker,
-        address payable _bep007Token,
-        uint256 _minimumStakeAmount,
-        uint256 _stakingPeriod,
-        uint256 _rewardMultiplier,
-        address _owner
+        address circuitBreakerAddr,
+        address payable bep007TokenAddr,
+        uint256 minStakeAmount,
+        uint256 stakePeriod,
+        uint256 rewardMult,
+        address ownerAddr
     ) public initializer {
-        require(_circuitBreaker != address(0), "StakingRewards: circuit breaker is zero address");
-        require(_bep007Token != address(0), "StakingRewards: token is zero address");
-        require(_owner != address(0), "StakingRewards: owner is zero address");
+        require(circuitBreakerAddr != address(0), "StakingRewards: circuit breaker is zero address");
+        require(bep007TokenAddr != address(0), "StakingRewards: token is zero address");
+        require(ownerAddr != address(0), "StakingRewards: owner is zero address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        circuitBreaker = ICircuitBreaker(_circuitBreaker);
-        bep007Token = BEP007(_bep007Token);
-        minimumStakeAmount = _minimumStakeAmount;
-        stakingPeriod = _stakingPeriod;
-        rewardMultiplier = _rewardMultiplier;
+        circuitBreaker = ICircuitBreaker(circuitBreakerAddr);
+        bep007Token = BEP007(bep007TokenAddr);
+        minimumStakeAmount = minStakeAmount;
+        stakingPeriod = stakePeriod;
+        rewardMultiplier = rewardMult;
 
-        transferOwnership(_owner);
+        transferOwnership(ownerAddr);
     }
 
     /**
@@ -216,20 +216,20 @@ contract BEP007StakingRewards is
 
     /**
      * @dev Updates staking parameters (only owner)
-     * @param _minimumStakeAmount New minimum stake amount
-     * @param _stakingPeriod New staking period in days
-     * @param _rewardMultiplier New reward multiplier in basis points
+     * @param newMinimumStakeAmount New minimum stake amount
+     * @param newStakingPeriod New staking period in days
+     * @param newRewardMultiplier New reward multiplier in basis points
      */
     function updateStakingParameters(
-        uint256 _minimumStakeAmount,
-        uint256 _stakingPeriod,
-        uint256 _rewardMultiplier
+        uint256 newMinimumStakeAmount,
+        uint256 newStakingPeriod,
+        uint256 newRewardMultiplier
     ) external onlyOwner {
-        minimumStakeAmount = _minimumStakeAmount;
-        stakingPeriod = _stakingPeriod;
-        rewardMultiplier = _rewardMultiplier;
+        minimumStakeAmount = newMinimumStakeAmount;
+        stakingPeriod = newStakingPeriod;
+        rewardMultiplier = newRewardMultiplier;
 
-        emit StakingParametersUpdated(_minimumStakeAmount, _stakingPeriod, _rewardMultiplier);
+        emit StakingParametersUpdated(minimumStakeAmount, stakingPeriod, rewardMultiplier);
     }
 
     /**

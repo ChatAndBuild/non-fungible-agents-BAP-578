@@ -98,34 +98,34 @@ contract AgentFactory is
     /**
      * @dev Initializes the contract
      * @dev This function can only be called once due to the initializer modifier
-     * @param _implementation The address of the BEP007Enhanced implementation contract
-     * @param _owner The address of contract
-     * @param _defaultLearningModule The default learning module address
+     * @param implementationAddr The address of the BEP007Enhanced implementation contract
+     * @param ownerAddr The address of contract
+     * @param defaultLearningModuleAddr The default learning module address
      */
     function initialize(
-        address _implementation,
-        address _owner,
-        address _defaultLearningModule,
-        address payable _treasury,
-        address _circuitBreaker
+        address implementationAddr,
+        address ownerAddr,
+        address defaultLearningModuleAddr,
+        address payable treasuryAddr,
+        address circuitBreakerAddr
     ) public initializer {
-        require(_implementation != address(0), "AgentFactory: implementation is zero address");
-        require(_owner != address(0), "AgentFactory: owner is zero address");
+        require(implementationAddr != address(0), "AgentFactory: implementation is zero address");
+        require(ownerAddr != address(0), "AgentFactory: owner is zero address");
         require(
-            _defaultLearningModule != address(0),
+            defaultLearningModuleAddr != address(0),
             "AgentFactory: default learning module is zero address"
         );
-        require(_treasury != address(0), "AgentFactory: treasury is zero address");
-        require(_circuitBreaker != address(0), "AgentFactory: circuit breaker is zero address");
+        require(treasuryAddr != address(0), "AgentFactory: treasury is zero address");
+        require(circuitBreakerAddr != address(0), "AgentFactory: circuit breaker is zero address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        implementation = _implementation;
-        defaultLearningModule = _defaultLearningModule;
-        treasury = BEP007Treasury(_treasury);
-        circuitBreaker = _circuitBreaker;
+        implementation = implementationAddr;
+        defaultLearningModule = defaultLearningModuleAddr;
+        treasury = BEP007Treasury(treasuryAddr);
+        circuitBreaker = circuitBreakerAddr;
 
         // Initialize global stats
         globalLearningStats = LearningGlobalStats({
@@ -138,7 +138,7 @@ contract AgentFactory is
         });
 
         // Transfer ownership to owner
-        _transferOwnership(_owner);
+        _transferOwnership(ownerAddr);
     }
 
     /**
@@ -218,11 +218,11 @@ contract AgentFactory is
 
     /**
      * @dev Sets the treasury contract address
-     * @param _treasury The new treasury contract address
+     * @param newTreasury The new treasury contract address
      */
-    function setTreasury(address payable _treasury) external onlyOwner {
-        require(_treasury != address(0), "AgentFactory: treasury is zero address");
-        treasury = BEP007Treasury(_treasury);
+    function setTreasury(address payable newTreasury) external onlyOwner {
+        require(newTreasury != address(0), "AgentFactory: treasury is zero address");
+        treasury = BEP007Treasury(newTreasury);
     }
 
     /**

@@ -89,35 +89,35 @@ contract BEP007Treasury is
 
     /**
      * @dev Initializes the contract
-     * @param _circuitBreaker The address of the circuit breaker contract
-     * @param _foundationAddress The address for the NFA/ChatAndBuild Foundation
-     * @param _communityTreasuryAddress The address for the Community Treasury
-     * @param _stakingRewardsAddress The address for the Staking Rewards Pool
-     * @param _owner The address of the contract owner
+     * @param circuitBreakerAddr The address of the circuit breaker contract
+     * @param foundationAddr The address for the NFA/ChatAndBuild Foundation
+     * @param communityTreasuryAddr The address for the Community Treasury
+     * @param stakingRewardsAddr The address for the Staking Rewards Pool
+     * @param ownerAddr The address of the contract owner
      */
     function initialize(
-        address _circuitBreaker,
-        address _foundationAddress,
-        address _communityTreasuryAddress,
-        address _stakingRewardsAddress,
-        address _owner
+        address circuitBreakerAddr,
+        address foundationAddr,
+        address communityTreasuryAddr,
+        address stakingRewardsAddr,
+        address ownerAddr
     ) public initializer {
-        require(_circuitBreaker != address(0), "Treasury: circuit breaker is zero address");
-        require(_foundationAddress != address(0), "Treasury: foundation address is zero");
-        require(_communityTreasuryAddress != address(0), "Treasury: treasury address is zero");
-        require(_stakingRewardsAddress != address(0), "Treasury: staking address is zero");
-        require(_owner != address(0), "Treasury: owner is zero address");
+        require(circuitBreakerAddr != address(0), "Treasury: circuit breaker is zero address");
+        require(foundationAddr != address(0), "Treasury: foundation address is zero");
+        require(communityTreasuryAddr != address(0), "Treasury: treasury address is zero");
+        require(stakingRewardsAddr != address(0), "Treasury: staking address is zero");
+        require(ownerAddr != address(0), "Treasury: owner is zero address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        circuitBreaker = ICircuitBreaker(_circuitBreaker);
-        foundationAddress = _foundationAddress;
-        communityTreasuryAddress = _communityTreasuryAddress;
-        stakingRewardsAddress = _stakingRewardsAddress;
+        circuitBreaker = ICircuitBreaker(circuitBreakerAddr);
+        foundationAddress = foundationAddr;
+        communityTreasuryAddress = communityTreasuryAddr;
+        stakingRewardsAddress = stakingRewardsAddr;
 
-        transferOwnership(_owner);
+        transferOwnership(ownerAddr);
     }
 
     /**
@@ -167,7 +167,7 @@ contract BEP007Treasury is
      * @dev Internal function to distribute a donation
      * @param donationId The ID of the donation to distribute
      */
-    function _distributeDonation(uint256 donationId) internal nonReentrant {
+    function _distributeDonation(uint256 donationId) internal {
         Donation storage donation = donations[donationId];
 
         // Calculate distribution amounts
@@ -211,27 +211,27 @@ contract BEP007Treasury is
 
     /**
      * @dev Updates treasury addresses (only owner)
-     * @param _foundationAddress New foundation address
-     * @param _communityTreasuryAddress New community treasury address
-     * @param _stakingRewardsAddress New staking rewards address
+     * @param newFoundationAddress New foundation address
+     * @param newCommunityTreasuryAddress New community treasury address
+     * @param newStakingRewardsAddress New staking rewards address
      */
     function updateTreasuryAddresses(
-        address _foundationAddress,
-        address _communityTreasuryAddress,
-        address _stakingRewardsAddress
+        address newFoundationAddress,
+        address newCommunityTreasuryAddress,
+        address newStakingRewardsAddress
     ) external onlyOwner {
-        require(_foundationAddress != address(0), "Treasury: foundation address is zero");
-        require(_communityTreasuryAddress != address(0), "Treasury: treasury address is zero");
-        require(_stakingRewardsAddress != address(0), "Treasury: staking address is zero");
+        require(newFoundationAddress != address(0), "Treasury: foundation address is zero");
+        require(newCommunityTreasuryAddress != address(0), "Treasury: treasury address is zero");
+        require(newStakingRewardsAddress != address(0), "Treasury: staking address is zero");
 
-        foundationAddress = _foundationAddress;
-        communityTreasuryAddress = _communityTreasuryAddress;
-        stakingRewardsAddress = _stakingRewardsAddress;
+        foundationAddress = newFoundationAddress;
+        communityTreasuryAddress = newCommunityTreasuryAddress;
+        stakingRewardsAddress = newStakingRewardsAddress;
 
         emit TreasuryAddressesUpdated(
-            _foundationAddress,
-            _communityTreasuryAddress,
-            _stakingRewardsAddress
+            newFoundationAddress,
+            newCommunityTreasuryAddress,
+            newStakingRewardsAddress
         );
     }
 

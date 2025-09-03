@@ -217,42 +217,42 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     }
     /**
      * @dev Sets the agent factory address
-     * @param _agentFactory The new agent factory address
+     * @param newAgentFactory The new agent factory address
      */
-    function setAgentFactory(address _agentFactory) external onlyOwner {
-        require(_agentFactory != address(0), "BEP007Governance: factory is zero address");
-        agentFactory = _agentFactory;
-        emit AgentFactoryUpdated(_agentFactory);
+    function setAgentFactory(address newAgentFactory) external onlyOwner {
+        require(newAgentFactory != address(0), "BEP007Governance: factory is zero address");
+        agentFactory = newAgentFactory;
+        emit AgentFactoryUpdated(newAgentFactory);
     }
 
     /**
      * @dev Sets the treasury address
-     * @param _treasury The new treasury address
+     * @param newTreasury The new treasury address
      */
-    function setTreasury(address _treasury) external onlyOwner {
-        require(_treasury != address(0), "BEP007Governance: treasury is zero address");
-        treasury = _treasury;
-        emit TreasuryAddressUpdated(_treasury);
+    function setTreasury(address newTreasury) external onlyOwner {
+        require(newTreasury != address(0), "BEP007Governance: treasury is zero address");
+        treasury = newTreasury;
+        emit TreasuryAddressUpdated(newTreasury);
     }
 
     /**
      * @dev Updates the voting parameters
-     * @param _votingPeriod The new voting period in days
-     * @param _quorumPercentage The new quorum percentage
-     * @param _executionDelay The new execution delay in days
+     * @param newVotingPeriod The new voting period in days
+     * @param newQuorumPercentage The new quorum percentage
+     * @param newExecutionDelay The new execution delay in days
      */
     function updateVotingParameters(
-        uint256 _votingPeriod,
-        uint256 _quorumPercentage,
-        uint256 _executionDelay
+        uint256 newVotingPeriod,
+        uint256 newQuorumPercentage,
+        uint256 newExecutionDelay
     ) external onlyOwner {
-        require(_quorumPercentage <= 100, "BEP007Governance: quorum percentage exceeds 100");
+        require(newQuorumPercentage <= 100, "BEP007Governance: quorum percentage exceeds 100");
 
-        votingPeriod = _votingPeriod;
-        quorumPercentage = _quorumPercentage;
-        executionDelay = _executionDelay;
+        votingPeriod = newVotingPeriod;
+        quorumPercentage = newQuorumPercentage;
+        executionDelay = newExecutionDelay;
 
-        emit VotingParametersUpdated(_votingPeriod, _quorumPercentage, _executionDelay);
+        emit VotingParametersUpdated(newVotingPeriod, newQuorumPercentage, newExecutionDelay);
     }
 
     /**
