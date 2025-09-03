@@ -32,6 +32,7 @@ contract BEP007Treasury is
     // Treasury addresses
     address public foundationAddress;
     address public communityTreasuryAddress;
+    // Designated address for staking rewards (users will stake here themselves)
     address public stakingRewardsAddress;
 
     // Donation tracking
@@ -92,7 +93,7 @@ contract BEP007Treasury is
      * @param circuitBreakerAddr The address of the circuit breaker contract
      * @param foundationAddr The address for the NFA/ChatAndBuild Foundation
      * @param communityTreasuryAddr The address for the Community Treasury
-     * @param stakingRewardsAddr The address for the Staking Rewards Pool
+     * @param stakingRewardsAddr The designated address for staking rewards
      * @param ownerAddr The address of the contract owner
      */
     function initialize(
@@ -219,7 +220,7 @@ contract BEP007Treasury is
      * @dev Updates treasury addresses (only owner)
      * @param newFoundationAddress New foundation address
      * @param newCommunityTreasuryAddress New community treasury address
-     * @param newStakingRewardsAddress New staking rewards address
+     * @param newStakingRewardsAddress New designated staking rewards address
      */
     function updateTreasuryAddresses(
         address newFoundationAddress,

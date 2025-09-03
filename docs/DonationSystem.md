@@ -33,29 +33,14 @@ function getDonation(uint256 donationId) external view returns (Donation memory)
 function getTreasuryStats() external view returns (uint256, uint256, uint256, uint256)
 ```
 
-### 2. BEP007StakingRewards.sol
-Manages the staking reward pool and distributes rewards to $NFA token holders.
+### 2. Staking Rewards Address
+Designated address where users can stake their ETH themselves. The treasury sends 15% of donations to this address.
 
 **Key Features:**
-- Allows staking of BEP007 tokens
-- Calculates rewards based on stake amount and time
-- Provides minimum staking period and reward multipliers
-- Integrates with the treasury for automatic reward funding
-
-**Core Functions:**
-```solidity
-// Stake BEP007 tokens
-function stake(uint256[] calldata tokenIds) external
-
-// Claim pending rewards
-function claimRewards() external
-
-// Unstake tokens (after minimum period)
-function unstake() external
-
-// Calculate pending rewards
-function calculateRewards(address staker) external view returns (uint256)
-```
+- Designated address receives 15% of all donations
+- Users can stake their ETH at this address themselves
+- Provides flexibility for different staking strategies
+- Integrates with the treasury for automatic funding
 
 ### 3. AgentFactory Integration
 The AgentFactory has been updated to collect a 0.01 BNB fee for each agent creation, which is automatically sent to the treasury for distribution.
@@ -81,34 +66,15 @@ await signer.sendTransaction({
 });
 ```
 
-### Staking for Rewards
+### Staking Rewards
 
-#### Staking Tokens
+The treasury automatically sends 15% of all donations to the designated staking rewards address. Users can then stake their ETH at this address using whatever staking mechanism is implemented there.
+
+#### Checking Staking Rewards Address
 ```javascript
-// Get your BEP007 token IDs
-const tokenIds = [1, 2, 3]; // Your token IDs
-
-// Stake tokens
-await stakingRewards.stake(tokenIds);
-```
-
-#### Checking Rewards
-```javascript
-// Check pending rewards
-const rewards = await stakingRewards.calculateRewards(userAddress);
-console.log("Pending rewards:", ethers.utils.formatEther(rewards));
-```
-
-#### Claiming Rewards
-```javascript
-// Claim rewards without unstaking
-await stakingRewards.claimRewards();
-```
-
-#### Unstaking
-```javascript
-// Unstake after minimum period (30 days by default)
-await stakingRewards.unstake();
+// Get the address where staking rewards are sent
+const stakingRewardsAddress = await treasury.stakingRewardsAddress();
+console.log("Staking rewards address:", stakingRewardsAddress);
 ```
 
 ### Creating Agents with Fees

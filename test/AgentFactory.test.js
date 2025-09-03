@@ -45,21 +45,8 @@ describe('AgentFactory', function () {
     merkleTreeLearning = await MerkleTreeLearning.deploy();
     await merkleTreeLearning.deployed();
 
-    // Deploy StakingRewards for Treasury
-    const BEP007StakingRewards = await ethers.getContractFactory('BEP007StakingRewards');
-    stakingRewards = await upgrades.deployProxy(
-      BEP007StakingRewards,
-      [
-        circuitBreaker.address,
-        bep007Implementation.address,
-        1, // minimum stake amount
-        30, // staking period in days
-        100, // reward multiplier (1% daily)
-        owner.address
-      ],
-      { initializer: 'initialize' }
-    );
-    await stakingRewards.deployed();
+    // Designated staking rewards address (users will stake here themselves)
+    stakingRewards = { address: owner.address }; // Use owner address for testing
 
     // Deploy Treasury for AgentFactory
     const BEP007Treasury = await ethers.getContractFactory('BEP007Treasury');

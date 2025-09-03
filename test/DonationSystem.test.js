@@ -29,21 +29,8 @@ describe("Donation System", function () {
         );
         await bep007Implementation.deployed();
 
-        // Deploy StakingRewards first
-        const BEP007StakingRewards = await ethers.getContractFactory("BEP007StakingRewards");
-        stakingRewards = await upgrades.deployProxy(
-            BEP007StakingRewards,
-            [
-                circuitBreaker.address,
-                bep007Implementation.address,
-                1, // minimum stake amount
-                30, // staking period in days
-                1000, // reward multiplier (10% daily) - increased for testing
-                owner.address
-            ],
-            { initializer: 'initialize' }
-        );
-        await stakingRewards.deployed();
+        // Designated staking rewards address (users will stake here themselves)
+        stakingRewards = { address: owner.address }; // Use owner address for testing
 
         // Deploy Treasury with staking rewards address
         const BEP007Treasury = await ethers.getContractFactory("BEP007Treasury");
@@ -196,133 +183,9 @@ describe("Donation System", function () {
         });
     });
 
-    describe("BEP007StakingRewards", function () {
-        it("Should initialize with correct parameters", async function () {
-            expect(await stakingRewards.minimumStakeAmount()).to.equal(1);
-            expect(await stakingRewards.stakingPeriod()).to.equal(30);
-            expect(await stakingRewards.rewardMultiplier()).to.equal(1000);
-            expect(await stakingRewards.bep007Token()).to.equal(bep007Implementation.address);
-        });
 
-        it("Should allow staking BEP007 tokens", async function () {
-            // Create some test tokens for staker1
-            const tokenIds = [1, 2, 3];
-            const mockLogicAddress = '0x1234567890123456789012345678901234567890';
-            for (let i = 0; i < tokenIds.length; i++) {
-                await bep007Implementation['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
-                    staker1.address,
-                    mockLogicAddress,
-                    `metadata-${i}`,
-                    {
-                        persona: "",
-                        experience: "",
-                        voiceHash: "",
-                        animationURI: "",
-                        vaultURI: "",
-                        vaultHash: ethers.constants.HashZero
-                    }
-                );
-            }
 
-            await stakingRewards.connect(staker1).stake(tokenIds);
 
-            const stakeInfo = await stakingRewards.getStakeInfo(staker1.address);
-            expect(stakeInfo.isActive).to.be.true;
-            expect(stakeInfo.amount).to.equal(3); // 3 tokens staked
-            expect(stakeInfo.startTime).to.be.gt(0);
-        });
-
-        it("Should calculate rewards correctly", async function () {
-            // Create and stake tokens
-            const mockLogicAddress = '0x1234567890123456789012345678901234567890';
-            await bep007Implementation['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
-                staker1.address,
-                mockLogicAddress,
-                "metadata",
-                {
-                    persona: "",
-                    experience: "",
-                    voiceHash: "",
-                    animationURI: "",
-                    vaultURI: "",
-                    vaultHash: ethers.constants.HashZero
-                }
-            );
-
-            await stakingRewards.connect(staker1).stake([1]);
-
-            // Add rewards to pool
-            const rewardAmount = ethers.utils.parseEther("1.0");
-            await stakingRewards.addRewards({ value: rewardAmount });
-
-            // Fast forward time (simulate 10 days)
-            await ethers.provider.send("evm_increaseTime", [10 * 24 * 60 * 60]);
-            await ethers.provider.send("evm_mine");
-
-            const rewards = await stakingRewards.calculateRewards(staker1.address);
-            expect(rewards).to.be.gt(0);
-        });
-
-        it("Should allow claiming rewards", async function () {
-            // Create and stake tokens
-            const mockLogicAddress = '0x1234567890123456789012345678901234567890';
-            await bep007Implementation['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
-                staker1.address,
-                mockLogicAddress,
-                "metadata",
-                {
-                    persona: "",
-                    experience: "",
-                    voiceHash: "",
-                    animationURI: "",
-                    vaultURI: "",
-                    vaultHash: ethers.constants.HashZero
-                }
-            );
-
-            await stakingRewards.connect(staker1).stake([1]);
-
-            // Add rewards to pool
-            const rewardAmount = ethers.utils.parseEther("1.0");
-            await stakingRewards.addRewards({ value: rewardAmount });
-
-            // Fast forward time
-            await ethers.provider.send("evm_increaseTime", [10 * 24 * 60 * 60]);
-            await ethers.provider.send("evm_mine");
-
-            const initialBalance = await staker1.getBalance();
-            const tx = await stakingRewards.connect(staker1).claimRewards();
-            const receipt = await tx.wait();
-            const gasUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
-            const finalBalance = await staker1.getBalance();
-
-            // Check that the user received rewards (accounting for gas costs)
-            expect(finalBalance.add(gasUsed)).to.be.gt(initialBalance);
-        });
-
-        it("Should prevent unstaking before minimum period", async function () {
-            const mockLogicAddress = '0x1234567890123456789012345678901234567890';
-            await bep007Implementation['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
-                staker1.address,
-                mockLogicAddress,
-                "metadata",
-                {
-                    persona: "",
-                    experience: "",
-                    voiceHash: "",
-                    animationURI: "",
-                    vaultURI: "",
-                    vaultHash: ethers.constants.HashZero
-                }
-            );
-
-            await stakingRewards.connect(staker1).stake([1]);
-
-            await expect(
-                stakingRewards.connect(staker1).unstake()
-            ).to.be.revertedWith("StakingRewards: staking period not met");
-        });
-    });
 
     describe("AgentFactory Integration", function () {
         it("Should collect fees when creating agents", async function () {
@@ -355,28 +218,7 @@ describe("Donation System", function () {
             ).to.be.revertedWith("Treasury: system is paused");
         });
 
-        it("Should pause staking operations when circuit breaker is active", async function () {
-            await circuitBreaker.setGlobalPause(true);
 
-            const mockLogicAddress = '0x1234567890123456789012345678901234567890';
-            await bep007Implementation['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
-                staker1.address,
-                mockLogicAddress,
-                "metadata",
-                {
-                    persona: "",
-                    experience: "",
-                    voiceHash: "",
-                    animationURI: "",
-                    vaultURI: "",
-                    vaultHash: ethers.constants.HashZero
-                }
-            );
-
-            await expect(
-                stakingRewards.connect(staker1).stake([1])
-            ).to.be.revertedWith("StakingRewards: system is paused");
-        });
     });
 
     describe("Governance Integration", function () {

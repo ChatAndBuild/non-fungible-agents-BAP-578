@@ -22,11 +22,8 @@ async function main() {
     await treasury.deployed();
     console.log("BEP007Treasury deployed to:", treasury.address);
 
-    // Deploy BEP007StakingRewards
-    const BEP007StakingRewards = await ethers.getContractFactory("BEP007StakingRewards");
-    const stakingRewards = await BEP007StakingRewards.deploy();
-    await stakingRewards.deployed();
-    console.log("BEP007StakingRewards deployed to:", stakingRewards.address);
+    // Designated staking rewards address (users will stake here themselves)
+    const stakingRewardsAddress = deployer.address; // Replace with actual staking rewards address
 
     // Deploy AgentFactory
     const AgentFactory = await ethers.getContractFactory("AgentFactory");
@@ -55,25 +52,12 @@ async function main() {
         circuitBreaker.address,
         foundationAddress,
         communityTreasuryAddress,
-        stakingRewards.address,
+        stakingRewardsAddress,
         deployer.address
     );
     console.log("BEP007Treasury initialized");
 
-    // Initialize StakingRewards
-    const minimumStakeAmount = 1; // Minimum 1 token to stake
-    const stakingPeriod = 30; // 30 days minimum staking period
-    const rewardMultiplier = 100; // 1% daily reward rate (100 basis points)
 
-    await stakingRewards.initialize(
-        circuitBreaker.address,
-        bep007Implementation.address,
-        minimumStakeAmount,
-        stakingPeriod,
-        rewardMultiplier,
-        deployer.address
-    );
-    console.log("BEP007StakingRewards initialized");
 
     // Initialize AgentFactory
     await agentFactory.initialize(
@@ -115,7 +99,7 @@ async function main() {
     console.log("CircuitBreaker:", circuitBreaker.address);
     console.log("BEP007 Implementation:", bep007Implementation.address);
     console.log("BEP007Treasury:", treasury.address);
-    console.log("BEP007StakingRewards:", stakingRewards.address);
+    console.log("Staking Rewards Address:", stakingRewardsAddress);
     console.log("AgentFactory:", agentFactory.address);
     console.log("BEP007Governance:", governance.address);
     console.log("\n=== Important Notes ===");
