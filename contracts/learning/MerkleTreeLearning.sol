@@ -23,10 +23,10 @@ contract MerkleTreeLearning is
 
     // Mapping from token ID to learning tree root
     mapping(uint256 => bytes32) private _learningRoots;
-    
+
     // Mapping from token ID to learning metrics
     mapping(uint256 => LearningMetrics) private _learningMetrics;
-    
+
     // Mapping from token ID to learning update history
     mapping(uint256 => LearningUpdate[]) private _learningUpdates;
 
@@ -49,31 +49,31 @@ contract MerkleTreeLearning is
      * @dev Struct representing a Merkle tree node
      */
     struct TreeNode {
-        bytes32 hash;           // Hash of this node
-        bytes32 leftChild;      // Hash of left child (or zero if leaf)
-        bytes32 rightChild;     // Hash of right child (or zero if leaf)
-        bytes data;             // Raw data for leaf nodes
-        uint256 level;          // Level in the tree (0 = leaf, 1 = parent, etc.)
-        uint256 position;       // Position within the level
-        bool isLeaf;            // Whether this is a leaf node
-        uint256 timestamp;      // When this node was added
+        bytes32 hash; // Hash of this node
+        bytes32 leftChild; // Hash of left child (or zero if leaf)
+        bytes32 rightChild; // Hash of right child (or zero if leaf)
+        bytes data; // Raw data for leaf nodes
+        uint256 level; // Level in the tree (0 = leaf, 1 = parent, etc.)
+        uint256 position; // Position within the level
+        bool isLeaf; // Whether this is a leaf node
+        uint256 timestamp; // When this node was added
     }
 
     /**
      * @dev Struct containing node verification details
      */
     struct NodeVerificationInfo {
-        bool exists;            // Whether the node exists
-        bool isLeaf;            // Whether the node is a leaf
-        uint256 level;          // Level in the tree
-        uint256 position;       // Position within the level
-        bool hasValidChildren;  // Whether children exist and are valid
-        bool hasValidParent;    // Whether parent exists and is valid
-        bytes32 parentHash;     // Hash of the parent node
-        bytes32 leftChildHash;  // Hash of the left child
+        bool exists; // Whether the node exists
+        bool isLeaf; // Whether the node is a leaf
+        uint256 level; // Level in the tree
+        uint256 position; // Position within the level
+        bool hasValidChildren; // Whether children exist and are valid
+        bool hasValidParent; // Whether parent exists and is valid
+        bytes32 parentHash; // Hash of the parent node
+        bytes32 leftChildHash; // Hash of the left child
         bytes32 rightChildHash; // Hash of the right child
-        uint256 timestamp;      // When the node was added
-        uint256 dataLength;     // Length of the node's data
+        uint256 timestamp; // When the node was added
+        uint256 dataLength; // Length of the node's data
     }
 
     /**
@@ -157,19 +157,22 @@ contract MerkleTreeLearning is
         string calldata /* reason */
     ) internal {
         require(newRoot != bytes32(0), "MerkleTreeLearning: new root cannot be zero");
-        require(newRoot != _learningRoots[tokenId], "MerkleTreeLearning: new root must be different");
+        require(
+            newRoot != _learningRoots[tokenId],
+            "MerkleTreeLearning: new root must be different"
+        );
 
         bytes32 previousRoot = _learningRoots[tokenId];
-        
+
         // Update the root
         _learningRoots[tokenId] = newRoot;
-        
+
         // Replace entire tree structure
         _replaceTreeStructure(tokenId, nodes, newRoot, previousRoot);
-        
+
         // Update learning metrics
         _updateLearningMetrics(tokenId);
-        
+
         // Record the learning update
         LearningUpdate memory update = LearningUpdate({
             previousRoot: previousRoot,
@@ -177,17 +180,17 @@ contract MerkleTreeLearning is
             proof: proof,
             timestamp: block.timestamp
         });
-        
+
         _learningUpdates[tokenId].push(update);
         _updateCounts[tokenId]++;
         _lastUpdateTimestamps[tokenId] = block.timestamp;
-        
+
         // Update confidence score after update count is incremented
         _learningMetrics[tokenId].confidenceScore = _calculateConfidenceScore(tokenId);
-        
+
         // Emit learning updated event
         emit LearningUpdated(tokenId, previousRoot, newRoot, block.timestamp);
-        
+
         // Check for learning milestones
         _checkLearningMilestones(tokenId);
     }
@@ -198,10 +201,15 @@ contract MerkleTreeLearning is
      * @param nodes Array of tree nodes for the new tree
      * @return previousNodeCount The number of nodes in the previous tree
      */
-    function _replaceTreeStructure(uint256 tokenId, TreeNode[] calldata nodes, bytes32 newRoot, bytes32 previousRoot) internal returns (uint256 previousNodeCount) {
+    function _replaceTreeStructure(
+        uint256 tokenId,
+        TreeNode[] calldata nodes,
+        bytes32 newRoot,
+        bytes32 previousRoot
+    ) internal returns (uint256 previousNodeCount) {
         // Store previous tree information
         previousNodeCount = _nodeCounts[tokenId];
-        
+
         // Clear existing tree structure
         bytes32[] storage existingHashes = _nodeHashes[tokenId];
         for (uint256 i = 0; i < existingHashes.length; i++) {
@@ -209,14 +217,14 @@ contract MerkleTreeLearning is
         }
         delete _nodeHashes[tokenId];
         _nodeCounts[tokenId] = 0;
-        
+
         // Add new tree structure
         for (uint256 i = 0; i < nodes.length; i++) {
             TreeNode calldata node = nodes[i];
-            
+
             // Validate node
             require(node.hash != bytes32(0), "MerkleTreeLearning: node hash cannot be zero");
-            
+
             // Add new node
             _treeNodes[tokenId][node.hash] = TreeNode({
                 hash: node.hash,
@@ -228,10 +236,10 @@ contract MerkleTreeLearning is
                 isLeaf: node.isLeaf,
                 timestamp: block.timestamp
             });
-            
+
             _nodeHashes[tokenId].push(node.hash);
             _nodeCounts[tokenId]++;
-            
+
             emit TreeNodeAdded(
                 tokenId,
                 node.hash,
@@ -242,7 +250,7 @@ contract MerkleTreeLearning is
                 node.isLeaf
             );
         }
-        
+
         // Emit tree structure replaced event
         emit TreeStructureReplaced(
             tokenId,
@@ -287,7 +295,9 @@ contract MerkleTreeLearning is
      * @param tokenId The ID of the agent token
      * @return The latest learning update
      */
-    function getLatestLearningUpdate(uint256 tokenId) external view returns (LearningUpdate memory) {
+    function getLatestLearningUpdate(
+        uint256 tokenId
+    ) external view returns (LearningUpdate memory) {
         require(_learningUpdates[tokenId].length > 0, "MerkleTreeLearning: no updates found");
         return _learningUpdates[tokenId][_learningUpdates[tokenId].length - 1];
     }
@@ -316,7 +326,10 @@ contract MerkleTreeLearning is
      * @param nodeHash The hash of the node to retrieve
      * @return The tree node
      */
-    function getTreeNode(uint256 tokenId, bytes32 nodeHash) external view returns (TreeNode memory) {
+    function getTreeNode(
+        uint256 tokenId,
+        bytes32 nodeHash
+    ) external view returns (TreeNode memory) {
         TreeNode memory node = _treeNodes[tokenId][nodeHash];
         require(node.hash != bytes32(0), "MerkleTreeLearning: node not found");
         return node;
@@ -330,11 +343,11 @@ contract MerkleTreeLearning is
     function getAllTreeNodes(uint256 tokenId) external view returns (TreeNode[] memory) {
         bytes32[] memory hashes = _nodeHashes[tokenId];
         TreeNode[] memory nodes = new TreeNode[](hashes.length);
-        
+
         for (uint256 i = 0; i < hashes.length; i++) {
             nodes[i] = _treeNodes[tokenId][hashes[i]];
         }
-        
+
         return nodes;
     }
 
@@ -344,21 +357,24 @@ contract MerkleTreeLearning is
      * @param level The level in the tree
      * @return Array of tree nodes at the specified level
      */
-    function getTreeNodesAtLevel(uint256 tokenId, uint256 level) external view returns (TreeNode[] memory) {
+    function getTreeNodesAtLevel(
+        uint256 tokenId,
+        uint256 level
+    ) external view returns (TreeNode[] memory) {
         bytes32[] memory hashes = _nodeHashes[tokenId];
         uint256 count = 0;
-        
+
         // Count nodes at the specified level
         for (uint256 i = 0; i < hashes.length; i++) {
             if (_treeNodes[tokenId][hashes[i]].level == level) {
                 count++;
             }
         }
-        
+
         // Create array and populate with nodes at the specified level
         TreeNode[] memory nodes = new TreeNode[](count);
         uint256 index = 0;
-        
+
         for (uint256 i = 0; i < hashes.length; i++) {
             TreeNode memory node = _treeNodes[tokenId][hashes[i]];
             if (node.level == level) {
@@ -366,7 +382,7 @@ contract MerkleTreeLearning is
                 index++;
             }
         }
-        
+
         return nodes;
     }
 
@@ -378,18 +394,18 @@ contract MerkleTreeLearning is
     function getLeafNodes(uint256 tokenId) external view returns (TreeNode[] memory) {
         bytes32[] memory hashes = _nodeHashes[tokenId];
         uint256 count = 0;
-        
+
         // Count leaf nodes
         for (uint256 i = 0; i < hashes.length; i++) {
             if (_treeNodes[tokenId][hashes[i]].isLeaf) {
                 count++;
             }
         }
-        
+
         // Create array and populate with leaf nodes
         TreeNode[] memory nodes = new TreeNode[](count);
         uint256 index = 0;
-        
+
         for (uint256 i = 0; i < hashes.length; i++) {
             TreeNode memory node = _treeNodes[tokenId][hashes[i]];
             if (node.isLeaf) {
@@ -397,7 +413,7 @@ contract MerkleTreeLearning is
                 index++;
             }
         }
-        
+
         return nodes;
     }
 
@@ -418,14 +434,14 @@ contract MerkleTreeLearning is
     function getTreeDepth(uint256 tokenId) external view returns (uint256) {
         bytes32[] memory hashes = _nodeHashes[tokenId];
         uint256 maxLevel = 0;
-        
+
         for (uint256 i = 0; i < hashes.length; i++) {
             uint256 level = _treeNodes[tokenId][hashes[i]].level;
             if (level > maxLevel) {
                 maxLevel = level;
             }
         }
-        
+
         return maxLevel;
     }
 
@@ -462,29 +478,32 @@ contract MerkleTreeLearning is
      * @return isValid Whether the node is valid
      * @return nodeInfo Struct containing node verification details
      */
-    function verifyIndividualNode(uint256 tokenId, bytes32 nodeHash) external view returns (
-        bool isValid,
-        NodeVerificationInfo memory nodeInfo
-    ) {
+    function verifyIndividualNode(
+        uint256 tokenId,
+        bytes32 nodeHash
+    ) external view returns (bool isValid, NodeVerificationInfo memory nodeInfo) {
         TreeNode memory node = _treeNodes[tokenId][nodeHash];
-        
+
         // Check if node exists
         if (node.hash == bytes32(0)) {
-            return (false, NodeVerificationInfo({
-                exists: false,
-                isLeaf: false,
-                level: 0,
-                position: 0,
-                hasValidChildren: false,
-                hasValidParent: false,
-                parentHash: bytes32(0),
-                leftChildHash: bytes32(0),
-                rightChildHash: bytes32(0),
-                timestamp: 0,
-                dataLength: 0
-            }));
+            return (
+                false,
+                NodeVerificationInfo({
+                    exists: false,
+                    isLeaf: false,
+                    level: 0,
+                    position: 0,
+                    hasValidChildren: false,
+                    hasValidParent: false,
+                    parentHash: bytes32(0),
+                    leftChildHash: bytes32(0),
+                    rightChildHash: bytes32(0),
+                    timestamp: 0,
+                    dataLength: 0
+                })
+            );
         }
-        
+
         // Check if children exist and are valid
         bool hasValidChildren = true;
         if (node.leftChild != bytes32(0)) {
@@ -495,12 +514,12 @@ contract MerkleTreeLearning is
             TreeNode memory rightChild = _treeNodes[tokenId][node.rightChild];
             hasValidChildren = hasValidChildren && rightChild.hash != bytes32(0);
         }
-        
+
         // Check if parent exists
         bool hasValidParent = false;
         bytes32 parentHash = bytes32(0);
         bytes32[] memory hashes = _nodeHashes[tokenId];
-        
+
         for (uint256 i = 0; i < hashes.length; i++) {
             TreeNode memory potentialParent = _treeNodes[tokenId][hashes[i]];
             if (potentialParent.leftChild == nodeHash || potentialParent.rightChild == nodeHash) {
@@ -509,19 +528,19 @@ contract MerkleTreeLearning is
                 break;
             }
         }
-        
+
         // Root node doesn't have a parent
         if (nodeHash == _learningRoots[tokenId]) {
             hasValidParent = true;
             parentHash = bytes32(0);
         }
-        
+
         // Calculate data length
         uint256 dataLength = 0;
         if (node.data.length > 0) {
             dataLength = node.data.length;
         }
-        
+
         nodeInfo = NodeVerificationInfo({
             exists: true,
             isLeaf: node.isLeaf,
@@ -535,12 +554,13 @@ contract MerkleTreeLearning is
             timestamp: node.timestamp,
             dataLength: dataLength
         });
-        
+
         // Node is valid if it exists and has valid relationships
-        isValid = nodeInfo.exists && 
-                  (nodeInfo.hasValidParent || nodeHash == _learningRoots[tokenId]) &&
-                  (nodeInfo.isLeaf || nodeInfo.hasValidChildren);
-        
+        isValid =
+            nodeInfo.exists &&
+            (nodeInfo.hasValidParent || nodeHash == _learningRoots[tokenId]) &&
+            (nodeInfo.isLeaf || nodeInfo.hasValidChildren);
+
         return (isValid, nodeInfo);
     }
 
@@ -550,22 +570,28 @@ contract MerkleTreeLearning is
      * @param leafHash The hash of the leaf node
      * @return Array of node hashes representing the path
      */
-    function getPathToRoot(uint256 tokenId, bytes32 leafHash) external view returns (bytes32[] memory) {
-        require(_treeNodes[tokenId][leafHash].hash != bytes32(0), "MerkleTreeLearning: leaf node not found");
+    function getPathToRoot(
+        uint256 tokenId,
+        bytes32 leafHash
+    ) external view returns (bytes32[] memory) {
+        require(
+            _treeNodes[tokenId][leafHash].hash != bytes32(0),
+            "MerkleTreeLearning: leaf node not found"
+        );
         require(_treeNodes[tokenId][leafHash].isLeaf, "MerkleTreeLearning: node is not a leaf");
-        
+
         bytes32 currentHash = leafHash;
         bytes32[] memory path = new bytes32[](256); // Maximum possible path length
         uint256 pathLength = 0;
-        
+
         while (currentHash != _learningRoots[tokenId] && pathLength < 256) {
             path[pathLength] = currentHash;
             pathLength++;
-            
+
             // Find parent node
             bool found = false;
             bytes32[] memory hashes = _nodeHashes[tokenId];
-            
+
             for (uint256 i = 0; i < hashes.length; i++) {
                 TreeNode memory node = _treeNodes[tokenId][hashes[i]];
                 if (node.leftChild == currentHash || node.rightChild == currentHash) {
@@ -574,24 +600,24 @@ contract MerkleTreeLearning is
                     break;
                 }
             }
-            
+
             if (!found) {
                 break; // Cannot find parent, tree structure is incomplete
             }
         }
-        
+
         // Add root to path
         if (currentHash == _learningRoots[tokenId]) {
             path[pathLength] = currentHash;
             pathLength++;
         }
-        
+
         // Create properly sized array
         bytes32[] memory result = new bytes32[](pathLength);
         for (uint256 i = 0; i < pathLength; i++) {
             result[i] = path[i];
         }
-        
+
         return result;
     }
 
@@ -601,14 +627,14 @@ contract MerkleTreeLearning is
      */
     function _updateLearningMetrics(uint256 tokenId) internal {
         LearningMetrics storage metrics = _learningMetrics[tokenId];
-        
+
         uint256 timeSinceLastUpdate = block.timestamp - metrics.lastUpdateTimestamp;
-        
+
         // Update metrics
         metrics.totalInteractions++;
         metrics.learningEvents++;
         metrics.lastUpdateTimestamp = block.timestamp;
-        
+
         // Calculate learning velocity (updates per day)
         if (timeSinceLastUpdate > 0) {
             metrics.learningVelocity = (1 * 1 days) / timeSinceLastUpdate;
@@ -622,15 +648,15 @@ contract MerkleTreeLearning is
      */
     function _calculateConfidenceScore(uint256 tokenId) internal view returns (uint256) {
         uint256 updateCount = _updateCounts[tokenId];
-        
+
         // Base confidence on update frequency - minimum 100 points per update
         uint256 frequencyScore = updateCount * 100;
-        
+
         // For the first update, ensure we have a minimum score
         if (updateCount == 0) {
             return 0;
         }
-        
+
         // Add time-based score if we have update history
         uint256 timeScore = 0;
         if (_lastUpdateTimestamps[tokenId] > 0) {
@@ -638,7 +664,7 @@ contract MerkleTreeLearning is
             // Add 1 point per hour since last update (minimum 1 point)
             timeScore = (timeSinceLastUpdate / 1 hours) + 1;
         }
-        
+
         return frequencyScore + timeScore;
     }
 
@@ -648,7 +674,7 @@ contract MerkleTreeLearning is
      */
     function _checkLearningMilestones(uint256 tokenId) internal {
         uint256 updateCount = _updateCounts[tokenId];
-        
+
         // Check for milestone updates
         if (updateCount == 10) {
             emit LearningMilestone(tokenId, "First Decade", 10, block.timestamp);
@@ -657,7 +683,7 @@ contract MerkleTreeLearning is
         } else if (updateCount == 1000) {
             emit LearningMilestone(tokenId, "Millennium", 1000, block.timestamp);
         }
-        
+
         // Check for time-based milestones
         uint256 timeSinceLastUpdate = block.timestamp - _lastUpdateTimestamps[tokenId];
         if (timeSinceLastUpdate >= 30 days) {
@@ -672,10 +698,10 @@ contract MerkleTreeLearning is
      */
     function emergencyResetRoot(uint256 tokenId, bytes32 newRoot) external onlyOwner {
         require(newRoot != bytes32(0), "MerkleTreeLearning: new root cannot be zero");
-        
+
         bytes32 previousRoot = _learningRoots[tokenId];
         _learningRoots[tokenId] = newRoot;
-        
+
         // Record emergency update
         LearningUpdate memory update = LearningUpdate({
             previousRoot: previousRoot,
@@ -683,14 +709,14 @@ contract MerkleTreeLearning is
             proof: "",
             timestamp: block.timestamp
         });
-        
+
         _learningUpdates[tokenId].push(update);
         _updateCounts[tokenId]++;
         _lastUpdateTimestamps[tokenId] = block.timestamp;
-        
+
         // Update confidence score after update count is incremented
         _learningMetrics[tokenId].confidenceScore = _calculateConfidenceScore(tokenId);
-        
+
         emit LearningUpdated(tokenId, previousRoot, newRoot, block.timestamp);
     }
 }

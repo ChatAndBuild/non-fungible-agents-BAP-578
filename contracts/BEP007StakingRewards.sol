@@ -122,12 +122,15 @@ contract BEP007StakingRewards is
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
             require(bep007Token.ownerOf(tokenId) == msg.sender, "StakingRewards: not token owner");
-            
+
             // Each token contributes 1 unit to stake amount (can be modified based on token value)
             totalStakeAmount += 1;
         }
 
-        require(totalStakeAmount >= minimumStakeAmount, "StakingRewards: insufficient stake amount");
+        require(
+            totalStakeAmount >= minimumStakeAmount,
+            "StakingRewards: insufficient stake amount"
+        );
 
         // Create stake record
         stakes[msg.sender] = Stake({
@@ -149,7 +152,7 @@ contract BEP007StakingRewards is
      */
     function unstake() external hasActiveStake whenNotPaused nonReentrant {
         Stake storage userStake = stakes[msg.sender];
-        
+
         require(
             block.timestamp >= userStake.startTime + (stakingPeriod * 1 days),
             "StakingRewards: staking period not met"
@@ -170,7 +173,7 @@ contract BEP007StakingRewards is
             rewardPoolBalance -= finalRewards;
             totalRewardsDistributed += finalRewards;
 
-            (bool success, ) = payable(msg.sender).call{value: finalRewards}("");
+            (bool success, ) = payable(msg.sender).call{ value: finalRewards }("");
             require(success, "StakingRewards: reward transfer failed");
 
             emit RewardsClaimed(msg.sender, finalRewards);
@@ -194,7 +197,7 @@ contract BEP007StakingRewards is
         rewardPoolBalance -= rewards;
         totalRewardsDistributed += rewards;
 
-        (bool success, ) = payable(msg.sender).call{value: rewards}("");
+        (bool success, ) = payable(msg.sender).call{ value: rewards }("");
         require(success, "StakingRewards: reward transfer failed");
 
         emit RewardsClaimed(msg.sender, rewards);
@@ -205,9 +208,9 @@ contract BEP007StakingRewards is
      */
     function addRewards() external payable onlyOwner {
         require(msg.value > 0, "StakingRewards: no rewards to add");
-        
+
         rewardPoolBalance += msg.value;
-        
+
         emit RewardsAdded(msg.value, rewardPoolBalance);
     }
 
@@ -238,7 +241,7 @@ contract BEP007StakingRewards is
         require(recipient != address(0), "StakingRewards: recipient is zero address");
         require(amount <= address(this).balance, "StakingRewards: insufficient balance");
 
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success, ) = recipient.call{ value: amount }("");
         require(success, "StakingRewards: emergency withdrawal failed");
     }
 
@@ -258,22 +261,22 @@ contract BEP007StakingRewards is
      */
     function _calculateRewards(address staker) internal view returns (uint256) {
         Stake storage userStake = stakes[staker];
-        
+
         if (!userStake.isActive) {
             return 0;
         }
 
         uint256 timeStaked = block.timestamp - userStake.lastRewardTime;
-        uint256 daysStaked = timeStaked / 1 days;
-        
+
         // Calculate rewards based on stake amount, time, and multiplier
-        uint256 rewards = (userStake.amount * daysStaked * rewardMultiplier) / 10000;
-        
+        // Multiply first to avoid precision loss, then divide
+        uint256 rewards = (userStake.amount * timeStaked * rewardMultiplier) / (1 days * 10000);
+
         // Cap rewards by the available reward pool balance
         if (rewards > rewardPoolBalance) {
             rewards = rewardPoolBalance;
         }
-        
+
         return rewards;
     }
 
@@ -293,18 +296,17 @@ contract BEP007StakingRewards is
      * @return totalStakersCount Total number of stakers
      * @return rewardPoolBalanceAmount Current reward pool balance
      */
-    function getStakingStats() external view returns (
-        uint256 totalStakedAmount,
-        uint256 totalRewardsDistributedAmount,
-        uint256 totalStakersCount,
-        uint256 rewardPoolBalanceAmount
-    ) {
-        return (
-            totalStaked,
-            totalRewardsDistributed,
-            totalStakers,
-            rewardPoolBalance
-        );
+    function getStakingStats()
+        external
+        view
+        returns (
+            uint256 totalStakedAmount,
+            uint256 totalRewardsDistributedAmount,
+            uint256 totalStakersCount,
+            uint256 rewardPoolBalanceAmount
+        )
+    {
+        return (totalStaked, totalRewardsDistributed, totalStakers, rewardPoolBalance);
     }
 
     /**
@@ -314,7 +316,7 @@ contract BEP007StakingRewards is
      */
     function canUnstake(address staker) external view returns (bool) {
         Stake storage userStake = stakes[staker];
-        
+
         if (!userStake.isActive) {
             return false;
         }

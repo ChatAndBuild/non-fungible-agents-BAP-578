@@ -111,6 +111,10 @@ contract AgentFactory is
     ) public initializer {
         require(_implementation != address(0), "AgentFactory: implementation is zero address");
         require(_owner != address(0), "AgentFactory: owner is zero address");
+        require(
+            _defaultLearningModule != address(0),
+            "AgentFactory: default learning module is zero address"
+        );
         require(_treasury != address(0), "AgentFactory: treasury is zero address");
         require(_circuitBreaker != address(0), "AgentFactory: circuit breaker is zero address");
 
@@ -165,7 +169,7 @@ contract AgentFactory is
         require(msg.value == AGENT_CREATION_FEE, "AgentFactory: incorrect fee amount");
 
         // Collect fee and distribute to treasury
-        (bool success, ) = payable(address(treasury)).call{value: AGENT_CREATION_FEE}("");
+        (bool success, ) = payable(address(treasury)).call{ value: AGENT_CREATION_FEE }("");
         require(success, "AgentFactory: fee transfer failed");
 
         emit AgentCreationFeeCollected(msg.sender, AGENT_CREATION_FEE);

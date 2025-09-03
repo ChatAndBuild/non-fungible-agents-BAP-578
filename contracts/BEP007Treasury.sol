@@ -25,9 +25,9 @@ contract BEP007Treasury is
     ICircuitBreaker public circuitBreaker;
 
     // Fee allocation percentages (in basis points - 10000 = 100%)
-    uint256 public constant FOUNDATION_PERCENTAGE = 6000;  // 60%
-    uint256 public constant TREASURY_PERCENTAGE = 2500;    // 25%
-    uint256 public constant STAKING_PERCENTAGE = 1500;     // 15%
+    uint256 public constant FOUNDATION_PERCENTAGE = 6000; // 60%
+    uint256 public constant TREASURY_PERCENTAGE = 2500; // 25%
+    uint256 public constant STAKING_PERCENTAGE = 1500; // 15%
 
     // Treasury addresses
     address public foundationAddress;
@@ -36,7 +36,7 @@ contract BEP007Treasury is
 
     // Donation tracking
     CountersUpgradeable.Counter private _donationIdCounter;
-    
+
     struct Donation {
         uint256 id;
         address donor;
@@ -63,20 +63,20 @@ contract BEP007Treasury is
         string message,
         uint256 timestamp
     );
-    
+
     event DonationDistributed(
         uint256 indexed donationId,
         uint256 foundationAmount,
         uint256 treasuryAmount,
         uint256 stakingAmount
     );
-    
+
     event TreasuryAddressesUpdated(
         address foundationAddress,
         address communityTreasuryAddress,
         address stakingRewardsAddress
     );
-    
+
     event EmergencyWithdraw(address indexed recipient, uint256 amount);
 
     /**
@@ -167,9 +167,9 @@ contract BEP007Treasury is
      * @dev Internal function to distribute a donation
      * @param donationId The ID of the donation to distribute
      */
-    function _distributeDonation(uint256 donationId) internal {
+    function _distributeDonation(uint256 donationId) internal nonReentrant {
         Donation storage donation = donations[donationId];
-        
+
         // Calculate distribution amounts
         uint256 foundationAmount = (donation.amount * FOUNDATION_PERCENTAGE) / 10000;
         uint256 treasuryAmount = (donation.amount * TREASURY_PERCENTAGE) / 10000;
@@ -182,27 +182,29 @@ contract BEP007Treasury is
             foundationAmount += (donation.amount - totalDistributed);
         }
 
-        // Transfer funds to recipients
+        // Mark donation as distributed FIRST to prevent reentrancy
+        donation.distributed = true;
+
+        // Update totals BEFORE external calls to prevent reentrancy
+        totalDistributedToFoundation += foundationAmount;
+        totalDistributedToTreasury += treasuryAmount;
+        totalDistributedToStaking += stakingAmount;
+
+        // Transfer funds to recipients AFTER state updates
         if (foundationAmount > 0) {
-            (bool success1, ) = payable(foundationAddress).call{value: foundationAmount}("");
+            (bool success1, ) = payable(foundationAddress).call{ value: foundationAmount }("");
             require(success1, "Treasury: foundation transfer failed");
-            totalDistributedToFoundation += foundationAmount;
         }
 
         if (treasuryAmount > 0) {
-            (bool success2, ) = payable(communityTreasuryAddress).call{value: treasuryAmount}("");
+            (bool success2, ) = payable(communityTreasuryAddress).call{ value: treasuryAmount }("");
             require(success2, "Treasury: treasury transfer failed");
-            totalDistributedToTreasury += treasuryAmount;
         }
 
         if (stakingAmount > 0) {
-            (bool success3, ) = payable(stakingRewardsAddress).call{value: stakingAmount}("");
+            (bool success3, ) = payable(stakingRewardsAddress).call{ value: stakingAmount }("");
             require(success3, "Treasury: staking transfer failed");
-            totalDistributedToStaking += stakingAmount;
         }
-
-        // Mark donation as distributed
-        donation.distributed = true;
 
         emit DonationDistributed(donationId, foundationAmount, treasuryAmount, stakingAmount);
     }
@@ -226,7 +228,11 @@ contract BEP007Treasury is
         communityTreasuryAddress = _communityTreasuryAddress;
         stakingRewardsAddress = _stakingRewardsAddress;
 
-        emit TreasuryAddressesUpdated(_foundationAddress, _communityTreasuryAddress, _stakingRewardsAddress);
+        emit TreasuryAddressesUpdated(
+            _foundationAddress,
+            _communityTreasuryAddress,
+            _stakingRewardsAddress
+        );
     }
 
     /**
@@ -238,7 +244,7 @@ contract BEP007Treasury is
         require(recipient != address(0), "Treasury: recipient is zero address");
         require(amount <= address(this).balance, "Treasury: insufficient balance");
 
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Treasury: emergency withdrawal failed");
 
         emit EmergencyWithdraw(recipient, amount);
@@ -277,12 +283,16 @@ contract BEP007Treasury is
      * @return treasuryDistributed Total distributed to treasury
      * @return stakingDistributed Total distributed to staking
      */
-    function getTreasuryStats() external view returns (
-        uint256 totalReceived,
-        uint256 foundationDistributed,
-        uint256 treasuryDistributed,
-        uint256 stakingDistributed
-    ) {
+    function getTreasuryStats()
+        external
+        view
+        returns (
+            uint256 totalReceived,
+            uint256 foundationDistributed,
+            uint256 treasuryDistributed,
+            uint256 stakingDistributed
+        )
+    {
         return (
             totalDonationsReceived,
             totalDistributedToFoundation,
