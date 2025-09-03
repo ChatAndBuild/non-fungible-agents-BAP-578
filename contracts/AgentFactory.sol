@@ -168,9 +168,8 @@ contract AgentFactory is
         // Verify fee payment
         require(msg.value == AGENT_CREATION_FEE, "AgentFactory: incorrect fee amount");
 
-        // Collect fee and distribute to treasury
-        (bool success, ) = payable(address(treasury)).call{ value: AGENT_CREATION_FEE }("");
-        require(success, "AgentFactory: fee transfer failed");
+        // Collect fee and donate to treasury (this will trigger the 60/25/15 distribution)
+        BEP007Treasury(treasury).donate{ value: AGENT_CREATION_FEE }("Agent creation fee");
 
         emit AgentCreationFeeCollected(msg.sender, AGENT_CREATION_FEE);
 

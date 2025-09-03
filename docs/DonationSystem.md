@@ -43,7 +43,7 @@ Designated address where users can stake their ETH themselves. The treasury send
 - Integrates with the treasury for automatic funding
 
 ### 3. AgentFactory Integration
-The AgentFactory has been updated to collect a 0.01 BNB fee for each agent creation, which is automatically sent to the treasury for distribution.
+The AgentFactory has been updated to collect a 0.01 BNB fee for each agent creation, which is automatically sent to the treasury via the `donate` method, triggering the 60/25/15 distribution.
 
 ## Usage Guide
 
@@ -81,6 +81,7 @@ console.log("Staking rewards address:", stakingRewardsAddress);
 
 ```javascript
 // Create an agent (requires 0.01 BNB fee)
+// The fee is automatically donated to the treasury, triggering 60/25/15 distribution
 await agentFactory.createAgent(
     "My Agent",
     "MAG",
@@ -89,6 +90,20 @@ await agentFactory.createAgent(
     { value: ethers.utils.parseEther("0.01") }
 );
 ```
+
+### How AgentFactory Integrates with Donation System
+
+When you create an agent through the AgentFactory:
+
+1. **Fee Collection**: The factory collects the 0.01 BNB creation fee
+2. **Automatic Donation**: Instead of just transferring ETH to the treasury, it calls `treasury.donate("Agent creation fee")`
+3. **Distribution Triggered**: This automatically triggers the 60/25/15 distribution:
+   - 60% → NFA/ChatAndBuild Foundation
+   - 25% → Community Treasury  
+   - 15% → Designated Staking Address
+4. **Event Emission**: The factory emits `AgentCreationFeeCollected` event for tracking
+
+This means every agent creation automatically contributes to the ecosystem's funding without requiring manual donation steps.
 
 ## Fee Allocation Breakdown
 
@@ -106,24 +121,11 @@ await agentFactory.createAgent(
 |-----------|------------|--------|---------|
 | NFA/ChatAndBuild Foundation | 60% | 0.006 BNB | R&D and ecosystem expansion |
 | Community Treasury | 25% | 0.0025 BNB | Developer incentives and partnerships |
-| $NFA Staking Reward Pool | 15% | 0.0015 BNB | Long-term holder rewards |
+| Designated Staking Address | 15% | 0.0015 BNB | User staking incentives |
 
-## Staking Parameters
+**Note**: This distribution happens automatically every time an agent is created through the AgentFactory.
 
-### Default Configuration
-- **Minimum Stake Amount**: 1 BEP007 token
-- **Staking Period**: 30 days minimum
-- **Reward Multiplier**: 100 basis points (1% daily reward rate)
 
-### Reward Calculation
-```
-Rewards = (Stake Amount × Days Staked × Reward Multiplier) / 10000
-```
-
-Example: Staking 5 tokens for 10 days with 1% daily rate
-```
-Rewards = (5 × 10 × 100) / 10000 = 0.5 BNB
-```
 
 ## Security Features
 
@@ -157,10 +159,10 @@ await governance.setAgentFactory(factoryAddress);
 ```
 
 ### Parameter Updates
-Governance can update staking parameters through proposals:
-- Minimum stake amount
-- Staking period
-- Reward multiplier
+Governance can update treasury addresses through proposals:
+- Foundation address
+- Community treasury address
+- Staking rewards address
 
 ## Events and Monitoring
 
@@ -182,12 +184,7 @@ event DonationDistributed(
 );
 ```
 
-### Staking Events
-```solidity
-event Staked(address indexed staker, uint256 amount, uint256 startTime);
-event RewardsClaimed(address indexed staker, uint256 amount);
-event Unstaked(address indexed staker, uint256 amount, uint256 totalRewards);
-```
+
 
 ## Deployment
 
