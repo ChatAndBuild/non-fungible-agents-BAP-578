@@ -12,7 +12,7 @@ import "../interfaces/ILearningModule.sol";
  *      that serve as personalized brand assistants or digital twins
  */
 contract CreatorAgent is Ownable, ReentrancyGuard {
-    // The address of the BEP007 token that owns this logic
+    // The address of the BAP578 token that owns this logic
     address public agentToken;
 
     // Learning module integration
@@ -32,7 +32,7 @@ contract CreatorAgent is Ownable, ReentrancyGuard {
 
     /**
      * @dev Initializes the contract
-     * @param _agentToken The address of the BEP007 token
+     * @param _agentToken The address of the BAP578 token
      * @param _name The creator's name
      * @param _bio The creator's bio
      * @param _niche The creator's niche

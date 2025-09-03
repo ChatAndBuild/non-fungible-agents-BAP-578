@@ -5,18 +5,18 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
-import "./BEP007.sol";
+import "./BAP578.sol";
 
 /**
- * @title BEP007Governance
- * @dev Governance contract for the BEP-007 ecosystem
+ * @title BAP578Governance
+ * @dev Governance contract for the BAP-578 ecosystem
  * Handles proposals, voting, and protocol parameter updates
  */
-contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract BAP578Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    // BEP007 token contract
-    BEP007 public bep007Token;
+    // BAP578 token contract
+    BAP578 public bap578Token;
 
     // Agent factory contract
     address public agentFactory;
@@ -62,14 +62,14 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
 
     /**
      * @dev Initializes the contract
-     * @param _bep007Token The address of the BEP007 token contract
+     * @param _bap578Token The address of the BAP578 token contract
      * @param _owner The address of the initial owner
      * @param _votingPeriod The voting period in days
      * @param _quorumPercentage The quorum percentage
      * @param _executionDelay The execution delay in days
      */
     function initialize(
-        address payable _bep007Token,
+        address payable _bap578Token,
         address _owner,
         uint256 _votingPeriod,
         uint256 _quorumPercentage,
@@ -78,12 +78,12 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
         __Ownable_init();
         __UUPSUpgradeable_init();
 
-        require(_bep007Token != address(0), "BEP007Governance: token is zero address");
-        require(_owner != address(0), "BEP007Governance: owner is zero address");
-        require(_quorumPercentage <= 100, "BEP007Governance: quorum percentage exceeds 100");
+        require(_bap578Token != address(0), "BAP578Governance: token is zero address");
+        require(_owner != address(0), "BAP578Governance: owner is zero address");
+        require(_quorumPercentage <= 100, "BAP578Governance: quorum percentage exceeds 100");
 
         transferOwnership(_owner);
-        bep007Token = BEP007(_bep007Token);
+        bap578Token = BAP578(_bap578Token);
         votingPeriod = _votingPeriod;
         quorumPercentage = _quorumPercentage;
         executionDelay = _executionDelay;
@@ -101,7 +101,7 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
         bytes memory callData,
         address targetContract
     ) external returns (uint256) {
-        require(targetContract != address(0), "BEP007Governance: target is zero address");
+        require(targetContract != address(0), "BAP578Governance: target is zero address");
 
         _proposalIdCounter.increment();
         uint256 proposalId = _proposalIdCounter.current();
@@ -129,18 +129,18 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     function castVote(uint256 proposalId, bool support) external {
         Proposal storage proposal = proposals[proposalId];
 
-        require(proposal.id != 0, "BEP007Governance: proposal does not exist");
-        require(!proposal.executed, "BEP007Governance: proposal already executed");
-        require(!proposal.canceled, "BEP007Governance: proposal canceled");
+        require(proposal.id != 0, "BAP578Governance: proposal does not exist");
+        require(!proposal.executed, "BAP578Governance: proposal already executed");
+        require(!proposal.canceled, "BAP578Governance: proposal canceled");
         require(
             block.timestamp <= proposal.createdAt + votingPeriod * 1 days,
-            "BEP007Governance: voting period ended"
+            "BAP578Governance: voting period ended"
         );
-        require(!proposal.hasVoted[msg.sender], "BEP007Governance: already voted");
+        require(!proposal.hasVoted[msg.sender], "BAP578Governance: already voted");
 
         // Get voter's voting weight (1 token = 1 vote)
-        uint256 weight = bep007Token.balanceOf(msg.sender);
-        require(weight > 0, "BEP007Governance: no voting weight");
+        uint256 weight = bap578Token.balanceOf(msg.sender);
+        require(weight > 0, "BAP578Governance: no voting weight");
 
         proposal.hasVoted[msg.sender] = true;
 
@@ -160,34 +160,34 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     function executeProposal(uint256 proposalId) external {
         Proposal storage proposal = proposals[proposalId];
 
-        require(proposal.id != 0, "BEP007Governance: proposal does not exist");
-        require(!proposal.executed, "BEP007Governance: proposal already executed");
-        require(!proposal.canceled, "BEP007Governance: proposal canceled");
+        require(proposal.id != 0, "BAP578Governance: proposal does not exist");
+        require(!proposal.executed, "BAP578Governance: proposal already executed");
+        require(!proposal.canceled, "BAP578Governance: proposal canceled");
 
         // Check if voting period has ended
         require(
             block.timestamp > proposal.createdAt + votingPeriod * 1 days,
-            "BEP007Governance: voting period not ended"
+            "BAP578Governance: voting period not ended"
         );
 
         // Check if execution delay has passed
         require(
             block.timestamp >= proposal.createdAt + (votingPeriod + executionDelay) * 1 days,
-            "BEP007Governance: execution delay not passed"
+            "BAP578Governance: execution delay not passed"
         );
 
         // Check if proposal passed (more votes for than against and meets quorum)
-        uint256 totalSupply = bep007Token.totalSupply();
+        uint256 totalSupply = bap578Token.totalSupply();
         uint256 quorumVotes = (totalSupply * quorumPercentage) / 100;
 
-        require(proposal.votesFor > proposal.votesAgainst, "BEP007Governance: proposal rejected");
-        require(proposal.votesFor >= quorumVotes, "BEP007Governance: quorum not reached");
+        require(proposal.votesFor > proposal.votesAgainst, "BAP578Governance: proposal rejected");
+        require(proposal.votesFor >= quorumVotes, "BAP578Governance: quorum not reached");
 
         proposal.executed = true;
 
         // Execute the proposal
         (bool success, ) = proposal.targetContract.call(proposal.callData);
-        require(success, "BEP007Governance: execution failed");
+        require(success, "BAP578Governance: execution failed");
 
         emit ProposalExecuted(proposalId);
     }
@@ -199,12 +199,12 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     function cancelProposal(uint256 proposalId) external {
         Proposal storage proposal = proposals[proposalId];
 
-        require(proposal.id != 0, "BEP007Governance: proposal does not exist");
-        require(!proposal.executed, "BEP007Governance: proposal already executed");
-        require(!proposal.canceled, "BEP007Governance: proposal already canceled");
+        require(proposal.id != 0, "BAP578Governance: proposal does not exist");
+        require(!proposal.executed, "BAP578Governance: proposal already executed");
+        require(!proposal.canceled, "BAP578Governance: proposal already canceled");
         require(
             msg.sender == proposal.proposer || msg.sender == owner(),
-            "BEP007Governance: not proposer or owner"
+            "BAP578Governance: not proposer or owner"
         );
 
         proposal.canceled = true;
@@ -216,7 +216,7 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
      * @param _agentFactory The new agent factory address
      */
     function setAgentFactory(address _agentFactory) external onlyOwner {
-        require(_agentFactory != address(0), "BEP007Governance: factory is zero address");
+        require(_agentFactory != address(0), "BAP578Governance: factory is zero address");
         agentFactory = _agentFactory;
         emit AgentFactoryUpdated(_agentFactory);
     }
@@ -232,7 +232,7 @@ contract BEP007Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
         uint256 _quorumPercentage,
         uint256 _executionDelay
     ) external onlyOwner {
-        require(_quorumPercentage <= 100, "BEP007Governance: quorum percentage exceeds 100");
+        require(_quorumPercentage <= 100, "BAP578Governance: quorum percentage exceeds 100");
 
         votingPeriod = _votingPeriod;
         quorumPercentage = _quorumPercentage;

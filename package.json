@@ -1,7 +1,7 @@
 {
-  "name": "bep007-non-fungible-agents",
+  "name": "bap578-non-fungible-agents",
   "version": "0.1.0",
-  "description": "BEP-007 Non-Fungible Agent (NFA) Token Standard Implementation",
+  "description": "BAP-578 Non-Fungible Agent (NFA) Token Standard Implementation",
   "main": "index.js",
   "scripts": {
     "compile": "npx hardhat compile",

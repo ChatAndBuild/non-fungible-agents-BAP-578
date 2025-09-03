@@ -1,6 +1,6 @@
-# BEP-007 Enhanced Architecture Guide
+# BAP-578 Enhanced Architecture Guide
 
-This document provides a comprehensive overview of the enhanced BEP-007 Non-Fungible Agent (NFA) architecture, explaining the key components and their interactions with the new learning capabilities. It serves as a guide for developers working with both simple and learning-enabled agents in the BEP-007 standard.
+This document provides a comprehensive overview of the enhanced BAP-578 Non-Fungible Agent (NFA) architecture, explaining the key components and their interactions with the new learning capabilities. It serves as a guide for developers working with both simple and learning-enabled agents in the BAP-578 standard.
 
 ## Table of Contents
 
@@ -18,11 +18,11 @@ This document provides a comprehensive overview of the enhanced BEP-007 Non-Fung
 
 ## Enhanced Smart Contract Architecture
 
-The enhanced BEP-007 token standard builds upon ERC-721 to introduce a composable framework for intelligent, evolving agents with cryptographically verifiable learning capabilities. The architecture has been designed to accommodate both static NFT functionality and dynamic extensions critical for agent behavior, media, experience, and learning progression.
+The enhanced BAP-578 token standard builds upon ERC-721 to introduce a composable framework for intelligent, evolving agents with cryptographically verifiable learning capabilities. The architecture has been designed to accommodate both static NFT functionality and dynamic extensions critical for agent behavior, media, experience, and learning progression.
 
 ### Design Principles
 
-1. **ERC-721 Compatibility**: BEP-007 maintains compatibility by inheriting core functionality: unique token IDs, safe transfers, ownership tracking, and metadata URI referencing.
+1. **ERC-721 Compatibility**: BAP-578 maintains compatibility by inheriting core functionality: unique token IDs, safe transfers, ownership tracking, and metadata URI referencing.
 
 2. **Dual-Path Architecture**: The system provides two distinct development paths:
    - **Simple Agents**: Traditional NFT functionality with agent-specific extensions
@@ -38,7 +38,7 @@ The enhanced BEP-007 token standard builds upon ERC-721 to introduce a composabl
 
 ## Dual-Path Development System
 
-The enhanced BEP-007 standard provides developers with two distinct development paths while maintaining 100% backward compatibility:
+The enhanced BAP-578 standard provides developers with two distinct development paths while maintaining 100% backward compatibility:
 
 ### Path 1: Simple Agents (JSON Light Experience)
 ```
@@ -72,7 +72,7 @@ Adaptive behavior and intelligence growth
 
 ## Core Components
 
-### Enhanced BEP007.sol
+### Enhanced BAP578.sol
 
 The main contract that implements the enhanced Non-Fungible Agent token standard. It extends ERC-721 with agent-specific functionality and optional learning capabilities.
 
@@ -133,7 +133,7 @@ function createAgent(
     string memory symbol,
     address logicAddress,
     string memory metadataURI,
-    IBEP007.AgentMetadata memory extendedMetadata
+    IBAP578.AgentMetadata memory extendedMetadata
 ) external returns (address agent);
 
 // Example: Creating a learning agent through the factory
@@ -142,7 +142,7 @@ function createLearningAgent(
     string memory symbol,
     address logicAddress,
     string memory metadataURI,
-    IBEP007Enhanced.EnhancedAgentMetadata memory extendedMetadata,
+    IBAP578Enhanced.EnhancedAgentMetadata memory extendedMetadata,
     address learningModule
 ) external returns (address agent);
 
@@ -262,7 +262,7 @@ function pauseAgentLearning(uint256 tokenId) external onlyOwnerOrGovernance(toke
 
 ## Enhanced Metadata Schema
 
-BEP-007 extends the standard ERC-721 metadata with additional fields specifically designed for agent functionality and learning capabilities:
+BAP-578 extends the standard ERC-721 metadata with additional fields specifically designed for agent functionality and learning capabilities:
 
 ### Core Agent Metadata
 ```solidity
@@ -279,7 +279,7 @@ struct AgentMetadata {
 ### Enhanced Learning Metadata
 ```solidity
 struct EnhancedAgentMetadata {
-    // Original BEP-007 fields
+    // Original BAP-578 fields
     string persona;           // JSON-encoded character traits
     string experience;            // Agent's role/purpose summary
     string voiceHash;         // Audio profile reference
@@ -447,7 +447,7 @@ Experience modules are structured as JSON documents that include structured expe
 
 ```json
 {
-  "context_id": "nfa007-experience-001",
+  "context_id": "nfa578-experience-001",
   "owner": "0xUserWalletAddress",
   "created": "2025-01-20T10:00:00Z",
   "persona": "Strategic crypto analyst with learning capabilities",
@@ -548,7 +548,7 @@ enum LearningPermissionLevel {
 
 ## Agent Templates
 
-BEP-007 includes an enhanced template system for creating specialized agent types with learning support. These templates provide pre-configured logic for specific use cases.
+BAP-578 includes an enhanced template system for creating specialized agent types with learning support. These templates provide pre-configured logic for specific use cases.
 
 ### Enhanced Available Templates
 
@@ -556,7 +556,7 @@ BEP-007 includes an enhanced template system for creating specialized agent type
 Template for DeFi-focused agents with adaptive trading strategies:
 
 ```solidity
-contract DeFiAgent is BEP007Enhanced {
+contract DeFiAgent is BAP578Enhanced {
     struct TradingExperience {
         mapping(address => uint256) tokenPerformance;
         mapping(bytes32 => uint256) strategySuccess;
@@ -578,7 +578,7 @@ contract DeFiAgent is BEP007Enhanced {
 Template for gaming-focused agents with evolving NPCs and adaptive behavior:
 
 ```solidity
-contract GameAgent is BEP007Enhanced {
+contract GameAgent is BAP578Enhanced {
     struct GameExperience {
         mapping(bytes32 => uint256) skillLevels;
         mapping(address => uint256) playerInteractions;
@@ -600,7 +600,7 @@ contract GameAgent is BEP007Enhanced {
 Template for DAO-focused agents with adaptive governance participation:
 
 ```solidity
-contract DAOAgent is BEP007Enhanced {
+contract DAOAgent is BAP578Enhanced {
     struct GovernanceExperience {
         mapping(uint256 => bool) proposalVotes;
         mapping(bytes32 => uint256) topicExpertise;
@@ -648,7 +648,7 @@ const learningTx = await agentFactory.createLearningAgent(
 
 ## Security Mechanisms
 
-BEP-007 implements several enhanced security mechanisms to protect agents, their owners, and learning data:
+BAP-578 implements several enhanced security mechanisms to protect agents, their owners, and learning data:
 
 ### Enhanced Circuit Breaker
 
@@ -684,7 +684,7 @@ Strict access control for sensitive operations including learning:
 
 ```solidity
 modifier onlyAgentOwner(uint256 tokenId) {
-    require(ownerOf(tokenId) == msg.sender, "BEP007: caller is not agent owner");
+    require(ownerOf(tokenId) == msg.sender, "BAP578: caller is not agent owner");
     _;
 }
 
@@ -692,7 +692,7 @@ modifier onlyLearningAuthorized(uint256 tokenId) {
     require(
         ownerOf(tokenId) == msg.sender || 
         isAuthorizedLearningUpdater(tokenId, msg.sender),
-        "BEP007: not authorized for learning operations"
+        "BAP578: not authorized for learning operations"
     );
     _;
 }
@@ -701,7 +701,7 @@ modifier onlyApprovedLearningModule(uint256 tokenId) {
     require(
         approvedLearningModules[msg.sender] || 
         learningModules[tokenId] == msg.sender,
-        "BEP007: not approved learning module"
+        "BAP578: not approved learning module"
     );
     _;
 }
@@ -798,7 +798,7 @@ const tx = await agentFactory.createLearningAgent(
 );
 
 // 4. Fund the agent
-const agent = await ethers.getContractAt("BEP007Enhanced", agentAddress);
+const agent = await ethers.getContractAt("BAP578Enhanced", agentAddress);
 await agent.fundAgent({ value: ethers.utils.parseEther("0.1") });
 
 // 5. Execute an action with learning integration
@@ -814,7 +814,7 @@ await merkleTreeLearning.recordInteraction(tokenId, "swap_execution", true);
 ```javascript
 // 1. Create enhanced module metadata with learning support
 const enhancedModuleMetadata = JSON.stringify({
-  context_id: "nfa007-experience-001",
+  context_id: "nfa578-experience-001",
   owner: ownerAddress,
   created: new Date().toISOString(),
   persona: "Strategic crypto analyst with learning",
@@ -895,14 +895,14 @@ const initialLearningRoot = await generateInitialLearningTree(tokenId);
 const learningModule = merkleTreeLearning.address;
 
 // 2. Enable learning on existing simple agent
-await bep007Enhanced.enableLearning(
+await bap578Enhanced.enableLearning(
   tokenId,
   learningModule,
   initialLearningRoot
 );
 
 // 3. Verify learning is enabled
-const isLearningEnabled = await bep007Enhanced.isLearningEnabled(tokenId);
+const isLearningEnabled = await bap578Enhanced.isLearningEnabled(tokenId);
 console.log("Learning enabled:", isLearningEnabled);
 
 // 4. Start recording interactions
@@ -921,7 +921,7 @@ const currentRoot = await oldLearningModule.getLearningRoot(tokenId);
 const migrationData = await prepareMigrationData(tokenId, currentRoot);
 
 // 2. Upgrade to new learning module
-await bep007Enhanced.upgradeLearningModule(
+await bap578Enhanced.upgradeLearningModule(
   tokenId,
   newLearningModule.address,
   migrationData
@@ -936,7 +936,7 @@ const migrationSuccess = await verifyMigration(tokenId, currentRoot, newRoot);
 
 ```javascript
 // 1. Prepare cross-chain migration package
-const migrationPackage = await bep007Enhanced.prepareCrossChainMigration(tokenId);
+const migrationPackage = await bap578Enhanced.prepareCrossChainMigration(tokenId);
 
 // 2. Bridge learning data to target chain
 const bridgeTx = await learningBridge.migrateLearningData(
@@ -946,8 +946,8 @@ const bridgeTx = await learningBridge.migrateLearningData(
 );
 
 // 3. Verify migration on target chain
-const targetAgent = await ethers.getContractAt("BEP007Enhanced", targetAgentAddress);
+const targetAgent = await ethers.getContractAt("BAP578Enhanced", targetAgentAddress);
 const migrationSuccess = await targetAgent.verifyMigration(tokenId, migrationPackage);
 ```
 
-This enhanced architecture guide provides a comprehensive overview of the BEP-007 standard with learning capabilities, enabling developers to build both simple and sophisticated agents while maintaining security, verifiability, and backward compatibility. The dual-path approach ensures that the standard can accommodate current needs while enabling future innovation in autonomous agent intelligence.
+This enhanced architecture guide provides a comprehensive overview of the BAP-578 standard with learning capabilities, enabling developers to build both simple and sophisticated agents while maintaining security, verifiability, and backward compatibility. The dual-path approach ensures that the standard can accommodate current needs while enabling future innovation in autonomous agent intelligence.

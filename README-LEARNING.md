@@ -1,10 +1,10 @@
-# BEP007 Enhanced: Optional Merkle Tree Learning
+# BAP578 Enhanced: Optional Merkle Tree Learning
 
-This document explains how the enhanced BEP007 standard incorporates optional Merkle tree learning while maintaining full backward compatibility.
+This document explains how the enhanced BAP578 standard incorporates optional Merkle tree learning while maintaining full backward compatibility.
 
 ## Overview
 
-The enhanced BEP007 standard provides **two paths** for agent development:
+The enhanced BAP578 standard provides **two paths** for agent development:
 
 ### 🚀 **Path 1: JSON Light Experience (Default)**
 
@@ -26,7 +26,7 @@ The enhanced BEP007 standard provides **two paths** for agent development:
 
 ### ✅ **Backward Compatibility**
 
-- All existing BEP007 agents continue working unchanged
+- All existing BAP578 agents continue working unchanged
 - Standard `createAgent()` function creates simple agents by default
 - No forced upgrades or breaking changes
 
@@ -93,7 +93,7 @@ const tx = await agentFactory.createAgent(
 
 ```javascript
 // Enable learning on existing simple agent
-await bep007Enhanced.enableLearning(
+await bap578Enhanced.enableLearning(
   tokenId,
   merkleTreeLearning.address,
   initialMerkleRoot
@@ -215,8 +215,8 @@ The system tracks various learning metrics:
 
 ## Getting Started
 
-1. **For Simple Agents**: Use existing BEP007 creation patterns
+1. **For Simple Agents**: Use existing BAP578 creation patterns
 2. **For Learning Agents**: Deploy MerkleTreeLearning contract and use enhanced metadata
 3. **For Upgrades**: Call `enableLearning()` on existing agents
 
-The enhanced BEP007 standard ensures that both simple and sophisticated use cases are supported from day one, with a clear upgrade path for those who want to explore the future of intelligent, evolving agents.
+The enhanced BAP578 standard ensures that both simple and sophisticated use cases are supported from day one, with a clear upgrade path for those who want to explore the future of intelligent, evolving agents.

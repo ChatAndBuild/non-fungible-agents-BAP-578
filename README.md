@@ -99,7 +99,7 @@ Standardization through BAP-578 enables:
 
 - **Autonomous Behavior**: Agents execute predefined logic (e.g., trading, interacting with contracts) without manual intervention
 - **Statefulness**: Each agent maintains mutable state variables stored on-chain
-- **Interoperability**: Agents can interact with any smart contract on the BNB Chain, including BEP-20 and BEP-721 tokens
+- **Interoperability**: Agents can interact with any smart contract on the BNB Chain, including BAP-20 and BAP-721 tokens
 - **Upgradability**: Agent logic can be upgraded by their owners via proxy patterns or modular logic
 - **Optional Learning**: Agents can evolve and improve through cryptographically verifiable learning systems
 - **Governance**: Protocol-level governance for parameter updates and improvements
@@ -112,7 +112,7 @@ Standardization through BAP-578 enables:
 
 ## Token Structure
 
-- **Inheritance**: Extends BEP-721 (NFT standard) with additional agent-specific functions
+- **Inheritance**: Extends BAP-721 (NFT standard) with additional agent-specific functions
 - **Metadata**: Includes static attributes, dynamic metadata, state variables, and optional learning data
 - **Smart Contract Design**: Implements key functions like executeAction(), setLogicAddress(), fundAgent(), getState(), and optional learning functions
 - **Hybrid Storage**: Essential data on-chain, extended data off-chain with secure references
@@ -141,7 +141,7 @@ The BAP-578 standard consists of the following components:
 
 - **`IBAP578.sol`**: Interface defining the core functionality for BAP-578 compliant tokens
 - **`ILearningModule.sol`**: Interface defining the standard for pluggable learning systems
-- **`learning-integration.js`**: Demonstrates how to use the enhanced BAP700 standard with optional learning capabilities from day 1
+- **`learning-integration.js`**: Demonstrates how to use the enhanced BAP578 standard with optional learning capabilities from day 1
 
 ### Agent Templates
 
@@ -205,8 +205,8 @@ BAP-578 tokens include an enhanced metadata structure with:
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/non-fungible-agents-BAP-578.git
-cd BAP578
+git clone https://github.com/ChatAndBuild/non-fungible-agents-BAP578.git
+cd non-fungible-agents-BAP578
 ```
 
 2. Install dependencies:
@@ -323,7 +323,7 @@ const initialRoot = ethers.utils.keccak256(
 );
 
 // Enable learning on existing agent
-const tx = await BAP700Enhanced.enableLearning(
+const tx = await bap578Enhanced.enableLearning(
   tokenId,
   merkleTreeLearning.address,
   initialRoot
