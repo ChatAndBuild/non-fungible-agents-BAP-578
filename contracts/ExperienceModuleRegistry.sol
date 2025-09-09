@@ -144,8 +144,9 @@ contract ExperienceModuleRegistry is
      * @dev Modifier to check if the caller is the owner of the specified token
      */
     modifier onlyTokenOwner(uint256 tokenId) {
+        IBEP007.State memory agentState = bep007Token.getState(tokenId);
         require(
-            bep007Token.ownerOf(tokenId) == msg.sender,
+            agentState.owner == msg.sender,
             "ExperienceModuleRegistry: caller is not token owner"
         );
         _;
@@ -215,7 +216,46 @@ contract ExperienceModuleRegistry is
         require(moduleAddress != address(0), "ExperienceModuleRegistry: invalid module address");
         require(bytes(specification).length > 0, "ExperienceModuleRegistry: empty specification");
 
-        // Verify the signature
+        // Verify signature and get signer
+        address signer = _verifySignature(
+            tokenId,
+            moduleAddress,
+            moduleHash,
+            specification,
+            experienceType,
+            securityLevel,
+            metadata,
+            signature
+        );
+
+        // Register module in global registry if new
+        _registerGlobalModule(
+            moduleAddress,
+            moduleHash,
+            specification,
+            experienceType,
+            securityLevel,
+            signer,
+            tokenId
+        );
+
+        // Add module to agent's registry if not already present
+        _addModuleToAgent(tokenId, moduleAddress, metadata);
+    }
+
+    /**
+     * @dev Verifies the signature and returns the signer address
+     */
+    function _verifySignature(
+        uint256 tokenId,
+        address moduleAddress,
+        bytes32 moduleHash,
+        string memory specification,
+        ExperienceType experienceType,
+        SecurityLevel securityLevel,
+        string memory metadata,
+        bytes memory signature
+    ) private view returns (address) {
         bytes32 messageHash = keccak256(
             abi.encodePacked(
                 tokenId,
@@ -230,14 +270,28 @@ contract ExperienceModuleRegistry is
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         address signer = ethSignedMessageHash.recover(signature);
 
+        IBEP007.State memory agentState = bep007Token.getState(tokenId);
         require(
-            signer == bep007Token.ownerOf(tokenId),
+            signer == agentState.owner,
             "ExperienceModuleRegistry: invalid signature"
         );
 
-        // Check if module already exists in global registry
+        return signer;
+    }
+
+    /**
+     * @dev Registers a module in the global registry if it doesn't exist
+     */
+    function _registerGlobalModule(
+        address moduleAddress,
+        bytes32 moduleHash,
+        string memory specification,
+        ExperienceType experienceType,
+        SecurityLevel securityLevel,
+        address signer,
+        uint256 tokenId
+    ) private {
         if (_moduleRegistry[moduleAddress].moduleAddress == address(0)) {
-            // Register new module in global registry
             _moduleRegistry[moduleAddress] = ExperienceModule({
                 moduleAddress: moduleAddress,
                 moduleHash: moduleHash,
@@ -250,7 +304,6 @@ contract ExperienceModuleRegistry is
                 version: 1
             });
 
-            // Add to global modules array
             _allModules.push(moduleAddress);
             _moduleIndex[moduleAddress] = _allModules.length - 1;
 
@@ -263,23 +316,32 @@ contract ExperienceModuleRegistry is
                 specification
             );
         }
+    }
 
-        // Add module to agent's registered modules if not already present
+    /**
+     * @dev Adds a module to an agent's registry if not already present
+     */
+    function _addModuleToAgent(
+        uint256 tokenId,
+        address moduleAddress,
+        string memory metadata
+    ) private {
+        address[] storage agentModules = _registeredModules[tokenId];
         bool alreadyRegistered = false;
-        for (uint256 i = 0; i < _registeredModules[tokenId].length; i++) {
-            if (_registeredModules[tokenId][i] == moduleAddress) {
+        
+        for (uint256 i = 0; i < agentModules.length; i++) {
+            if (agentModules[i] == moduleAddress) {
                 alreadyRegistered = true;
                 break;
             }
         }
 
         if (!alreadyRegistered) {
-            _registeredModules[tokenId].push(moduleAddress);
+            agentModules.push(moduleAddress);
             _moduleMetadata[tokenId][moduleAddress] = metadata;
             _moduleUsageCount[moduleAddress]++;
+            emit ModuleUsageUpdated(moduleAddress, _moduleUsageCount[moduleAddress]);
         }
-
-        emit ModuleUsageUpdated(moduleAddress, _moduleUsageCount[moduleAddress]);
     }
 
     /**
