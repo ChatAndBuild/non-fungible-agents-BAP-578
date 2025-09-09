@@ -28,45 +28,45 @@ contract ExperienceModuleRegistry is
      * @dev Represents an experience module with its configuration and metadata
      */
     struct ExperienceModule {
-        address moduleAddress;        // Address of the experience module contract
-        bytes32 moduleHash;          // Hash of the module's code/configuration
-        string specification;        // JSON specification of the module's capabilities
+        address moduleAddress; // Address of the experience module contract
+        bytes32 moduleHash; // Hash of the module's code/configuration
+        string specification; // JSON specification of the module's capabilities
         ExperienceType experienceType; // Type of experience this module provides
         SecurityLevel securityLevel; // Security classification of the module
-        bool active;                 // Whether the module is currently active
-        uint256 registrationTime;    // Timestamp when module was registered
-        address creator;             // Address of the module creator
-        uint256 version;             // Version number of the module
+        bool active; // Whether the module is currently active
+        uint256 registrationTime; // Timestamp when module was registered
+        address creator; // Address of the module creator
+        uint256 version; // Version number of the module
     }
 
     /**
      * @dev Experience module types based on BEP-007 standard
      */
     enum ExperienceType {
-        STATIC,          // Traditional static experience (no learning)
-        ADAPTIVE,        // Basic adaptive experience (simple learning)
-        LEARNING,        // Full learning capabilities (advanced AI)
-        FEDERATED       // Cross-agent learning support (collaborative)
+        STATIC, // Traditional static experience (no learning)
+        ADAPTIVE, // Basic adaptive experience (simple learning)
+        LEARNING, // Full learning capabilities (advanced AI)
+        FEDERATED // Cross-agent learning support (collaborative)
     }
 
     /**
      * @dev Security levels for experience modules
      */
     enum SecurityLevel {
-        EXPERIMENTAL,    // For development and testing
-        COMMUNITY,       // Community-validated modules
-        PROFESSIONAL,    // Professionally audited
-        ENTERPRISE      // Enterprise-grade security
+        EXPERIMENTAL, // For development and testing
+        COMMUNITY, // Community-validated modules
+        PROFESSIONAL, // Professionally audited
+        ENTERPRISE // Enterprise-grade security
     }
 
     /**
      * @dev Represents an agent's experience configuration
      */
     struct AgentExperienceConfig {
-        bool learningEnabled;        // Whether learning is enabled for this agent
+        bool learningEnabled; // Whether learning is enabled for this agent
         ExperienceType preferredType; // Preferred experience type
-        uint256 maxModules;         // Maximum number of modules allowed
-        uint256 lastUpdate;         // Last time configuration was updated
+        uint256 maxModules; // Maximum number of modules allowed
+        uint256 lastUpdate; // Last time configuration was updated
     }
 
     // ============ STATE VARIABLES ============
@@ -109,11 +109,7 @@ contract ExperienceModuleRegistry is
         string specification
     );
 
-    event ModuleApproved(
-        uint256 indexed tokenId,
-        address indexed moduleAddress,
-        bool approved
-    );
+    event ModuleApproved(uint256 indexed tokenId, address indexed moduleAddress, bool approved);
 
     event ModuleMetadataUpdated(
         uint256 indexed tokenId,
@@ -128,15 +124,9 @@ contract ExperienceModuleRegistry is
         uint256 maxModules
     );
 
-    event ModuleDeactivated(
-        address indexed moduleAddress,
-        string reason
-    );
+    event ModuleDeactivated(address indexed moduleAddress, string reason);
 
-    event ModuleUsageUpdated(
-        address indexed moduleAddress,
-        uint256 newUsageCount
-    );
+    event ModuleUsageUpdated(address indexed moduleAddress, uint256 newUsageCount);
 
     // ============ MODIFIERS ============
 
@@ -271,10 +261,7 @@ contract ExperienceModuleRegistry is
         address signer = ethSignedMessageHash.recover(signature);
 
         IBEP007.State memory agentState = bep007Token.getState(tokenId);
-        require(
-            signer == agentState.owner,
-            "ExperienceModuleRegistry: invalid signature"
-        );
+        require(signer == agentState.owner, "ExperienceModuleRegistry: invalid signature");
 
         return signer;
     }
@@ -328,7 +315,7 @@ contract ExperienceModuleRegistry is
     ) private {
         address[] storage agentModules = _registeredModules[tokenId];
         bool alreadyRegistered = false;
-        
+
         for (uint256 i = 0; i < agentModules.length; i++) {
             if (agentModules[i] == moduleAddress) {
                 alreadyRegistered = true;
@@ -475,7 +462,10 @@ contract ExperienceModuleRegistry is
      * @param moduleAddress Address of the experience module
      * @return Metadata string
      */
-    function getModuleMetadata(uint256 tokenId, address moduleAddress) external view returns (string memory) {
+    function getModuleMetadata(
+        uint256 tokenId,
+        address moduleAddress
+    ) external view returns (string memory) {
         return _moduleMetadata[tokenId][moduleAddress];
     }
 
@@ -484,7 +474,9 @@ contract ExperienceModuleRegistry is
      * @param moduleAddress Address of the experience module
      * @return ExperienceModule struct
      */
-    function getModuleInfo(address moduleAddress) external view moduleExists(moduleAddress) returns (ExperienceModule memory) {
+    function getModuleInfo(
+        address moduleAddress
+    ) external view moduleExists(moduleAddress) returns (ExperienceModule memory) {
         return _moduleRegistry[moduleAddress];
     }
 
@@ -493,7 +485,9 @@ contract ExperienceModuleRegistry is
      * @param tokenId The ID of the agent token
      * @return AgentExperienceConfig struct
      */
-    function getAgentExperienceConfig(uint256 tokenId) external view returns (AgentExperienceConfig memory) {
+    function getAgentExperienceConfig(
+        uint256 tokenId
+    ) external view returns (AgentExperienceConfig memory) {
         return _agentConfigs[tokenId];
     }
 
@@ -519,13 +513,17 @@ contract ExperienceModuleRegistry is
      * @param experienceType The experience type to filter by
      * @return Array of module addresses matching the type
      */
-    function getModulesByType(ExperienceType experienceType) external view returns (address[] memory) {
+    function getModulesByType(
+        ExperienceType experienceType
+    ) external view returns (address[] memory) {
         address[] memory result = new address[](_allModules.length);
         uint256 count = 0;
 
         for (uint256 i = 0; i < _allModules.length; i++) {
-            if (_moduleRegistry[_allModules[i]].experienceType == experienceType && 
-                _moduleRegistry[_allModules[i]].active) {
+            if (
+                _moduleRegistry[_allModules[i]].experienceType == experienceType &&
+                _moduleRegistry[_allModules[i]].active
+            ) {
                 result[count] = _allModules[i];
                 count++;
             }
@@ -545,13 +543,17 @@ contract ExperienceModuleRegistry is
      * @param securityLevel The security level to filter by
      * @return Array of module addresses matching the security level
      */
-    function getModulesBySecurityLevel(SecurityLevel securityLevel) external view returns (address[] memory) {
+    function getModulesBySecurityLevel(
+        SecurityLevel securityLevel
+    ) external view returns (address[] memory) {
         address[] memory result = new address[](_allModules.length);
         uint256 count = 0;
 
         for (uint256 i = 0; i < _allModules.length; i++) {
-            if (_moduleRegistry[_allModules[i]].securityLevel == securityLevel && 
-                _moduleRegistry[_allModules[i]].active) {
+            if (
+                _moduleRegistry[_allModules[i]].securityLevel == securityLevel &&
+                _moduleRegistry[_allModules[i]].active
+            ) {
                 result[count] = _allModules[i];
                 count++;
             }
@@ -604,7 +606,7 @@ contract ExperienceModuleRegistry is
 
         // Basic JSON validation - check for required fields
         string memory spec = string(specBytes);
-        return 
+        return
             bytes(spec).length > 0 &&
             _containsString(spec, "context_id") &&
             _containsString(spec, "persona") &&
@@ -620,9 +622,9 @@ contract ExperienceModuleRegistry is
     function _containsString(string memory str, string memory substr) private pure returns (bool) {
         bytes memory strBytes = bytes(str);
         bytes memory substrBytes = bytes(substr);
-        
+
         if (substrBytes.length > strBytes.length) return false;
-        
+
         for (uint256 i = 0; i <= strBytes.length - substrBytes.length; i++) {
             bool found = true;
             for (uint256 j = 0; j < substrBytes.length; j++) {

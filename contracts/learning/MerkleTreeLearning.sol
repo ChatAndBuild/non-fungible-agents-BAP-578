@@ -23,10 +23,10 @@ contract MerkleTreeLearning is
 
     // Mapping from token ID to learning tree root
     mapping(uint256 => bytes32) private _learningRoots;
-    
+
     // Mapping from token ID to learning metrics
     mapping(uint256 => LearningMetrics) private _learningMetrics;
-    
+
     // Mapping from token ID to learning update history
     mapping(uint256 => LearningUpdate[]) private _learningUpdates;
 
