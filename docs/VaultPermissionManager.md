@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Vault Permission Manager is a crucial component of the BEP-007 Non-Fungible Agent (NFA) ecosystem that manages access control for agent vaults. It provides a secure and flexible way for agent owners to delegate access to their agent's off-chain data while maintaining cryptographic verification and time-based controls.
+The Vault Permission Manager is a crucial component of the BAP-578 Non-Fungible Agent (NFA) ecosystem that manages access control for agent vaults. It provides a secure and flexible way for agent owners to delegate access to their agent's off-chain data while maintaining cryptographic verification and time-based controls.
 
 ## Purpose
 
@@ -20,8 +20,8 @@ The VaultPermissionManager is implemented as an upgradeable contract with the fo
 
 ```solidity
 contract VaultPermissionManager is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    // BEP007 token contract
-    BEP007 public bep007Token;
+    // BAP578 token contract
+    BAP578 public bap578Token;
     
     // Mapping from token ID to delegated addresses
     mapping(uint256 => mapping(address => bool)) private _delegatedAccess;
@@ -36,7 +36,7 @@ contract VaultPermissionManager is Initializable, OwnableUpgradeable, Reentrancy
     event VaultAccessGranted(uint256 indexed tokenId, address indexed requester, bytes32 requestId);
     
     // Functions
-    function initialize(address _bep007Token) public initializer;
+    function initialize(address _bap578Token) public initializer;
     function delegateAccess(uint256 tokenId, address delegate, uint256 expiryTime, bytes memory signature) external nonReentrant;
     function revokeAccess(uint256 tokenId, address delegate) external;
     function requestVaultAccess(uint256 tokenId) external returns (bytes32 requestId);
@@ -83,7 +83,7 @@ function revokeAccess(
     address delegate
 ) external {
     // Only the token owner can revoke access
-    require(bep007Token.ownerOf(tokenId) == msg.sender, "VaultPermissionManager: not token owner");
+    require(bap578Token.ownerOf(tokenId) == msg.sender, "VaultPermissionManager: not token owner");
     
     _delegatedAccess[tokenId][delegate] = false;
     _delegationExpiry[tokenId][delegate] = 0;
@@ -116,10 +116,10 @@ function grantVaultAccess(
     bytes memory signature
 ) external {
     // Verify that the token exists
-    require(bep007Token.ownerOf(tokenId) != address(0), "VaultPermissionManager: token does not exist");
+    require(bap578Token.ownerOf(tokenId) != address(0), "VaultPermissionManager: token does not exist");
     
     // Get the owner of the token
-    address owner = bep007Token.ownerOf(tokenId);
+    address owner = bap578Token.ownerOf(tokenId);
     
     // Verify the signature
     bytes32 messageHash = keccak256(abi.encodePacked(tokenId, requester, requestId));
@@ -138,7 +138,7 @@ Agent vaults are structured as encrypted JSON documents that contain sensitive a
 
 ```json
 {
-  "vault_id": "nfa007-vault-001",
+  "vault_id": "nfa578-vault-001",
   "owner": "0xUserWalletAddress",
   "created": "2025-05-12T10:00:00Z",
   "encrypted_sections": {
@@ -259,9 +259,9 @@ The agent owner can revoke access at any time, providing an additional layer of 
 
 The manager uses OpenZeppelin's ReentrancyGuard to protect against reentrancy attacks during access delegation.
 
-## Integration with BEP-007 Ecosystem
+## Integration with BAP-578 Ecosystem
 
-The Vault Permission Manager integrates with the BEP-007 ecosystem in the following ways:
+The Vault Permission Manager integrates with the BAP-578 ecosystem in the following ways:
 
 1. **Agent Creation**: When an agent is created, its vault URI and hash are stored in the agent's metadata.
 2. **Agent Logic**: Agent logic contracts can use the vault to store sensitive data needed for operation.
@@ -297,4 +297,4 @@ The Vault Permission Manager is designed to be extensible and can be enhanced in
 
 ## Conclusion
 
-The Vault Permission Manager is a powerful component of the BEP-007 ecosystem that enables secure and flexible access control for agent vaults. By providing cryptographic verification, time-based controls, and revocation capabilities, the manager ensures that agent owners maintain control over their agent's sensitive data while enabling collaboration and service integration.
+The Vault Permission Manager is a powerful component of the BAP-578 ecosystem that enables secure and flexible access control for agent vaults. By providing cryptographic verification, time-based controls, and revocation capabilities, the manager ensures that agent owners maintain control over their agent's sensitive data while enabling collaboration and service integration.
