@@ -99,7 +99,7 @@ Standardization through BAP-578 enables:
 
 - **Autonomous Behavior**: Agents execute predefined logic (e.g., trading, interacting with contracts) without manual intervention
 - **Statefulness**: Each agent maintains mutable state variables stored on-chain
-- **Interoperability**: Agents can interact with any smart contract on the BNB Chain, including BAP-20 and BAP-721 tokens
+- **Interoperability**: Agents can interact with any smart contract on the BNB Chain, including BEP-20 and BEP-721 tokens
 - **Upgradability**: Agent logic can be upgraded by their owners via proxy patterns or modular logic
 - **Optional Learning**: Agents can evolve and improve through cryptographically verifiable learning systems
 - **Governance**: Protocol-level governance for parameter updates and improvements

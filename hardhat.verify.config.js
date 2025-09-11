@@ -1,6 +1,6 @@
 require('@nomiclabs/hardhat-waffle');
 require('@nomiclabs/hardhat-ethers');
-require("@openzeppelin/hardhat-upgrades");
+require("@nomicfoundation/hardhat-verify");
 require('dotenv').config();
 
 // Load environment variables
@@ -51,26 +51,10 @@ module.exports = {
     cache: './cache',
     artifacts: './artifacts',
   },
-  mocha: {
-    timeout: 40000,
-  },
   sourcify: {
     enabled: true
   },
   etherscan: {
-    apiKey: {
-      bsc: BSCSCAN_API_KEY,
-      bscTestnet: BSCSCAN_API_KEY,
-    },
-    customChains: [
-      {
-        network: "bscTestnet",
-        chainId: 97,
-        urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com"
-        }
-      }
-    ]
+    apiKey: BSCSCAN_API_KEY
   },
 };
