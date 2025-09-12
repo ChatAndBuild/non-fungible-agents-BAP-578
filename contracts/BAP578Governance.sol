@@ -21,6 +21,9 @@ contract BAP578Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     // Agent factory contract
     address public agentFactory;
 
+    // Treasury contract
+    address public treasury;
+
     // Proposal counter
     CountersUpgradeable.Counter private _proposalIdCounter;
 
@@ -54,6 +57,7 @@ contract BAP578Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     event ProposalCanceled(uint256 indexed proposalId);
     event TreasuryUpdated(address indexed newTreasury);
     event AgentFactoryUpdated(address indexed newAgentFactory);
+    event TreasuryAddressUpdated(address indexed newTreasury);
     event VotingParametersUpdated(
         uint256 votingPeriod,
         uint256 quorumPercentage,
@@ -213,32 +217,42 @@ contract BAP578Governance is Initializable, OwnableUpgradeable, UUPSUpgradeable 
     }
     /**
      * @dev Sets the agent factory address
-     * @param _agentFactory The new agent factory address
+     * @param newAgentFactory The new agent factory address
      */
-    function setAgentFactory(address _agentFactory) external onlyOwner {
-        require(_agentFactory != address(0), "BAP578Governance: factory is zero address");
-        agentFactory = _agentFactory;
-        emit AgentFactoryUpdated(_agentFactory);
+    function setAgentFactory(address newAgentFactory) external onlyOwner {
+        require(newAgentFactory != address(0), "BAP578Governance: factory is zero address");
+        agentFactory = newAgentFactory;
+        emit AgentFactoryUpdated(newAgentFactory);
+    }
+
+    /**
+     * @dev Sets the treasury address
+     * @param newTreasury The new treasury address
+     */
+    function setTreasury(address newTreasury) external onlyOwner {
+        require(newTreasury != address(0), "BAP578Governance: factory is zero address");
+        treasury = newTreasury;
+        emit TreasuryAddressUpdated(newTreasury);
     }
 
     /**
      * @dev Updates the voting parameters
-     * @param _votingPeriod The new voting period in days
-     * @param _quorumPercentage The new quorum percentage
-     * @param _executionDelay The new execution delay in days
+     * @param newVotingPeriod The new voting period in days
+     * @param newQuorumPercentage The new quorum percentage
+     * @param newExecutionDelay The new execution delay in days
      */
     function updateVotingParameters(
-        uint256 _votingPeriod,
-        uint256 _quorumPercentage,
-        uint256 _executionDelay
+        uint256 newVotingPeriod,
+        uint256 newQuorumPercentage,
+        uint256 newExecutionDelay
     ) external onlyOwner {
-        require(_quorumPercentage <= 100, "BAP578Governance: quorum percentage exceeds 100");
+        require(newQuorumPercentage <= 100, "BAP578Governance: quorum percentage exceeds 100");
 
-        votingPeriod = _votingPeriod;
-        quorumPercentage = _quorumPercentage;
-        executionDelay = _executionDelay;
+        votingPeriod = newVotingPeriod;
+        quorumPercentage = newQuorumPercentage;
+        executionDelay = newExecutionDelay;
 
-        emit VotingParametersUpdated(_votingPeriod, _quorumPercentage, _executionDelay);
+        emit VotingParametersUpdated(newVotingPeriod, newQuorumPercentage, newExecutionDelay);
     }
 
     /**
