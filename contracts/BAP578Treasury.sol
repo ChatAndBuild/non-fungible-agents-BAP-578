@@ -9,11 +9,11 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "./interfaces/ICircuitBreaker.sol";
 
 /**
- * @title BEP007Treasury
- * @dev Treasury contract for managing donations and fee distribution in the BEP-007 ecosystem
+ * @title BAP578Treasury
+ * @dev Treasury contract for managing donations and fee distribution in the BAP-578 ecosystem
  * Handles collection of donations and distribution to Foundation, Community Treasury, and Staking Rewards
  */
-contract BEP007Treasury is
+contract BAP578Treasury is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,

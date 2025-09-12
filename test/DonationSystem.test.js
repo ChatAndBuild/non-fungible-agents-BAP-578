@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
 describe("Donation System", function () {
-    let circuitBreaker, treasury, stakingRewards, agentFactory, governance, bep007Implementation;
+    let circuitBreaker, treasury, stakingRewards, agentFactory, governance, bap578Implementation;
     let owner, foundation, communityTreasury, donor1, donor2, staker1, staker2;
     let foundationAddress, communityTreasuryAddress;
 
@@ -20,22 +20,22 @@ describe("Donation System", function () {
         );
         await circuitBreaker.deployed();
 
-        // Deploy BEP007 implementation
-        const BEP007 = await ethers.getContractFactory("BEP007");
-        bep007Implementation = await upgrades.deployProxy(
-            BEP007,
+        // Deploy BAP578 implementation
+        const BAP578 = await ethers.getContractFactory("BAP578");
+        bap578Implementation = await upgrades.deployProxy(
+            BAP578,
             ["Test Agent", "TAG", circuitBreaker.address],
             { initializer: 'initialize', kind: 'uups' }
         );
-        await bep007Implementation.deployed();
+        await bap578Implementation.deployed();
 
         // Designated staking rewards address (users will stake here themselves)
         stakingRewards = { address: owner.address }; // Use owner address for testing
 
         // Deploy Treasury with staking rewards address
-        const BEP007Treasury = await ethers.getContractFactory("BEP007Treasury");
+        const BAP578Treasury = await ethers.getContractFactory("BAP578Treasury");
         treasury = await upgrades.deployProxy(
-            BEP007Treasury,
+            BAP578Treasury,
             [
                 circuitBreaker.address,
                 foundationAddress,
@@ -52,7 +52,7 @@ describe("Donation System", function () {
         agentFactory = await upgrades.deployProxy(
             AgentFactory,
             [
-                bep007Implementation.address,
+                bap578Implementation.address,
                 owner.address,
                 owner.address, // Use owner address as default learning module for testing
                 treasury.address,
@@ -63,11 +63,11 @@ describe("Donation System", function () {
         await agentFactory.deployed();
 
         // Deploy Governance
-        const BEP007Governance = await ethers.getContractFactory("BEP007Governance");
+        const BAP578Governance = await ethers.getContractFactory("BAP578Governance");
         governance = await upgrades.deployProxy(
-            BEP007Governance,
+            BAP578Governance,
             [
-                bep007Implementation.address,
+                bap578Implementation.address,
                 owner.address,
                 7, // voting period
                 10, // quorum percentage
@@ -78,7 +78,7 @@ describe("Donation System", function () {
         await governance.deployed();
     });
 
-    describe("BEP007Treasury", function () {
+    describe("BAP578Treasury", function () {
         it("Should initialize with correct parameters", async function () {
             expect(await treasury.foundationAddress()).to.equal(foundationAddress);
             expect(await treasury.communityTreasuryAddress()).to.equal(communityTreasuryAddress);

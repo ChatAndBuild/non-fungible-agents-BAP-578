@@ -4,8 +4,8 @@ const { ethers, upgrades } = require('hardhat');
 describe('StrategicAgent Template Integration', function () {
   let StrategicAgent;
   let strategicAgent;
-  let BEP007;
-  let bep007;
+  let BAP578;
+  let bap578;
   let CircuitBreaker;
   let circuitBreaker;
   let owner;
@@ -30,19 +30,19 @@ describe('StrategicAgent Template Integration', function () {
     );
     await circuitBreaker.deployed();
 
-    // Deploy BEP007 with CircuitBreaker as governance
-    BEP007 = await ethers.getContractFactory('BEP007');
-    bep007 = await upgrades.deployProxy(
-      BEP007,
+    // Deploy BAP578 with CircuitBreaker as governance
+    BAP578 = await ethers.getContractFactory('BAP578');
+    bap578 = await upgrades.deployProxy(
+      BAP578,
       ['Non-Fungible Agent', 'NFA', circuitBreaker.address],
       { initializer: 'initialize', kind: 'uups' },
     );
-    await bep007.deployed();
+    await bap578.deployed();
 
     // Deploy StrategicAgent template
     StrategicAgent = await ethers.getContractFactory('StrategicAgent');
     strategicAgent = await StrategicAgent.deploy(
-      bep007.address,
+      bap578.address,
       'Strategic Monitor',
       'Crypto Analysis',
       75 // monitoring intensity
@@ -52,7 +52,7 @@ describe('StrategicAgent Template Integration', function () {
 
   describe('Deployment', function () {
     it('Should set the right agent token address', async function () {
-      expect(await strategicAgent.agentToken()).to.equal(bep007.address);
+      expect(await strategicAgent.agentToken()).to.equal(bap578.address);
     });
 
     it('Should initialize with correct profile', async function () {
@@ -480,8 +480,8 @@ describe('StrategicAgent Template Integration', function () {
     });
   });
 
-  describe('BEP-007 Integration', function () {
-    it('Should work with BEP-007 agent creation', async function () {
+  describe('BAP-578 Integration', function () {
+    it('Should work with BAP-578 agent creation', async function () {
       // Create an agent using the StrategicAgent template
       const metadataURI = 'ipfs://strategic-agent-metadata';
       const extendedMetadata = {
@@ -494,7 +494,7 @@ describe('StrategicAgent Template Integration', function () {
       };
 
       // Create agent with StrategicAgent as logic
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address,
         strategicAgent.address, // Use StrategicAgent as logic
         metadataURI,
@@ -502,10 +502,10 @@ describe('StrategicAgent Template Integration', function () {
       );
 
       const tokenId = 1;
-      expect(await bep007.ownerOf(tokenId)).to.equal(addr1.address);
-      expect(await bep007.tokenURI(tokenId)).to.equal(metadataURI);
+      expect(await bap578.ownerOf(tokenId)).to.equal(addr1.address);
+      expect(await bap578.tokenURI(tokenId)).to.equal(metadataURI);
 
-      const agentMetadata = await bep007.getAgentMetadata(tokenId);
+      const agentMetadata = await bap578.getAgentMetadata(tokenId);
       expect(agentMetadata.persona).to.equal(extendedMetadata.persona);
       expect(agentMetadata.experience).to.equal(extendedMetadata.experience);
     });

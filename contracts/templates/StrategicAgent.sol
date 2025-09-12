@@ -21,7 +21,7 @@ import "../interfaces/ILearningModule.sol";
 contract StrategicAgent is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
-    // The address of the BEP-007 token that owns this logic
+    // The address of the BAP-578 token that owns this logic
     address public agentToken;
 
     // Learning module integration
@@ -170,7 +170,7 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
 
     /**
      * @dev Initializes the Strategic Agent contract
-     * @param _agentToken The address of the BEP-007 token
+     * @param _agentToken The address of the BAP-578 token
      * @param _name The agent's name
      * @param _specialization The agent's area of expertise
      * @param _monitoringIntensity Monitoring intensity level (0-100)

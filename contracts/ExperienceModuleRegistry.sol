@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "./interfaces/IBEP007.sol";
+import "./interfaces/IBAP578.sol";
 
 /**
  * @title ExperienceModuleRegistry
@@ -40,7 +40,7 @@ contract ExperienceModuleRegistry is
     }
 
     /**
-     * @dev Experience module types based on BEP-007 standard
+     * @dev Experience module types based on BAP-578 standard
      */
     enum ExperienceType {
         STATIC, // Traditional static experience (no learning)
@@ -71,8 +71,8 @@ contract ExperienceModuleRegistry is
 
     // ============ STATE VARIABLES ============
 
-    /// @dev Reference to the BEP007 token contract
-    IBEP007 public bep007Token;
+    /// @dev Reference to the BAP578 token contract
+    IBAP578 public bap578Token;
 
     /// @dev Mapping from token ID to registered experience modules
     mapping(uint256 => address[]) private _registeredModules;
@@ -134,7 +134,7 @@ contract ExperienceModuleRegistry is
      * @dev Modifier to check if the caller is the owner of the specified token
      */
     modifier onlyTokenOwner(uint256 tokenId) {
-        IBEP007.State memory agentState = bep007Token.getState(tokenId);
+        IBAP578.State memory agentState = bap578Token.getState(tokenId);
         require(
             agentState.owner == msg.sender,
             "ExperienceModuleRegistry: caller is not token owner"
@@ -168,16 +168,16 @@ contract ExperienceModuleRegistry is
 
     /**
      * @dev Initializes the contract
-     * @param _bep007Token Address of the BEP007 token contract
+     * @param _bap578Token Address of the BAP578 token contract
      */
-    function initialize(address _bep007Token) public initializer {
-        require(_bep007Token != address(0), "ExperienceModuleRegistry: invalid BEP007 address");
+    function initialize(address _bap578Token) public initializer {
+        require(_bap578Token != address(0), "ExperienceModuleRegistry: invalid BAP578 address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        bep007Token = IBEP007(_bep007Token);
+        bap578Token = IBAP578(_bap578Token);
     }
 
     // ============ CORE FUNCTIONS ============
@@ -260,7 +260,7 @@ contract ExperienceModuleRegistry is
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         address signer = ethSignedMessageHash.recover(signature);
 
-        IBEP007.State memory agentState = bep007Token.getState(tokenId);
+        IBAP578.State memory agentState = bap578Token.getState(tokenId);
         require(signer == agentState.owner, "ExperienceModuleRegistry: invalid signature");
 
         return signer;
@@ -579,12 +579,12 @@ contract ExperienceModuleRegistry is
     // ============ ADMIN FUNCTIONS ============
 
     /**
-     * @dev Updates the BEP007 token contract address (only owner)
-     * @param newBEP007Token New BEP007 token contract address
+     * @dev Updates the BAP578 token contract address (only owner)
+     * @param newBAP578Token New BAP578 token contract address
      */
-    function updateBEP007Token(address newBEP007Token) external onlyOwner {
-        require(newBEP007Token != address(0), "ExperienceModuleRegistry: invalid address");
-        bep007Token = IBEP007(newBEP007Token);
+    function updateBAP578Token(address newBAP578Token) external onlyOwner {
+        require(newBAP578Token != address(0), "ExperienceModuleRegistry: invalid BAP578 address");
+        bap578Token = IBAP578(newBAP578Token);
     }
 
     /**

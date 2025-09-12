@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./BAP578.sol";
 import "./interfaces/IBAP578.sol";
-import "./BEP007Treasury.sol";
+import "./BAP578Treasury.sol";
 
 /**
  * @title AgentFactory
@@ -30,7 +30,7 @@ contract AgentFactory is
     address public defaultLearningModule;
 
     // Treasury contract for fee collection
-    BEP007Treasury public treasury;
+    BAP578Treasury public treasury;
 
     // Circuit breaker for new agents
     address public circuitBreaker;
@@ -124,7 +124,7 @@ contract AgentFactory is
 
         implementation = implementationAddr;
         defaultLearningModule = defaultLearningModuleAddr;
-        treasury = BEP007Treasury(treasuryAddr);
+        treasury = BAP578Treasury(treasuryAddr);
         circuitBreaker = circuitBreakerAddr;
 
         // Initialize global stats
@@ -169,7 +169,7 @@ contract AgentFactory is
         require(msg.value == AGENT_CREATION_FEE, "AgentFactory: incorrect fee amount");
 
         // Collect fee and donate to treasury (this will trigger the 60/25/15 distribution)
-        BEP007Treasury(treasury).donate{ value: AGENT_CREATION_FEE }("Agent creation fee");
+        BAP578Treasury(treasury).donate{ value: AGENT_CREATION_FEE }("Agent creation fee");
 
         emit AgentCreationFeeCollected(msg.sender, AGENT_CREATION_FEE);
 
@@ -221,7 +221,7 @@ contract AgentFactory is
      */
     function setTreasury(address payable newTreasury) external onlyOwner {
         require(newTreasury != address(0), "AgentFactory: treasury is zero address");
-        treasury = BEP007Treasury(newTreasury);
+        treasury = BAP578Treasury(newTreasury);
     }
 
     /**

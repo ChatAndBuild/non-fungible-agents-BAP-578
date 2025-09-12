@@ -49,9 +49,9 @@ describe('AgentFactory', function () {
     stakingRewards = { address: owner.address }; // Use owner address for testing
 
     // Deploy Treasury for AgentFactory
-    const BEP007Treasury = await ethers.getContractFactory('BEP007Treasury');
+    const BAP578Treasury = await ethers.getContractFactory('BAP578Treasury');
     treasury = await upgrades.deployProxy(
-      BEP007Treasury,
+      BAP578Treasury,
       [
         circuitBreaker.address,
         owner.address, // foundation address
@@ -67,11 +67,7 @@ describe('AgentFactory', function () {
     AgentFactory = await ethers.getContractFactory('AgentFactory');
     agentFactory = await upgrades.deployProxy(
       AgentFactory,
-<<<<<<< HEAD
-      [bep007Implementation.address, owner.address, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
-=======
-      [bap578Implementation.address, owner.address, merkleTreeLearning.address],
->>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
+      [bap578Implementation.address, owner.address, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
       { initializer: "initialize", kind: "uups" }
     );
     await agentFactory.deployed();
@@ -112,11 +108,7 @@ describe('AgentFactory', function () {
       await expect(
         upgrades.deployProxy(
           AgentFactoryFactory,
-<<<<<<< HEAD
-          [bep007Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
-=======
-          [bap578Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address],
->>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
+          [bap578Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
           { initializer: "initialize", kind: "uups" }
         )
       ).to.be.revertedWith("AgentFactory: owner is zero address");

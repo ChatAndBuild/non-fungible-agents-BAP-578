@@ -9,7 +9,7 @@ import "../interfaces/ILearningModule.sol";
 
 /**
  * @title MerkleTreeLearning
- * @dev Implementation of Merkle tree-based learning for BEP007 agents
+ * @dev Implementation of Merkle tree-based learning for BAP578 agents
  */
 contract MerkleTreeLearning is
     ILearningModule,

@@ -70,7 +70,7 @@ contract VaultPermissionManager is
     mapping(address => mapping(string => VaultInfo)) public vaults; // owner => vaultId => VaultInfo
     mapping(address => uint256[]) public userPermissions; // user => permission IDs
     mapping(address => mapping(string => uint256[])) public vaultPermissions; // owner => vaultId => permission IDs
-    mapping(address => bool) public authorizedAgents; // BEP007 agent contracts that can request permissions
+    mapping(address => bool) public authorizedAgents; // BAP578 agent contracts that can request permissions
 
     // Statistics
     uint256 public totalPermissions;
@@ -387,7 +387,7 @@ contract VaultPermissionManager is
     }
 
     /**
-     * @dev Authorizes or deauthorizes a BEP007 agent contract
+     * @dev Authorizes or deauthorizes a BAP578 agent contract
      * @param agent Address of the agent contract
      * @param authorized Whether to authorize or deauthorize
      */

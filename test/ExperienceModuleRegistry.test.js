@@ -4,8 +4,8 @@ const { ethers, upgrades } = require('hardhat');
 describe('ExperienceModuleRegistry', function () {
   let ExperienceModuleRegistry;
   let experienceRegistry;
-  let BEP007;
-  let bep007;
+  let BAP578;
+  let bap578;
   let CircuitBreaker;
   let circuitBreaker;
   let owner;
@@ -57,20 +57,20 @@ describe('ExperienceModuleRegistry', function () {
     );
     await circuitBreaker.deployed();
 
-    // Deploy BEP007 with CircuitBreaker as governance
-    BEP007 = await ethers.getContractFactory('BEP007');
-    bep007 = await upgrades.deployProxy(
-      BEP007,
+    // Deploy BAP578 with CircuitBreaker as governance
+    BAP578 = await ethers.getContractFactory('BAP578');
+    bap578 = await upgrades.deployProxy(
+      BAP578,
       ['Non-Fungible Agent', 'NFA', circuitBreaker.address],
       { initializer: 'initialize', kind: 'uups' },
     );
-    await bep007.deployed();
+    await bap578.deployed();
 
     // Deploy ExperienceModuleRegistry
     ExperienceModuleRegistry = await ethers.getContractFactory('ExperienceModuleRegistry');
     experienceRegistry = await upgrades.deployProxy(
       ExperienceModuleRegistry,
-      [bep007.address],
+      [bap578.address],
       { initializer: 'initialize', kind: 'uups' },
     );
     await experienceRegistry.deployed();
@@ -81,23 +81,23 @@ describe('ExperienceModuleRegistry', function () {
       expect(await experienceRegistry.owner()).to.equal(owner.address);
     });
 
-    it('Should set the right BEP007 token address', async function () {
-      expect(await experienceRegistry.bep007Token()).to.equal(bep007.address);
+    it('Should set the right BAP578 token address', async function () {
+      expect(await experienceRegistry.bap578Token()).to.equal(bap578.address);
     });
 
-    it('Should not allow initialization with zero BEP007 address', async function () {
+    it('Should not allow initialization with zero BAP578 address', async function () {
       const ExperienceModuleRegistryFactory = await ethers.getContractFactory('ExperienceModuleRegistry');
       await expect(
         upgrades.deployProxy(ExperienceModuleRegistryFactory, [ethers.constants.AddressZero], {
           initializer: 'initialize',
           kind: 'uups',
         }),
-      ).to.be.revertedWith('ExperienceModuleRegistry: invalid BEP007 address');
+      ).to.be.revertedWith('ExperienceModuleRegistry: invalid BAP578 address');
     });
 
     it('Should support upgradeable pattern', async function () {
       // Test that the contract is properly initialized and can be upgraded
-      expect(await experienceRegistry.bep007Token()).to.equal(bep007.address);
+      expect(await experienceRegistry.bap578Token()).to.equal(bap578.address);
     });
   });
 
@@ -107,7 +107,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token for testing
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -320,7 +320,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -425,7 +425,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -502,7 +502,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -565,7 +565,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -632,7 +632,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -787,29 +787,29 @@ describe('ExperienceModuleRegistry', function () {
   });
 
   describe('Admin Functions', function () {
-    it('Should allow owner to update BEP007 token address', async function () {
-      // Create a new BEP007 contract
-      const newBEP007 = await upgrades.deployProxy(
-        BEP007,
+    it('Should allow owner to update BAP578 token address', async function () {
+      // Create a new BAP578 contract
+      const newBAP578 = await upgrades.deployProxy(
+        BAP578,
         ['New NFA', 'NNFA', circuitBreaker.address],
         { initializer: 'initialize', kind: 'uups' },
       );
-      await newBEP007.deployed();
+      await newBAP578.deployed();
 
-      await experienceRegistry.connect(owner).updateBEP007Token(newBEP007.address);
-      expect(await experienceRegistry.bep007Token()).to.equal(newBEP007.address);
+      await experienceRegistry.connect(owner).updateBAP578Token(newBAP578.address);
+      expect(await experienceRegistry.bap578Token()).to.equal(newBAP578.address);
     });
 
-    it('Should reject BEP007 update from non-owner', async function () {
+    it('Should reject BAP578 update from non-owner', async function () {
       await expect(
-        experienceRegistry.connect(addr1).updateBEP007Token(addr2.address)
+        experienceRegistry.connect(addr1).updateBAP578Token(addr2.address)
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
 
-    it('Should reject BEP007 update with zero address', async function () {
+    it('Should reject BAP578 update with zero address', async function () {
       await expect(
-        experienceRegistry.connect(owner).updateBEP007Token(ethers.constants.AddressZero)
-      ).to.be.revertedWith('ExperienceModuleRegistry: invalid address');
+        experienceRegistry.connect(owner).updateBAP578Token(ethers.constants.AddressZero)
+      ).to.be.revertedWith('ExperienceModuleRegistry: invalid BAP578 address');
     });
   });
 
@@ -818,7 +818,7 @@ describe('ExperienceModuleRegistry', function () {
 
     beforeEach(async function () {
       // Create an agent token
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
@@ -880,7 +880,7 @@ describe('ExperienceModuleRegistry', function () {
       // The registerModule function should have the nonReentrant modifier
       // We can verify this by checking that multiple rapid calls don't cause issues
       const tokenId = 1;
-      await bep007['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
+      await bap578['createAgent(address,address,string,(string,string,string,string,string,bytes32))'](
         addr1.address, 
         mockLogicAddress, 
         'ipfs://test', 
