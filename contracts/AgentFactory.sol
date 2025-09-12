@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "./BEP007.sol";
-import "./interfaces/IBEP007.sol";
+import "./BAP578.sol";
+import "./interfaces/IBAP578.sol";
 import "./BEP007Treasury.sol";
 
 /**
@@ -23,7 +23,7 @@ contract AgentFactory is
 {
     using ECDSAUpgradeable for bytes32;
 
-    // The address of the BEP007Enhanced implementation contract
+    // The address of the BAP578Enhanced implementation contract
     address public implementation;
 
     // Default learning module for new agents
@@ -72,7 +72,7 @@ contract AgentFactory is
         string symbol;
         address logicAddress;
         string metadataURI;
-        IBEP007.AgentMetadata extendedMetadata;
+        IBAP578.AgentMetadata extendedMetadata;
     }
 
     // Events
@@ -98,7 +98,7 @@ contract AgentFactory is
     /**
      * @dev Initializes the contract
      * @dev This function can only be called once due to the initializer modifier
-     * @param implementationAddr The address of the BEP007Enhanced implementation contract
+     * @param implementationAddr The address of the BAP578Enhanced implementation contract
      * @param ownerAddr The address of contract
      * @param defaultLearningModuleAddr The default learning module address
      */
@@ -156,7 +156,7 @@ contract AgentFactory is
         string calldata metadataURI
     ) external payable returns (address agent) {
         // Create empty extended metadata
-        IBEP007.AgentMetadata memory emptyMetadata = IBEP007.AgentMetadata({
+        IBAP578.AgentMetadata memory emptyMetadata = IBAP578.AgentMetadata({
             persona: "",
             experience: "",
             voiceHash: "",
@@ -185,7 +185,7 @@ contract AgentFactory is
             new ERC1967Proxy(
                 implementation,
                 abi.encodeWithSelector(
-                    BEP007(payable(implementation)).initialize.selector,
+                    BAP578(payable(implementation)).initialize.selector,
                     params.name,
                     params.symbol,
                     circuitBreaker // Use the stored circuit breaker address
@@ -194,7 +194,7 @@ contract AgentFactory is
         );
 
         // Prepare enhanced metadata with learning configuration
-        IBEP007.AgentMetadata memory enhancedMetadata = IBEP007.AgentMetadata({
+        IBAP578.AgentMetadata memory enhancedMetadata = IBAP578.AgentMetadata({
             persona: params.extendedMetadata.persona,
             experience: params.extendedMetadata.experience,
             voiceHash: params.extendedMetadata.voiceHash,
@@ -203,7 +203,7 @@ contract AgentFactory is
             vaultHash: params.extendedMetadata.vaultHash
         });
 
-        uint256 tokenId = BEP007(payable(agent)).createAgent(
+        uint256 tokenId = BAP578(payable(agent)).createAgent(
             msg.sender,
             params.logicAddress,
             params.metadataURI,

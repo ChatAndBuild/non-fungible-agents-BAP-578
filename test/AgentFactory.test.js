@@ -4,8 +4,8 @@ const { ethers, upgrades } = require('hardhat');
 describe('AgentFactory', function () {
   let AgentFactory;
   let agentFactory;
-  let BEP007;
-  let bep007Implementation;
+  let BAP578;
+  let bap578Implementation;
   let CircuitBreaker;
   let circuitBreaker;
   let MerkleTreeLearning;
@@ -35,10 +35,10 @@ describe('AgentFactory', function () {
     );
     await circuitBreaker.deployed();
 
-    // Deploy BEP007 implementation
-    BEP007 = await ethers.getContractFactory('BEP007');
-    bep007Implementation = await BEP007.deploy();
-    await bep007Implementation.deployed();
+    // Deploy BAP578 implementation
+    BAP578 = await ethers.getContractFactory('BAP578');
+    bap578Implementation = await BAP578.deploy();
+    await bap578Implementation.deployed();
 
     // Deploy MerkleTreeLearning as default learning module
     MerkleTreeLearning = await ethers.getContractFactory('MerkleTreeLearning');
@@ -67,7 +67,11 @@ describe('AgentFactory', function () {
     AgentFactory = await ethers.getContractFactory('AgentFactory');
     agentFactory = await upgrades.deployProxy(
       AgentFactory,
+<<<<<<< HEAD
       [bep007Implementation.address, owner.address, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
+=======
+      [bap578Implementation.address, owner.address, merkleTreeLearning.address],
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
       { initializer: "initialize", kind: "uups" }
     );
     await agentFactory.deployed();
@@ -75,7 +79,7 @@ describe('AgentFactory', function () {
 
   describe('Deployment', function () {
     it('Should set the correct implementation address', async function () {
-      expect(await agentFactory.implementation()).to.equal(bep007Implementation.address);
+      expect(await agentFactory.implementation()).to.equal(bap578Implementation.address);
     });
 
     it('Should set the correct default learning module', async function () {
@@ -108,7 +112,11 @@ describe('AgentFactory', function () {
       await expect(
         upgrades.deployProxy(
           AgentFactoryFactory,
+<<<<<<< HEAD
           [bep007Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address, treasury.address, circuitBreaker.address],
+=======
+          [bap578Implementation.address, ethers.constants.AddressZero, merkleTreeLearning.address],
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
           { initializer: "initialize", kind: "uups" }
         )
       ).to.be.revertedWith("AgentFactory: owner is zero address");
@@ -143,7 +151,7 @@ describe('AgentFactory', function () {
       expect(agentAddress).to.not.equal(ethers.constants.AddressZero);
 
       // Verify the agent contract is properly initialized
-      const agentContract = await ethers.getContractAt('BEP007', agentAddress);
+      const agentContract = await ethers.getContractAt('BAP578', agentAddress);
       expect(await agentContract.name()).to.equal(name);
       expect(await agentContract.symbol()).to.equal(symbol);
       expect(await agentContract.ownerOf(1)).to.equal(addr1.address);
@@ -196,7 +204,7 @@ describe('AgentFactory', function () {
       
       // Verify the agent has empty extended metadata (since we're using the basic createAgent function)
       const agentAddress = agentCreatedEvent.args.agent;
-      const agentContract = await ethers.getContractAt('BEP007', agentAddress);
+      const agentContract = await ethers.getContractAt('BAP578', agentAddress);
       const metadata = await agentContract.getAgentMetadata(1);
       
       expect(metadata.persona).to.equal("");
@@ -217,7 +225,7 @@ describe('AgentFactory', function () {
           "ipfs://QmTest",
           { value: feeAmount }
         )
-      ).to.be.reverted; // The revert will happen in the BEP007 contract
+      ).to.be.reverted; // The revert will happen in the BAP578 contract
     });
   });
 

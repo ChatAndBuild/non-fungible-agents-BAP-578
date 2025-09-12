@@ -2,7 +2,11 @@
 
 ## **🔍 Quick Overview**
 
+<<<<<<< HEAD
 **VaultPermissionManager.sol** is a comprehensive permission management system for off-chain data vaults in the BEP007 ecosystem. It provides secure, time-based access control for agent data vaults with granular permission levels and delegation capabilities.
+=======
+The Vault Permission Manager is a crucial component of the BAP-578 Non-Fungible Agent (NFA) ecosystem that manages access control for agent vaults. It provides a secure and flexible way for agent owners to delegate access to their agent's off-chain data while maintaining cryptographic verification and time-based controls.
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
 
 **Key Features:**
 - ✅ **Time-Based Permissions** - Permissions with configurable start and end times
@@ -58,11 +62,38 @@
 
 ### **PermissionLevel Enum**
 ```solidity
+<<<<<<< HEAD
 enum PermissionLevel {
     NONE,           // No access
     READ,           // Read-only access
     WRITE,          // Read and write access
     ADMIN           // Full administrative access
+=======
+contract VaultPermissionManager is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    // BAP578 token contract
+    BAP578 public bap578Token;
+    
+    // Mapping from token ID to delegated addresses
+    mapping(uint256 => mapping(address => bool)) private _delegatedAccess;
+    
+    // Mapping from token ID to delegation expiry timestamps
+    mapping(uint256 => mapping(address => uint256)) private _delegationExpiry;
+    
+    // Events
+    event AccessDelegated(uint256 indexed tokenId, address indexed delegate, uint256 expiryTime);
+    event AccessRevoked(uint256 indexed tokenId, address indexed delegate);
+    event VaultAccessRequested(uint256 indexed tokenId, address indexed requester, bytes32 requestId);
+    event VaultAccessGranted(uint256 indexed tokenId, address indexed requester, bytes32 requestId);
+    
+    // Functions
+    function initialize(address _bap578Token) public initializer;
+    function delegateAccess(uint256 tokenId, address delegate, uint256 expiryTime, bytes memory signature) external nonReentrant;
+    function revokeAccess(uint256 tokenId, address delegate) external;
+    function requestVaultAccess(uint256 tokenId) external returns (bytes32 requestId);
+    function grantVaultAccess(uint256 tokenId, address requester, bytes32 requestId, bytes memory signature) external;
+    function hasVaultAccess(uint256 tokenId, address delegate) external view returns (bool);
+    function getDelegationExpiry(uint256 tokenId, address delegate) external view returns (uint256);
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
 }
 ```
 
@@ -78,6 +109,7 @@ enum PermissionLevel {
 
 ### **VaultPermission**
 ```solidity
+<<<<<<< HEAD
 struct VaultPermission {
     uint256 id;                 // Unique permission ID
     address vaultOwner;         // Owner of the vault
@@ -89,11 +121,50 @@ struct VaultPermission {
     bool isActive;              // Whether permission is currently active
     string metadata;            // Additional metadata about the permission
     uint256 createdAt;          // When permission was created
+=======
+// Verify the signature
+bytes32 messageHash = keccak256(abi.encodePacked(tokenId, delegate, expiryTime));
+bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
+address signer = ethSignedMessageHash.recover(signature);
+
+require(signer == owner, "VaultPermissionManager: invalid signature");
+```
+
+### Time-Based Access Control
+
+Access delegations include an expiry timestamp to limit the duration of access:
+
+```solidity
+require(expiryTime > block.timestamp, "VaultPermissionManager: expiry time in the past");
+
+// Grant access
+_delegatedAccess[tokenId][delegate] = true;
+_delegationExpiry[tokenId][delegate] = expiryTime;
+```
+
+### Access Revocation
+
+Access can be revoked at any time by the agent owner:
+
+```solidity
+function revokeAccess(
+    uint256 tokenId,
+    address delegate
+) external {
+    // Only the token owner can revoke access
+    require(bap578Token.ownerOf(tokenId) == msg.sender, "VaultPermissionManager: not token owner");
+    
+    _delegatedAccess[tokenId][delegate] = false;
+    _delegationExpiry[tokenId][delegate] = 0;
+    
+    emit AccessRevoked(tokenId, delegate);
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
 }
 ```
 
 ### **VaultInfo**
 ```solidity
+<<<<<<< HEAD
 struct VaultInfo {
     address owner;              // Vault owner
     string vaultId;             // Unique vault identifier
@@ -101,6 +172,40 @@ struct VaultInfo {
     bool isActive;              // Whether vault is active
     uint256 createdAt;          // Creation timestamp
     uint256 lastAccessed;       // Last access timestamp
+=======
+function requestVaultAccess(uint256 tokenId) 
+    external 
+    returns (bytes32 requestId) 
+{
+    // Generate a unique request ID
+    requestId = keccak256(abi.encodePacked(tokenId, msg.sender, block.timestamp));
+    
+    emit VaultAccessRequested(tokenId, msg.sender, requestId);
+    
+    return requestId;
+}
+
+function grantVaultAccess(
+    uint256 tokenId,
+    address requester,
+    bytes32 requestId,
+    bytes memory signature
+) external {
+    // Verify that the token exists
+    require(bap578Token.ownerOf(tokenId) != address(0), "VaultPermissionManager: token does not exist");
+    
+    // Get the owner of the token
+    address owner = bap578Token.ownerOf(tokenId);
+    
+    // Verify the signature
+    bytes32 messageHash = keccak256(abi.encodePacked(tokenId, requester, requestId));
+    bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
+    address signer = ethSignedMessageHash.recover(signature);
+    
+    require(signer == owner, "VaultPermissionManager: invalid signature");
+    
+    emit VaultAccessGranted(tokenId, requester, requestId);
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
 }
 ```
 
@@ -108,6 +213,7 @@ struct VaultInfo {
 
 ## **🚀 Core Functions**
 
+<<<<<<< HEAD
 ### **Vault Management**
 
 #### **Create Vault**
@@ -116,6 +222,42 @@ function createVault(
     string memory vaultId,
     string memory description
 ) external whenNotPaused nonReentrant
+=======
+```json
+{
+  "vault_id": "nfa578-vault-001",
+  "owner": "0xUserWalletAddress",
+  "created": "2025-05-12T10:00:00Z",
+  "encrypted_sections": {
+    "api_keys": {
+      "cipher": "aes-256-gcm",
+      "data": "encrypted_data_here",
+      "iv": "initialization_vector_here",
+      "tag": "authentication_tag_here"
+    },
+    "private_experience": {
+      "cipher": "aes-256-gcm",
+      "data": "encrypted_data_here",
+      "iv": "initialization_vector_here",
+      "tag": "authentication_tag_here"
+    },
+    "credentials": {
+      "cipher": "aes-256-gcm",
+      "data": "encrypted_data_here",
+      "iv": "initialization_vector_here",
+      "tag": "authentication_tag_here"
+    }
+  },
+  "access_log": [
+    {
+      "delegate": "0xDelegateAddress",
+      "timestamp": "2025-05-13T14:30:00Z",
+      "sections": ["api_keys"]
+    }
+  ],
+  "last_updated": "2025-05-13T14:30:00Z"
+}
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
 ```
 
 **Purpose**: Creates a new data vault for the caller
@@ -462,9 +604,15 @@ if (hasAccess) {
 }
 ```
 
+<<<<<<< HEAD
 ---
 
 ## **🔒 Security Features**
+=======
+## Integration with BAP-578 Ecosystem
+
+The Vault Permission Manager integrates with the BAP-578 ecosystem in the following ways:
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c
 
 ### **Access Control**
 - **Owner-Only Functions**: Vault creation, permission granting, and revocation
@@ -532,6 +680,7 @@ Agent checks permission → Accesses vault → Records access
 Permission expires → Automatic cleanup → Access denied
 ```
 
+<<<<<<< HEAD
 ### **4. Permission Revocation**
 ```
 Owner revokes permission → Permission deactivated → Access denied
@@ -662,3 +811,6 @@ The VaultPermissionManager integrates with the BEP007 governance system for:
 ---
 
 This VaultPermissionManager provides a robust foundation for secure, time-based access control to off-chain data vaults in the BEP007 ecosystem, enabling sophisticated agent interactions while maintaining security and auditability.
+=======
+The Vault Permission Manager is a powerful component of the BAP-578 ecosystem that enables secure and flexible access control for agent vaults. By providing cryptographic verification, time-based controls, and revocation capabilities, the manager ensures that agent owners maintain control over their agent's sensitive data while enabling collaboration and service integration.
+>>>>>>> eaf0d18d50ed0d184fdfdc9b7b3f8932ff1a542c

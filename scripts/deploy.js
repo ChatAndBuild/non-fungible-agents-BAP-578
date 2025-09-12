@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 
 async function main() {
-  console.log('🚀 Deploying BEP-007 Non-Fungible Agent contracts...\n');
+  console.log('🚀 Deploying BAP-578 Non-Fungible Agent contracts...\n');
 
   const [deployer] = await ethers.getSigners();
   console.log("deployer", deployer);
@@ -22,15 +22,15 @@ async function main() {
     await circuitBreaker.initialize(deployer.address, deployer.address);
     console.log('✅ CircuitBreaker deployed to:', circuitBreaker.address);
 
-    // Deploy BEP007
-    console.log('\n📋 2. Deploying BEP007...');
-    const BEP007 = await ethers.getContractFactory('BEP007');
-    const bep007 = await BEP007.deploy();
-    await bep007.deployed();
+    // Deploy BAP578
+    console.log('\n📋 2. Deploying BAP578...');
+    const BAP578 = await ethers.getContractFactory('BAP578');
+    const bap578 = await BAP578.deploy();
+    await bap578.deployed();
     
-    // Initialize BEP007
-    await bep007.initialize('BEP007 Non-Fungible Agents', 'NFA', circuitBreaker.address);
-    console.log('✅ BEP007 deployed to:', bep007.address);
+    // Initialize BAP578
+    await bap578.initialize('BAP578 Non-Fungible Agents', 'NFA', circuitBreaker.address);
+    console.log('✅ BAP578 deployed to:', bap578.address);
 
     // Deploy MerkleTreeLearning
     console.log('\n📋 3. Deploying MerkleTreeLearning...');
@@ -49,30 +49,30 @@ async function main() {
     await agentFactory.deployed();
     
     // Initialize AgentFactory
-    await agentFactory.initialize(bep007.address, deployer.address, merkleLearning.address);
+    await agentFactory.initialize(bap578.address, deployer.address, merkleLearning.address);
     console.log('✅ AgentFactory deployed to:', agentFactory.address);
 
-    // Deploy BEP007Governance
-    console.log('\n📋 5. Deploying BEP007Governance...');
-    const BEP007Governance = await ethers.getContractFactory('BEP007Governance');
-    const governance = await BEP007Governance.deploy();
+    // Deploy BAP578Governance
+    console.log('\n📋 5. Deploying BAP578Governance...');
+    const BAP578Governance = await ethers.getContractFactory('BAP578Governance');
+    const governance = await BAP578Governance.deploy();
     await governance.deployed();
     
-    // Initialize BEP007Governance
+    // Initialize BAP578Governance
     await governance.initialize(
-      bep007.address,
+      bap578.address,
       deployer.address,
       7, // 7 days voting period
       10, // 10% quorum
       2  // 2 days execution delay
     );
-    console.log('✅ BEP007Governance deployed to:', governance.address);
+    console.log('✅ BAP578Governance deployed to:', governance.address);
 
     // Deploy CreatorAgent template
     console.log('\n📋 6. Deploying CreatorAgent template...');
     const CreatorAgent = await ethers.getContractFactory('CreatorAgent');
     const creatorAgent = await CreatorAgent.deploy(
-      bep007.address,
+      bap578.address,
       'Template Creator',
       'Template creator agent',
       'General'
@@ -103,10 +103,10 @@ async function main() {
     console.log('----------------------------------------------------');
     console.log('📋 Contract Addresses:');
     console.log('CircuitBreaker:', circuitBreaker.address);
-    console.log('BEP007:', bep007.address);
+    console.log('BAP578:', bap578.address);
     console.log('MerkleTreeLearning:', merkleLearning.address);
     console.log('AgentFactory:', agentFactory.address);
-    console.log('BEP007Governance:', governance.address);
+    console.log('BAP578Governance:', governance.address);
     console.log('CreatorAgent Template:', creatorAgent.address);
     console.log('----------------------------------------------------');
     console.log('💡 Update your .env file with these addresses');

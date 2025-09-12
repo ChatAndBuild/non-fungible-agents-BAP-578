@@ -10,8 +10,6 @@ import "../interfaces/ILearningModule.sol";
 /**
  * @title MerkleTreeLearning
  * @dev Implementation of Merkle tree-based learning for BEP007 agents
- * Supports updating Merkle roots when extended data changes
- * Stores complete Merkle tree structure including child nodes
  */
 contract MerkleTreeLearning is
     ILearningModule,

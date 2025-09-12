@@ -1,18 +1,18 @@
-# BEP-007: Non-Fungible Agent (NFA) Token Standard
+# BAP-578: Non-Fungible Agent (NFA) Token Standard
 
-![BEP-007 Non-Fungible Agents](https://github.com/christelbuchanan/bep007-non-fungible-agents-nfa/blob/main/NFA-ReadMe-Header.png)
+![BAP-578 Non-Fungible Agents](https://github.com/christelbuchanan/bep007-non-fungible-agents-nfa/blob/main/NFA-ReadMe-Header.png)
 
 ## Overview
 
-BEP-007 introduces Non-Fungible Agents (NFAs)—programmable, autonomous tokens that act as on-chain "agents" capable of executing tasks, evolving, and interacting with other contracts. Inspired by the iconic "007" designation for elite agents, this standard merges the uniqueness of NFTs with autonomous functionality, positioning BNB Chain as the home for decentralized automation.
+BAP-578 introduces Non-Fungible Agents (NFAs)—programmable, autonomous tokens that act as on-chain "agents" capable of executing tasks, evolving, and interacting with other contracts. This standard merges the uniqueness of NFTs with autonomous functionality, positioning BNB Chain as the home for decentralized automation.
 
 This implementation provides a complete framework for creating, managing, and governing autonomous agent tokens on the BNB Chain with **optional learning capabilities** that allow agents to evolve and improve over time.
 
-For a comprehensive technical breakdown, read the [Whitepaper](https://github.com/christelbuchanan/bep007-non-fungible-agents-nfa/tree/main/whitepaper)
+For a comprehensive technical breakdown, read the [Whitepaper](https://nfa.xyz/)
 
 ## 🚀 Enhanced Learning Capabilities
 
-BEP-007 now offers **two development paths** to accommodate different use cases and developer preferences:
+BAP-578 now offers **two development paths** to accommodate different use cases and developer preferences:
 
 ### **Path 1: JSON Light Experience (Default)**
 
@@ -44,7 +44,7 @@ For advanced developers wanting truly evolving agents:
 
 ### The Need for Standardization
 
-While traditional NFTs (BEP-721) provide uniqueness and ownership, they lack the standardized interfaces needed for autonomous behavior and cross-platform agent interactions. BEP-007 addresses this gap by defining:
+While traditional NFTs (BEP-721) provide uniqueness and ownership, they lack the standardized interfaces needed for autonomous behavior and cross-platform agent interactions. BAP-578 addresses this gap by defining:
 
 1. **Consistent Agent Interfaces**: Standardized methods for action execution, state management, and logic upgrades that enable predictable interactions across platforms.
 
@@ -58,7 +58,7 @@ While traditional NFTs (BEP-721) provide uniqueness and ownership, they lack the
 
 ### On-Chain vs. Off-Chain Components
 
-BEP-007 carefully balances which components belong on-chain versus off-chain:
+BAP-578 carefully balances which components belong on-chain versus off-chain:
 
 | Component               | Storage                              | Rationale                                                  |
 | ----------------------- | ------------------------------------ | ---------------------------------------------------------- |
@@ -81,7 +81,7 @@ This hybrid approach ensures that:
 
 ### Ecosystem Benefits
 
-Standardization through BEP-007 enables:
+Standardization through BAP-578 enables:
 
 1. **Developer Ecosystem**: Common interfaces allow developers to build agent-compatible applications without custom integration for each agent implementation.
 
@@ -112,7 +112,7 @@ Standardization through BEP-007 enables:
 
 ## Token Structure
 
-- **Inheritance**: Extends BEP-721 (NFT standard) with additional agent-specific functions
+- **Inheritance**: Extends BAP-721 (NFT standard) with additional agent-specific functions
 - **Metadata**: Includes static attributes, dynamic metadata, state variables, and optional learning data
 - **Smart Contract Design**: Implements key functions like executeAction(), setLogicAddress(), fundAgent(), getState(), and optional learning functions
 - **Hybrid Storage**: Essential data on-chain, extended data off-chain with secure references
@@ -120,16 +120,16 @@ Standardization through BEP-007 enables:
 
 ## Architecture
 
-The BEP-007 standard consists of the following components:
+The BAP-578 standard consists of the following components:
 
 ### Core Contracts
 
-- **`BEP007Enhanced.sol`**: The enhanced NFA contract that implements the agent token standard with optional learning
-- **`BEP007.sol`**: The original NFA contract for backward compatibility
+- **`BAP578Enhanced.sol`**: The enhanced NFA contract that implements the agent token standard with optional learning
+- **`BAP578.sol`**: The original NFA contract for backward compatibility
 - **`CircuitBreaker.sol`**: Emergency shutdown mechanism with global and targeted pause capabilities
 - **`AgentFactory.sol`**: Factory contract for deploying new agent tokens with customizable templates
-- **`BEP007Governance.sol`**: Governance contract for protocol-level decisions
-- **`BEP007Treasury.sol`**: Treasury management for fee collection and distribution
+- **`BAP578Governance.sol`**: Governance contract for protocol-level decisions
+- **`BAP578Treasury.sol`**: Treasury management for fee collection and distribution
 - **`ExperienceModuleRegistry.sol`**: Registry for managing external experience modules with cryptographic verification
 - **`VaultPermissionManager.sol`**: Manages secure access to off-chain data vaults with time-based delegation
 
@@ -139,9 +139,9 @@ The BEP-007 standard consists of the following components:
 
 ### Interfaces and Examples
 
-- **`IBEP007.sol`**: Interface defining the core functionality for BEP-007 compliant tokens
+- **`IBAP578.sol`**: Interface defining the core functionality for BAP-578 compliant tokens
 - **`ILearningModule.sol`**: Interface defining the standard for pluggable learning systems
-- **`learning-integration.js`**: Demonstrates how to use the enhanced BEP007 standard with optional learning capabilities from day 1
+- **`learning-integration.js`**: Demonstrates how to use the enhanced BAP578 standard with optional learning capabilities from day 1
 
 ### Agent Templates
 
@@ -157,7 +157,7 @@ The BEP-007 standard consists of the following components:
 
 ## Extended Metadata
 
-BEP-007 tokens include an enhanced metadata structure with:
+BAP-578 tokens include an enhanced metadata structure with:
 
 ### Basic Metadata
 
@@ -205,8 +205,8 @@ BEP-007 tokens include an enhanced metadata structure with:
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/bep007.git
-cd bep007
+git clone https://github.com/ChatAndBuild/non-fungible-agents-BAP578.git
+cd non-fungible-agents-BAP578
 ```
 
 2. Install dependencies:
@@ -323,7 +323,7 @@ const initialRoot = ethers.utils.keccak256(
 );
 
 // Enable learning on existing agent
-const tx = await bep007Enhanced.enableLearning(
+const tx = await bap578Enhanced.enableLearning(
   tokenId,
   merkleTreeLearning.address,
   initialRoot
@@ -339,14 +339,14 @@ To record interactions that help the agent learn:
 
 ```javascript
 // Record successful interaction
-await bep007Enhanced.recordInteraction(
+await BAP578Enhanced.recordInteraction(
   tokenId,
   "code_generation",
   true // success
 );
 
 // Record failed interaction
-await bep007Enhanced.recordInteraction(
+await BAP578Enhanced.recordInteraction(
   tokenId,
   "bug_fixing", 
   false // failure
@@ -360,7 +360,7 @@ console.log(`📊 Interactions recorded for learning`);
 To view an agent's learning metrics:
 
 ```javascript
-const { enabled, moduleAddress, metrics } = await bep007Enhanced.getLearningInfo(tokenId);
+const { enabled, moduleAddress, metrics } = await BAP578Enhanced.getLearningInfo(tokenId);
 
 if (enabled) {
   console.log(`🧠 Learning Module: ${moduleAddress}`);
@@ -412,7 +412,7 @@ To register a experience module:
 ```javascript
 // Create module metadata
 const moduleMetadata = JSON.stringify({
-  context_id: "nfa007-experience-001",
+  context_id: "nfa578-experience-001",
   owner: ownerAddress,
   created: new Date().toISOString(),
   persona: "Strategic crypto analyst"
@@ -556,5 +556,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgements
 
 - OpenZeppelin for their secure contract implementations
-- BNB Chain team for their support of the BEP-007 standard
+- BNB Chain team for their support of the BAP-578 standard
 - The AI and blockchain communities for inspiring the learning capabilities
