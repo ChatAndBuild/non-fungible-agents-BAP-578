@@ -168,16 +168,16 @@ contract ExperienceModuleRegistry is
 
     /**
      * @dev Initializes the contract
-     * @param _bap578Token Address of the BAP578 token contract
+     * @param bap578TokenAddress Address of the BAP578 token contract
      */
-    function initialize(address _bap578Token) public initializer {
-        require(_bap578Token != address(0), "ExperienceModuleRegistry: invalid BAP578 address");
+    function initialize(address bap578TokenAddress) public initializer {
+        require(bap578TokenAddress != address(0), "ExperienceModuleRegistry: invalid BAP578 address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        bap578Token = IBAP578(_bap578Token);
+        bap578Token = IBAP578(bap578TokenAddress);
     }
 
     // ============ CORE FUNCTIONS ============
@@ -516,14 +516,13 @@ contract ExperienceModuleRegistry is
     function getModulesByType(
         ExperienceType experienceType
     ) external view returns (address[] memory) {
-        address[] memory result = new address[](_allModules.length);
+        uint256 modulesLength = _allModules.length;
+        address[] memory result = new address[](modulesLength);
         uint256 count = 0;
 
-        for (uint256 i = 0; i < _allModules.length; i++) {
-            if (
-                _moduleRegistry[_allModules[i]].experienceType == experienceType &&
-                _moduleRegistry[_allModules[i]].active
-            ) {
+        for (uint256 i = 0; i < modulesLength; i++) {
+            ExperienceModule storage module = _moduleRegistry[_allModules[i]];
+            if (module.active && module.experienceType == experienceType) {
                 result[count] = _allModules[i];
                 count++;
             }
@@ -546,14 +545,13 @@ contract ExperienceModuleRegistry is
     function getModulesBySecurityLevel(
         SecurityLevel securityLevel
     ) external view returns (address[] memory) {
-        address[] memory result = new address[](_allModules.length);
+        uint256 modulesLength = _allModules.length;
+        address[] memory result = new address[](modulesLength);
         uint256 count = 0;
 
-        for (uint256 i = 0; i < _allModules.length; i++) {
-            if (
-                _moduleRegistry[_allModules[i]].securityLevel == securityLevel &&
-                _moduleRegistry[_allModules[i]].active
-            ) {
+        for (uint256 i = 0; i < modulesLength; i++) {
+            ExperienceModule storage module = _moduleRegistry[_allModules[i]];
+            if (module.active && module.securityLevel == securityLevel) {
                 result[count] = _allModules[i];
                 count++;
             }

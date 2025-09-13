@@ -34,6 +34,9 @@ contract BAP578Treasury is
     address public communityTreasuryAddress;
     // Designated address for staking rewards (users will stake here themselves)
     address public stakingRewardsAddress;
+    
+    // Mapping to track authorized treasury addresses
+    mapping(address => bool) public authorizedTreasuryAddresses;
 
     // Donation tracking
     CountersUpgradeable.Counter private _donationIdCounter;
@@ -118,6 +121,11 @@ contract BAP578Treasury is
         communityTreasuryAddress = communityTreasuryAddr;
         stakingRewardsAddress = stakingRewardsAddr;
 
+        // Authorize treasury addresses
+        authorizedTreasuryAddresses[foundationAddr] = true;
+        authorizedTreasuryAddresses[communityTreasuryAddr] = true;
+        authorizedTreasuryAddresses[stakingRewardsAddr] = true;
+
         transferOwnership(ownerAddr);
     }
 
@@ -158,9 +166,7 @@ contract BAP578Treasury is
      * @param donationId The ID of the donation to distribute
      */
     function distributeDonation(uint256 donationId) external onlyOwner whenNotPaused nonReentrant {
-        // STATE: These checks use donation state, not block timestamp
-        // The timestamp comparison is for donation existence and state validation
-        // This is a state check, not a time-based security decision
+        // Check donation exists and not already distributed
         require(donations[donationId].id != 0, "Treasury: donation does not exist");
         require(!donations[donationId].distributed, "Treasury: donation already distributed");
 
@@ -195,20 +201,22 @@ contract BAP578Treasury is
         totalDistributedToStaking += stakingAmount;
 
         // TRANSFER: Funds sent to recipients AFTER state updates
-        // SECURITY: Low-level calls required for ETH transfers to contract addresses
-        // These addresses are controlled by the contract owner and are trusted
+        // SECURITY: Only send to authorized treasury addresses
         // Reentrancy protection ensures state consistency
         if (foundationAmount > 0) {
+            require(authorizedTreasuryAddresses[foundationAddress], "Treasury: foundation address not authorized");
             (bool success1, ) = payable(foundationAddress).call{ value: foundationAmount }("");
             require(success1, "Treasury: foundation transfer failed");
         }
 
         if (treasuryAmount > 0) {
+            require(authorizedTreasuryAddresses[communityTreasuryAddress], "Treasury: treasury address not authorized");
             (bool success2, ) = payable(communityTreasuryAddress).call{ value: treasuryAmount }("");
             require(success2, "Treasury: treasury transfer failed");
         }
 
         if (stakingAmount > 0) {
+            require(authorizedTreasuryAddresses[stakingRewardsAddress], "Treasury: staking address not authorized");
             (bool success3, ) = payable(stakingRewardsAddress).call{ value: stakingAmount }("");
             require(success3, "Treasury: staking transfer failed");
         }
@@ -231,9 +239,19 @@ contract BAP578Treasury is
         require(newCommunityTreasuryAddress != address(0), "Treasury: treasury address is zero");
         require(newStakingRewardsAddress != address(0), "Treasury: staking address is zero");
 
+        // Update addresses and authorization
+        authorizedTreasuryAddresses[foundationAddress] = false; // Deauthorize old address
+        authorizedTreasuryAddresses[communityTreasuryAddress] = false; // Deauthorize old address
+        authorizedTreasuryAddresses[stakingRewardsAddress] = false; // Deauthorize old address
+        
         foundationAddress = newFoundationAddress;
         communityTreasuryAddress = newCommunityTreasuryAddress;
         stakingRewardsAddress = newStakingRewardsAddress;
+        
+        // Authorize new addresses
+        authorizedTreasuryAddresses[newFoundationAddress] = true;
+        authorizedTreasuryAddresses[newCommunityTreasuryAddress] = true;
+        authorizedTreasuryAddresses[newStakingRewardsAddress] = true;
 
         emit TreasuryAddressesUpdated(
             newFoundationAddress,
@@ -247,17 +265,18 @@ contract BAP578Treasury is
      * @param recipient The address to withdraw to
      * @param amount The amount to withdraw
      */
-    function emergencyWithdraw(address payable recipient, uint256 amount) external onlyOwner {
+    function emergencyWithdraw(address payable recipient, uint256 amount) external onlyOwner nonReentrant {
         require(recipient != address(0), "Treasury: recipient is zero address");
         require(amount <= address(this).balance, "Treasury: insufficient balance");
+
+        emit EmergencyWithdraw(recipient, amount);
 
         // SECURITY: Low-level call required for ETH transfers
         // This is the recommended Solidity pattern for ETH transfers
         // Success is verified to ensure transfer completion
+        // Event emitted before external call to prevent reentrancy issues
         (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Treasury: emergency withdrawal failed");
-
-        emit EmergencyWithdraw(recipient, amount);
     }
 
     /**

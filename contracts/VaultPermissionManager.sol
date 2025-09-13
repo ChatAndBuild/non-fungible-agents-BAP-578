@@ -376,7 +376,8 @@ contract VaultPermissionManager is
 
         // Revoke all active permissions for this vault
         uint256[] memory vaultPerms = vaultPermissions[msg.sender][vaultId];
-        for (uint256 i = 0; i < vaultPerms.length; i++) {
+        uint256 vaultPermsLength = vaultPerms.length;
+        for (uint256 i = 0; i < vaultPermsLength; i++) {
             if (permissions[vaultPerms[i]].isActive) {
                 permissions[vaultPerms[i]].isActive = false;
                 activePermissions--;
@@ -453,9 +454,10 @@ contract VaultPermissionManager is
         require(maxIterations <= 1000, "VaultPermissionManager: maxIterations too high");
 
         uint256[] memory vaultPerms = vaultPermissions[vaultOwner][vaultId];
+        uint256 vaultPermsLength = vaultPerms.length;
         uint256 iterations = 0;
 
-        for (uint256 i = 0; i < vaultPerms.length && iterations < maxIterations; i++) {
+        for (uint256 i = 0; i < vaultPermsLength && iterations < maxIterations; i++) {
             VaultPermission storage perm = permissions[vaultPerms[i]];
 
             if (perm.isActive && block.timestamp > perm.endTime) {
