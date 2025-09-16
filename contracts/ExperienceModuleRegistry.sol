@@ -433,7 +433,8 @@ contract ExperienceModuleRegistry is
         address[] memory approved = new address[](registered.length);
         uint256 approvedCount = 0;
 
-        for (uint256 i = 0; i < registered.length; i++) {
+        uint256 registeredLength = registered.length;
+        for (uint256 i = 0; i < registeredLength; i++) {
             if (_approvedModules[tokenId][registered[i]]) {
                 approved[approvedCount] = registered[i];
                 approvedCount++;

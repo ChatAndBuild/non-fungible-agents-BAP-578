@@ -91,7 +91,7 @@ contract BAP578 is
         address logicAddress,
         string memory metadataURI,
         AgentMetadata memory extendedMetadata
-    ) external returns (uint256 tokenId) {
+    ) external nonReentrant returns (uint256 tokenId) {
         require(logicAddress != address(0), "BAP578: logic address is zero");
 
         _tokenIdCounter.increment();

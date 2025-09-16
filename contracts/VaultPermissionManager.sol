@@ -488,9 +488,10 @@ contract VaultPermissionManager is
         require(maxIterations <= 1000, "VaultPermissionManager: maxIterations too high");
 
         uint256[] memory userPerms = userPermissions[user];
+        uint256 userPermsLength = userPerms.length;
         uint256 iterations = 0;
 
-        for (uint256 i = 0; i < userPerms.length && iterations < maxIterations; i++) {
+        for (uint256 i = 0; i < userPermsLength && iterations < maxIterations; i++) {
             VaultPermission storage perm = permissions[userPerms[i]];
 
             if (perm.isActive && block.timestamp > perm.endTime) {

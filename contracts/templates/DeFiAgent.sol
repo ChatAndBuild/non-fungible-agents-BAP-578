@@ -609,7 +609,7 @@ contract DeFiAgent is Ownable, ReentrancyGuard {
         uint256 inputPrice = _getTokenPrice(_tokenIn);
         uint256 outputPrice = _getTokenPrice(_tokenOut);
 
-        // Calculate expected output amount
+        // Calculate expected output amount (avoid divide-before-multiply)
         uint256 expectedOutput = _amountIn.mul(inputPrice).div(outputPrice);
 
         // Apply slippage (simulate market impact)

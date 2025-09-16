@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "../interfaces/ILearningModule.sol";
 
 /**
@@ -20,6 +21,7 @@ import "../interfaces/ILearningModule.sol";
  */
 contract StrategicAgent is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
+    using Counters for Counters.Counter;
 
     // The address of the BAP-578 token that owns this logic
     address public agentToken;
@@ -126,6 +128,10 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
         uint256 lastActivity; // Last activity timestamp
     }
 
+    // Counters for ID generation
+    Counters.Counter private _mentionIdCounter;
+    Counters.Counter private _analysisIdCounter;
+
     PerformanceMetrics public metrics;
 
     // Events
@@ -167,6 +173,7 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
     );
 
     event LearningUpdate(string updateType, bytes32 dataHash, uint256 timestamp);
+    event ETHWithdrawn(address indexed to, uint256 amount);
 
     /**
      * @dev Initializes the Strategic Agent contract
@@ -356,7 +363,7 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
         require(bytes(_alertType).length > 0, "StrategicAgent: alert type cannot be empty");
 
         // Add to alert types list if new
-        if (alerts[_alertType].threshold == 0) {
+        if (alerts[_alertType].threshold <= 0) {
             alertTypes.push(_alertType);
         }
 
@@ -462,9 +469,10 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
             "StrategicAgent: sentiment score must be -100 to +100"
         );
 
-        // Create mention ID
+        // Create mention ID using nonce-based generation for better security
+        _mentionIdCounter.increment();
         bytes32 mentionId = keccak256(
-            abi.encodePacked(_entity, _content, _platform, block.timestamp)
+            abi.encode(_entity, _content, _platform, _mentionIdCounter.current())
         );
 
         // Convert sentiment score to uint256 for storage
@@ -526,8 +534,9 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
             "StrategicAgent: emotions and scores arrays must match"
         );
 
-        // Create analysis ID
-        bytes32 analysisId = keccak256(abi.encodePacked(_content, block.timestamp));
+        // Create analysis ID using nonce-based generation for better security
+        _analysisIdCounter.increment();
+        bytes32 analysisId = keccak256(abi.encodePacked(_content, _analysisIdCounter.current()));
 
         // Convert sentiment score to uint256 for storage
         uint256 sentimentScore = _sentimentScore >= 0
@@ -732,7 +741,7 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
     function _checkTrendAlerts(
         string memory _keyword,
         uint256 _mentions,
-        uint256 _sentimentScore,
+        uint256 /* _sentimentScore */,
         uint256 _confidence
     ) internal {
         AlertConfig storage alert = alerts["trend"];
@@ -759,9 +768,9 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
      */
     function _checkMentionAlerts(
         string memory _entity,
-        uint256 _sentimentScore,
+        uint256 /* _sentimentScore */,
         uint256 _reach,
-        uint256 _engagement
+        uint256 /* _engagement */
     ) internal {
         AlertConfig storage alert = alerts["mention"];
         if (!alert.enabled) return;
@@ -835,7 +844,7 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
         uint256 _sentimentScore
     ) internal whenLearningEnabled {
         bytes32 dataHash = keccak256(
-            abi.encodePacked(_entity, _content, _platform, _sentimentScore, block.timestamp)
+            abi.encode(_entity, _content, _platform, _sentimentScore, block.timestamp)
         );
 
         emit LearningUpdate("mention_detection", dataHash, block.timestamp);
@@ -848,13 +857,33 @@ contract StrategicAgent is Ownable, ReentrancyGuard {
         string memory _content,
         uint256 _sentimentScore,
         uint256 _confidence,
-        string[] memory _emotions
+        string[] memory /* _emotions */
     ) internal whenLearningEnabled {
         bytes32 dataHash = keccak256(
             abi.encodePacked(_content, _sentimentScore, _confidence, block.timestamp)
         );
 
         emit LearningUpdate("sentiment_analysis", dataHash, block.timestamp);
+    }
+
+    /**
+     * @dev Withdraws ETH from the contract (only owner)
+     * @param amount Amount of ETH to withdraw
+     */
+    function withdrawETH(uint256 amount) external onlyOwner {
+        require(address(this).balance >= amount, "StrategicAgent: insufficient balance");
+        payable(owner()).transfer(amount);
+        emit ETHWithdrawn(owner(), amount);
+    }
+
+    /**
+     * @dev Withdraws all ETH from the contract (only owner)
+     */
+    function withdrawAllETH() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "StrategicAgent: no ETH to withdraw");
+        payable(owner()).transfer(balance);
+        emit ETHWithdrawn(owner(), balance);
     }
 
     /**
