@@ -171,7 +171,10 @@ contract ExperienceModuleRegistry is
      * @param bap578TokenAddress Address of the BAP578 token contract
      */
     function initialize(address bap578TokenAddress) public initializer {
-        require(bap578TokenAddress != address(0), "ExperienceModuleRegistry: invalid BAP578 address");
+        require(
+            bap578TokenAddress != address(0),
+            "ExperienceModuleRegistry: invalid BAP578 address"
+        );
 
         __Ownable_init();
         __ReentrancyGuard_init();

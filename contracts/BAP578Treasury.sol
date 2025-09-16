@@ -34,7 +34,7 @@ contract BAP578Treasury is
     address public communityTreasuryAddress;
     // Designated address for staking rewards (users will stake here themselves)
     address public stakingRewardsAddress;
-    
+
     // Mapping to track authorized treasury addresses
     mapping(address => bool) public authorizedTreasuryAddresses;
 
@@ -204,19 +204,28 @@ contract BAP578Treasury is
         // SECURITY: Only send to authorized treasury addresses
         // Reentrancy protection ensures state consistency
         if (foundationAmount > 0) {
-            require(authorizedTreasuryAddresses[foundationAddress], "Treasury: foundation address not authorized");
+            require(
+                authorizedTreasuryAddresses[foundationAddress],
+                "Treasury: foundation address not authorized"
+            );
             (bool success1, ) = payable(foundationAddress).call{ value: foundationAmount }("");
             require(success1, "Treasury: foundation transfer failed");
         }
 
         if (treasuryAmount > 0) {
-            require(authorizedTreasuryAddresses[communityTreasuryAddress], "Treasury: treasury address not authorized");
+            require(
+                authorizedTreasuryAddresses[communityTreasuryAddress],
+                "Treasury: treasury address not authorized"
+            );
             (bool success2, ) = payable(communityTreasuryAddress).call{ value: treasuryAmount }("");
             require(success2, "Treasury: treasury transfer failed");
         }
 
         if (stakingAmount > 0) {
-            require(authorizedTreasuryAddresses[stakingRewardsAddress], "Treasury: staking address not authorized");
+            require(
+                authorizedTreasuryAddresses[stakingRewardsAddress],
+                "Treasury: staking address not authorized"
+            );
             (bool success3, ) = payable(stakingRewardsAddress).call{ value: stakingAmount }("");
             require(success3, "Treasury: staking transfer failed");
         }
@@ -243,11 +252,11 @@ contract BAP578Treasury is
         authorizedTreasuryAddresses[foundationAddress] = false; // Deauthorize old address
         authorizedTreasuryAddresses[communityTreasuryAddress] = false; // Deauthorize old address
         authorizedTreasuryAddresses[stakingRewardsAddress] = false; // Deauthorize old address
-        
+
         foundationAddress = newFoundationAddress;
         communityTreasuryAddress = newCommunityTreasuryAddress;
         stakingRewardsAddress = newStakingRewardsAddress;
-        
+
         // Authorize new addresses
         authorizedTreasuryAddresses[newFoundationAddress] = true;
         authorizedTreasuryAddresses[newCommunityTreasuryAddress] = true;
@@ -265,7 +274,10 @@ contract BAP578Treasury is
      * @param recipient The address to withdraw to
      * @param amount The amount to withdraw
      */
-    function emergencyWithdraw(address payable recipient, uint256 amount) external onlyOwner nonReentrant {
+    function emergencyWithdraw(
+        address payable recipient,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
         require(recipient != address(0), "Treasury: recipient is zero address");
         require(amount <= address(this).balance, "Treasury: insufficient balance");
 

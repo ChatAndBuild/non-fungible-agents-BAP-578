@@ -10,13 +10,13 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 /**
  * @title GameAgent
  * @dev Template for gaming-focused Non-Fungible Agents (NFAs) on BAP-578
- * 
+ *
  * This template enables agents to function as:
  * - NPCs (Non-Player Characters) with dialogue, behavior patterns, and interactions
  * - Item management systems for inventory, trading, and crafting
  * - Quest providers and reward distributors
  * - Gaming ecosystem participants with learning capabilities
- * 
+ *
  * Features:
  * - NPC behavior and dialogue management
  * - Item inventory and trading system
@@ -192,10 +192,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         address indexed questGiver
     );
 
-    event QuestAccepted(
-        uint256 indexed questId,
-        address indexed questTaker
-    );
+    event QuestAccepted(uint256 indexed questId, address indexed questTaker);
 
     event QuestCompleted(
         uint256 indexed questId,
@@ -204,11 +201,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         uint256 reputationReward
     );
 
-    event PlayerInteracted(
-        address indexed player,
-        uint8 mood,
-        uint256 interactionCount
-    );
+    event PlayerInteracted(address indexed player, uint8 mood, uint256 interactionCount);
 
     event TradeOfferCreated(
         uint256 indexed offerId,
@@ -223,17 +216,9 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         address indexed trader
     );
 
-    event DialogueUpdated(
-        uint256 indexed dialogueId,
-        string greeting,
-        uint8 mood
-    );
+    event DialogueUpdated(uint256 indexed dialogueId, string greeting, uint8 mood);
 
-    event LearningUpdate(
-        string updateType,
-        bytes32 dataHash,
-        uint256 timestamp
-    );
+    event LearningUpdate(string updateType, bytes32 dataHash, uint256 timestamp);
 
     // ============ MODIFIERS ============
 
@@ -369,7 +354,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         require(quantity > 0, "GameAgent: quantity must be greater than 0");
 
         uint256 itemId = uint256(keccak256(abi.encodePacked(name, block.timestamp, msg.sender)));
-        
+
         items[itemId] = Item({
             itemId: itemId,
             name: name,
@@ -400,7 +385,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
 
         itemQuantities[itemId] -= quantity;
         items[itemId].quantity = itemQuantities[itemId];
-        
+
         if (itemQuantities[itemId] == 0) {
             itemIds.remove(itemId);
             delete items[itemId];
@@ -437,7 +422,10 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
     ) external onlyOwner {
         require(bytes(title).length > 0, "GameAgent: quest title cannot be empty");
         require(questType <= 4, "GameAgent: invalid quest type");
-        require(requiredItems.length == requiredQuantities.length, "GameAgent: arrays length mismatch");
+        require(
+            requiredItems.length == requiredQuantities.length,
+            "GameAgent: arrays length mismatch"
+        );
         require(rewardItems.length == rewardQuantities.length, "GameAgent: arrays length mismatch");
         require(activeQuests.length() < maxActiveQuests, "GameAgent: max active quests reached");
 
@@ -475,10 +463,13 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
     function acceptQuest(uint256 questId) external validQuest(questId) questNotCompleted(questId) {
         require(quests[questId].isActive, "GameAgent: quest is not active");
         require(quests[questId].questTaker == address(0), "GameAgent: quest already taken");
-        require(block.timestamp < quests[questId].deadline || quests[questId].deadline == 0, "GameAgent: quest deadline passed");
+        require(
+            block.timestamp < quests[questId].deadline || quests[questId].deadline == 0,
+            "GameAgent: quest deadline passed"
+        );
 
         quests[questId].questTaker = msg.sender;
-        
+
         // Update player interaction
         if (!interactedPlayers.contains(msg.sender)) {
             playerInteractions[msg.sender] = PlayerInteraction({
@@ -512,7 +503,10 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
     ) external validQuest(questId) questNotCompleted(questId) {
         require(quests[questId].questTaker == msg.sender, "GameAgent: not quest taker");
         require(quests[questId].isActive, "GameAgent: quest is not active");
-        require(submittedItems.length == submittedQuantities.length, "GameAgent: arrays length mismatch");
+        require(
+            submittedItems.length == submittedQuantities.length,
+            "GameAgent: arrays length mismatch"
+        );
 
         Quest storage quest = quests[questId];
 
@@ -520,8 +514,10 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         for (uint256 i = 0; i < quest.requiredItems.length; i++) {
             bool requirementMet = false;
             for (uint256 j = 0; j < submittedItems.length; j++) {
-                if (quest.requiredItems[i] == submittedItems[j] && 
-                    quest.requiredQuantities[i] <= submittedQuantities[j]) {
+                if (
+                    quest.requiredItems[i] == submittedItems[j] &&
+                    quest.requiredQuantities[i] <= submittedQuantities[j]
+                ) {
                     requirementMet = true;
                     break;
                 }
@@ -598,7 +594,10 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         }
 
         PlayerInteraction storage interaction = playerInteractions[player];
-        require(block.timestamp >= interaction.lastInteraction + interactionCooldown, "GameAgent: interaction cooldown active");
+        require(
+            block.timestamp >= interaction.lastInteraction + interactionCooldown,
+            "GameAgent: interaction cooldown active"
+        );
 
         interaction.interactionCount++;
         interaction.lastInteraction = block.timestamp;
@@ -627,7 +626,10 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
     ) external {
         require(acceptsTrades, "GameAgent: trades not accepted");
         require(offerItems.length == offerQuantities.length, "GameAgent: arrays length mismatch");
-        require(requestItems.length == requestQuantities.length, "GameAgent: arrays length mismatch");
+        require(
+            requestItems.length == requestQuantities.length,
+            "GameAgent: arrays length mismatch"
+        );
         require(deadline > block.timestamp, "GameAgent: invalid deadline");
 
         _tradeOfferIdCounter.increment();
@@ -669,8 +671,9 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         activeTradeOffers.remove(offerId);
 
         totalItemsTraded += offer.offerItems.length + offer.requestItems.length;
-        totalValueTraded += calculateTradeValue(offer.offerItems, offer.offerQuantities) + 
-                           calculateTradeValue(offer.requestItems, offer.requestQuantities);
+        totalValueTraded +=
+            calculateTradeValue(offer.offerItems, offer.offerQuantities) +
+            calculateTradeValue(offer.requestItems, offer.requestQuantities);
 
         emit TradeOfferAccepted(offerId, msg.sender, offer.trader);
     }
@@ -773,13 +776,11 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
      * @dev Gets agent statistics
      * @return Total interactions, quests given, quests completed, items traded, value traded
      */
-    function getAgentStatistics() external view returns (
-        uint256,
-        uint256,
-        uint256,
-        uint256,
-        uint256
-    ) {
+    function getAgentStatistics()
+        external
+        view
+        returns (uint256, uint256, uint256, uint256, uint256)
+    {
         return (
             totalInteractions,
             totalQuestsGiven,
