@@ -133,6 +133,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
     /// @dev Quest management
     mapping(uint256 => Quest) public quests;
     Counters.Counter private _questIdCounter;
+    Counters.Counter private _itemIdCounter;
     EnumerableSet.UintSet private activeQuests;
     EnumerableSet.UintSet private completedQuests;
 
@@ -353,7 +354,9 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         require(rarity >= 1 && rarity <= 5, "GameAgent: invalid rarity");
         require(quantity > 0, "GameAgent: quantity must be greater than 0");
 
-        uint256 itemId = uint256(keccak256(abi.encodePacked(name, block.timestamp, msg.sender)));
+        // Use counter-based ID generation for better security and uniqueness
+        _itemIdCounter.increment();
+        uint256 itemId = _itemIdCounter.current();
 
         items[itemId] = Item({
             itemId: itemId,
@@ -386,7 +389,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         itemQuantities[itemId] -= quantity;
         items[itemId].quantity = itemQuantities[itemId];
 
-        if (itemQuantities[itemId] == 0) {
+        if (itemQuantities[itemId] <= 0) {
             itemIds.remove(itemId);
             delete items[itemId];
             delete itemQuantities[itemId];
@@ -464,7 +467,7 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         require(quests[questId].isActive, "GameAgent: quest is not active");
         require(quests[questId].questTaker == address(0), "GameAgent: quest already taken");
         require(
-            block.timestamp < quests[questId].deadline || quests[questId].deadline == 0,
+            quests[questId].deadline == 0 || block.timestamp < quests[questId].deadline,
             "GameAgent: quest deadline passed"
         );
 
@@ -511,9 +514,11 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
         Quest storage quest = quests[questId];
 
         // Verify quest requirements are met
-        for (uint256 i = 0; i < quest.requiredItems.length; i++) {
+        uint256 requiredItemsLength = quest.requiredItems.length;
+        uint256 submittedItemsLength = submittedItems.length;
+        for (uint256 i = 0; i < requiredItemsLength; i++) {
             bool requirementMet = false;
-            for (uint256 j = 0; j < submittedItems.length; j++) {
+            for (uint256 j = 0; j < submittedItemsLength; j++) {
                 if (
                     quest.requiredItems[i] == submittedItems[j] &&
                     quest.requiredQuantities[i] <= submittedQuantities[j]
@@ -538,9 +543,10 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
 
         // Remove completed quest from active quests
         uint256[] storage activePlayerQuests = playerInteractions[msg.sender].activeQuests;
-        for (uint256 i = 0; i < activePlayerQuests.length; i++) {
+        uint256 activeQuestsLength = activePlayerQuests.length;
+        for (uint256 i = 0; i < activeQuestsLength; i++) {
             if (activePlayerQuests[i] == questId) {
-                activePlayerQuests[i] = activePlayerQuests[activePlayerQuests.length - 1];
+                activePlayerQuests[i] = activePlayerQuests[activeQuestsLength - 1];
                 activePlayerQuests.pop();
                 break;
             }
@@ -575,9 +581,8 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
     /**
      * @dev Records a player interaction
      * @param player Player address
-     * @param responseIndex Index of the response given
      */
-    function recordInteraction(address player, uint256 responseIndex) external {
+    function recordInteraction(address player, uint256 /* responseIndex */) external {
         require(player != address(0), "GameAgent: invalid player address");
 
         if (!interactedPlayers.contains(player)) {
@@ -810,18 +815,19 @@ contract GameAgent is Ownable, ReentrancyGuard, Pausable {
 
     /**
      * @dev Calculates the value of a trade
-     * @param itemIds Array of item IDs
+     * @param tradeItemIds Array of item IDs
      * @param quantities Array of quantities
      * @return Total value of the trade
      */
     function calculateTradeValue(
-        uint256[] memory itemIds,
+        uint256[] memory tradeItemIds,
         uint256[] memory quantities
     ) internal view returns (uint256) {
         uint256 totalValue = 0;
-        for (uint256 i = 0; i < itemIds.length; i++) {
-            if (itemIds[i] != 0 && items[itemIds[i]].itemId != 0) {
-                totalValue += items[itemIds[i]].value * quantities[i];
+        uint256 itemIdsLength = tradeItemIds.length;
+        for (uint256 i = 0; i < itemIdsLength; i++) {
+            if (tradeItemIds[i] != 0 && items[tradeItemIds[i]].itemId != 0) {
+                totalValue += items[tradeItemIds[i]].value * quantities[i];
             }
         }
         return totalValue;
