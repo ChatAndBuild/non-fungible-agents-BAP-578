@@ -597,7 +597,8 @@ describe("GameAgent Template Integration", function () {
       const healthPotionId = inventory[0];
       const goldCoinId = inventory[1];
 
-      const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const currentBlock = await ethers.provider.getBlock('latest');
+      const deadline = currentBlock.timestamp + 3600; // 1 hour from now
 
       await gameAgent.connect(addr1).createTradeOffer(
         [healthPotionId],
@@ -626,7 +627,8 @@ describe("GameAgent Template Integration", function () {
       const healthPotionId = inventory[0];
       const goldCoinId = inventory[1];
 
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const currentBlock = await ethers.provider.getBlock('latest');
+      const deadline = currentBlock.timestamp + 3600;
 
       await gameAgent.connect(addr1).createTradeOffer(
         [healthPotionId],
@@ -647,7 +649,8 @@ describe("GameAgent Template Integration", function () {
     });
 
     it("Should reject invalid trade operations", async function () {
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const currentBlock = await ethers.provider.getBlock('latest');
+      const deadline = currentBlock.timestamp + 3600;
 
       await expect(
         gameAgent.connect(addr1).createTradeOffer(
@@ -675,7 +678,7 @@ describe("GameAgent Template Integration", function () {
           [1],
           [2],
           [1],
-          Math.floor(Date.now() / 1000) - 3600 // Past deadline
+          currentBlock.timestamp - 3600 // Past deadline
         )
       ).to.be.revertedWith("GameAgent: invalid deadline");
     });
@@ -685,7 +688,8 @@ describe("GameAgent Template Integration", function () {
       const healthPotionId = inventory[0];
       const goldCoinId = inventory[1];
 
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const currentBlock = await ethers.provider.getBlock('latest');
+      const deadline = currentBlock.timestamp + 3600;
 
       await gameAgent.connect(addr1).createTradeOffer(
         [healthPotionId],

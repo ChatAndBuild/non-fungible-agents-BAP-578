@@ -37,6 +37,9 @@ contract BAP578Treasury is
 
     // Mapping to track authorized treasury addresses
     mapping(address => bool) public authorizedTreasuryAddresses;
+    
+    // Array to track all authorized addresses for enumeration
+    address[] public authorizedAddresses;
 
     // Donation tracking
     CountersUpgradeable.Counter private _donationIdCounter;
@@ -125,6 +128,11 @@ contract BAP578Treasury is
         authorizedTreasuryAddresses[foundationAddr] = true;
         authorizedTreasuryAddresses[communityTreasuryAddr] = true;
         authorizedTreasuryAddresses[stakingRewardsAddr] = true;
+        
+        // Track authorized addresses
+        authorizedAddresses.push(foundationAddr);
+        authorizedAddresses.push(communityTreasuryAddr);
+        authorizedAddresses.push(stakingRewardsAddr);
 
         transferOwnership(ownerAddr);
     }
@@ -208,6 +216,7 @@ contract BAP578Treasury is
                 authorizedTreasuryAddresses[foundationAddress],
                 "Treasury: foundation address not authorized"
             );
+            require(foundationAddress != address(0), "Treasury: foundation address is zero");
             (bool success1, ) = payable(foundationAddress).call{ value: foundationAmount }("");
             require(success1, "Treasury: foundation transfer failed");
         }
@@ -217,6 +226,7 @@ contract BAP578Treasury is
                 authorizedTreasuryAddresses[communityTreasuryAddress],
                 "Treasury: treasury address not authorized"
             );
+            require(communityTreasuryAddress != address(0), "Treasury: treasury address is zero");
             (bool success2, ) = payable(communityTreasuryAddress).call{ value: treasuryAmount }("");
             require(success2, "Treasury: treasury transfer failed");
         }
@@ -226,6 +236,7 @@ contract BAP578Treasury is
                 authorizedTreasuryAddresses[stakingRewardsAddress],
                 "Treasury: staking address not authorized"
             );
+            require(stakingRewardsAddress != address(0), "Treasury: staking address is zero");
             (bool success3, ) = payable(stakingRewardsAddress).call{ value: stakingAmount }("");
             require(success3, "Treasury: staking transfer failed");
         }
@@ -261,12 +272,50 @@ contract BAP578Treasury is
         authorizedTreasuryAddresses[newFoundationAddress] = true;
         authorizedTreasuryAddresses[newCommunityTreasuryAddress] = true;
         authorizedTreasuryAddresses[newStakingRewardsAddress] = true;
+        
+        // Update authorized addresses array (remove old, add new)
+        _removeAuthorizedAddress(foundationAddress);
+        _removeAuthorizedAddress(communityTreasuryAddress);
+        _removeAuthorizedAddress(stakingRewardsAddress);
+        
+        authorizedAddresses.push(newFoundationAddress);
+        authorizedAddresses.push(newCommunityTreasuryAddress);
+        authorizedAddresses.push(newStakingRewardsAddress);
 
         emit TreasuryAddressesUpdated(
             newFoundationAddress,
             newCommunityTreasuryAddress,
             newStakingRewardsAddress
         );
+    }
+
+    /**
+     * @dev Withdraws ETH from the contract (only owner)
+     * @param amount Amount of ETH to withdraw
+     */
+    function withdrawETH(uint256 amount) external onlyOwner nonReentrant {
+        require(amount <= address(this).balance, "Treasury: insufficient balance");
+        require(amount > 0, "Treasury: amount must be greater than 0");
+        
+        // SECURITY: Low-level call required for ETH transfers
+        (bool success, ) = payable(owner()).call{ value: amount }("");
+        require(success, "Treasury: withdrawal failed");
+        
+        emit EmergencyWithdraw(owner(), amount);
+    }
+
+    /**
+     * @dev Withdraws all ETH from the contract (only owner)
+     */
+    function withdrawAllETH() external onlyOwner nonReentrant {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "Treasury: no ETH to withdraw");
+        
+        // SECURITY: Low-level call required for ETH transfers
+        (bool success, ) = payable(owner()).call{ value: balance }("");
+        require(success, "Treasury: withdrawal failed");
+        
+        emit EmergencyWithdraw(owner(), balance);
     }
 
     /**
@@ -281,14 +330,14 @@ contract BAP578Treasury is
         require(recipient != address(0), "Treasury: recipient is zero address");
         require(amount <= address(this).balance, "Treasury: insufficient balance");
 
-        emit EmergencyWithdraw(recipient, amount);
-
         // SECURITY: Low-level call required for ETH transfers
         // This is the recommended Solidity pattern for ETH transfers
         // Success is verified to ensure transfer completion
-        // Event emitted before external call to prevent reentrancy issues
+        // Event emitted after external call to prevent reentrancy issues
         (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Treasury: emergency withdrawal failed");
+        
+        emit EmergencyWithdraw(recipient, amount);
     }
 
     /**
@@ -340,6 +389,28 @@ contract BAP578Treasury is
             totalDistributedToTreasury,
             totalDistributedToStaking
         );
+    }
+
+    /**
+     * @dev Gets all authorized treasury addresses
+     * @return Array of authorized addresses
+     */
+    function getAuthorizedAddresses() external view returns (address[] memory) {
+        return authorizedAddresses;
+    }
+
+    /**
+     * @dev Internal function to remove an address from the authorized addresses array
+     * @param addr The address to remove
+     */
+    function _removeAuthorizedAddress(address addr) internal {
+        for (uint256 i = 0; i < authorizedAddresses.length; i++) {
+            if (authorizedAddresses[i] == addr) {
+                authorizedAddresses[i] = authorizedAddresses[authorizedAddresses.length - 1];
+                authorizedAddresses.pop();
+                break;
+            }
+        }
     }
 
     /**

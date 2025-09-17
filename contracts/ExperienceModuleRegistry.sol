@@ -127,6 +127,8 @@ contract ExperienceModuleRegistry is
     event ModuleDeactivated(address indexed moduleAddress, string reason);
 
     event ModuleUsageUpdated(address indexed moduleAddress, uint256 newUsageCount);
+    
+    event ContractInitialized(address indexed bap578Token, uint256 timestamp);
 
     // ============ MODIFIERS ============
 
@@ -167,6 +169,14 @@ contract ExperienceModuleRegistry is
     // ============ INITIALIZATION ============
 
     /**
+     * @dev Constructor disables initializers to prevent implementation contract from being initialized
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
      * @dev Initializes the contract
      * @param bap578TokenAddress Address of the BAP578 token contract
      */
@@ -181,6 +191,13 @@ contract ExperienceModuleRegistry is
         __UUPSUpgradeable_init();
 
         bap578Token = IBAP578(bap578TokenAddress);
+        
+        // Initialize state variables explicitly for security
+        // Note: Mappings are automatically initialized in Solidity, but we document this for clarity
+        // _registeredModules, _approvedModules, and _moduleMetadata are automatically initialized as empty mappings
+        
+        // Emit event to confirm successful initialization
+        emit ContractInitialized(bap578TokenAddress, block.timestamp);
     }
 
     // ============ CORE FUNCTIONS ============
