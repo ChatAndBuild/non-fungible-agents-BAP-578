@@ -85,6 +85,8 @@ contract BAP578Treasury is
     );
 
     event EmergencyWithdraw(address indexed recipient, uint256 amount);
+    
+    event AuthorizedTransfer(address indexed recipient, uint256 amount, string addressType);
 
     /**
      * @dev Modifier to check if the system is not paused
@@ -212,33 +214,15 @@ contract BAP578Treasury is
         // SECURITY: Only send to authorized treasury addresses
         // Reentrancy protection ensures state consistency
         if (foundationAmount > 0) {
-            require(
-                authorizedTreasuryAddresses[foundationAddress],
-                "Treasury: foundation address not authorized"
-            );
-            require(foundationAddress != address(0), "Treasury: foundation address is zero");
-            (bool success1, ) = payable(foundationAddress).call{ value: foundationAmount }("");
-            require(success1, "Treasury: foundation transfer failed");
+            _validateAndTransferToAuthorizedAddress(foundationAddress, foundationAmount, "foundation");
         }
 
         if (treasuryAmount > 0) {
-            require(
-                authorizedTreasuryAddresses[communityTreasuryAddress],
-                "Treasury: treasury address not authorized"
-            );
-            require(communityTreasuryAddress != address(0), "Treasury: treasury address is zero");
-            (bool success2, ) = payable(communityTreasuryAddress).call{ value: treasuryAmount }("");
-            require(success2, "Treasury: treasury transfer failed");
+            _validateAndTransferToAuthorizedAddress(communityTreasuryAddress, treasuryAmount, "treasury");
         }
 
         if (stakingAmount > 0) {
-            require(
-                authorizedTreasuryAddresses[stakingRewardsAddress],
-                "Treasury: staking address not authorized"
-            );
-            require(stakingRewardsAddress != address(0), "Treasury: staking address is zero");
-            (bool success3, ) = payable(stakingRewardsAddress).call{ value: stakingAmount }("");
-            require(success3, "Treasury: staking transfer failed");
+            _validateAndTransferToAuthorizedAddress(stakingRewardsAddress, stakingAmount, "staking");
         }
 
         emit DonationDistributed(donationId, foundationAmount, treasuryAmount, stakingAmount);
@@ -411,6 +395,40 @@ contract BAP578Treasury is
                 break;
             }
         }
+    }
+
+    /**
+     * @dev Internal function to validate and transfer ETH to authorized addresses only
+     * @param recipient The address to send ETH to
+     * @param amount The amount of ETH to send
+     * @param addressType The type of address (for error messages)
+     */
+    function _validateAndTransferToAuthorizedAddress(
+        address recipient,
+        uint256 amount,
+        string memory addressType
+    ) internal {
+        // Validate recipient is not zero address
+        require(recipient != address(0), string(abi.encodePacked("Treasury: ", addressType, " address is zero")));
+        
+        // Validate recipient is authorized
+        require(
+            authorizedTreasuryAddresses[recipient],
+            string(abi.encodePacked("Treasury: ", addressType, " address not authorized"))
+        );
+        
+        // Validate amount is greater than zero
+        require(amount > 0, string(abi.encodePacked("Treasury: ", addressType, " amount must be greater than zero")));
+        
+        // Validate contract has sufficient balance
+        require(address(this).balance >= amount, "Treasury: insufficient contract balance");
+        
+        // Execute transfer with low-level call for security
+        (bool success, ) = payable(recipient).call{ value: amount }("");
+        require(success, string(abi.encodePacked("Treasury: ", addressType, " transfer failed")));
+        
+        // Emit event for transparency
+        emit AuthorizedTransfer(recipient, amount, addressType);
     }
 
     /**
