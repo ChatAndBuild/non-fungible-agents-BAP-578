@@ -201,7 +201,7 @@ contract ExperienceModuleRegistry is
         // - uints: 0
         // - bools: false
         // - addresses: address(0)
-        
+
         // The following variables are automatically initialized and don't need explicit initialization:
         // - _registeredModules: mapping(uint256 => address[]) - empty mapping
         // - _approvedModules: mapping(uint256 => mapping(address => bool)) - empty nested mapping
@@ -211,7 +211,7 @@ contract ExperienceModuleRegistry is
         // - _moduleUsageCount: mapping(address => uint256) - empty mapping (all values are 0)
         // - _allModules: address[] - empty array
         // - _moduleIndex: mapping(address => uint256) - empty mapping
-        
+
         // slither-disable-next-line uninitialized-state
         // These variables are intentionally not explicitly initialized as Solidity handles this automatically
 
