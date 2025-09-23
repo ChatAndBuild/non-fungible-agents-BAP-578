@@ -55,5 +55,8 @@
   "dependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
     "merkletreejs": "^0.5.2"
+  },
+  "overrides": {
+    "form-data": ">=2.5.4"
   }
 }
