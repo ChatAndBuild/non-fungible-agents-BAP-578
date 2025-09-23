@@ -37,7 +37,7 @@ contract BAP578Treasury is
 
     // Mapping to track authorized treasury addresses
     mapping(address => bool) public authorizedTreasuryAddresses;
-    
+
     // Array to track all authorized addresses for enumeration
     address[] public authorizedAddresses;
 
@@ -85,7 +85,7 @@ contract BAP578Treasury is
     );
 
     event EmergencyWithdraw(address indexed recipient, uint256 amount);
-    
+
     event AuthorizedTransfer(address indexed recipient, uint256 amount, string addressType);
 
     /**
@@ -130,7 +130,7 @@ contract BAP578Treasury is
         authorizedTreasuryAddresses[foundationAddr] = true;
         authorizedTreasuryAddresses[communityTreasuryAddr] = true;
         authorizedTreasuryAddresses[stakingRewardsAddr] = true;
-        
+
         // Track authorized addresses
         authorizedAddresses.push(foundationAddr);
         authorizedAddresses.push(communityTreasuryAddr);
@@ -214,15 +214,27 @@ contract BAP578Treasury is
         // SECURITY: Only send to authorized treasury addresses
         // Reentrancy protection ensures state consistency
         if (foundationAmount > 0) {
-            _validateAndTransferToAuthorizedAddress(foundationAddress, foundationAmount, "foundation");
+            _validateAndTransferToAuthorizedAddress(
+                foundationAddress,
+                foundationAmount,
+                "foundation"
+            );
         }
 
         if (treasuryAmount > 0) {
-            _validateAndTransferToAuthorizedAddress(communityTreasuryAddress, treasuryAmount, "treasury");
+            _validateAndTransferToAuthorizedAddress(
+                communityTreasuryAddress,
+                treasuryAmount,
+                "treasury"
+            );
         }
 
         if (stakingAmount > 0) {
-            _validateAndTransferToAuthorizedAddress(stakingRewardsAddress, stakingAmount, "staking");
+            _validateAndTransferToAuthorizedAddress(
+                stakingRewardsAddress,
+                stakingAmount,
+                "staking"
+            );
         }
 
         emit DonationDistributed(donationId, foundationAmount, treasuryAmount, stakingAmount);
@@ -256,12 +268,12 @@ contract BAP578Treasury is
         authorizedTreasuryAddresses[newFoundationAddress] = true;
         authorizedTreasuryAddresses[newCommunityTreasuryAddress] = true;
         authorizedTreasuryAddresses[newStakingRewardsAddress] = true;
-        
+
         // Update authorized addresses array (remove old, add new)
         _removeAuthorizedAddress(foundationAddress);
         _removeAuthorizedAddress(communityTreasuryAddress);
         _removeAuthorizedAddress(stakingRewardsAddress);
-        
+
         authorizedAddresses.push(newFoundationAddress);
         authorizedAddresses.push(newCommunityTreasuryAddress);
         authorizedAddresses.push(newStakingRewardsAddress);
@@ -280,11 +292,11 @@ contract BAP578Treasury is
     function withdrawETH(uint256 amount) external onlyOwner nonReentrant {
         require(amount <= address(this).balance, "Treasury: insufficient balance");
         require(amount > 0, "Treasury: amount must be greater than 0");
-        
+
         // SECURITY: Low-level call required for ETH transfers
         (bool success, ) = payable(owner()).call{ value: amount }("");
         require(success, "Treasury: withdrawal failed");
-        
+
         emit EmergencyWithdraw(owner(), amount);
     }
 
@@ -294,11 +306,11 @@ contract BAP578Treasury is
     function withdrawAllETH() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "Treasury: no ETH to withdraw");
-        
+
         // SECURITY: Low-level call required for ETH transfers
         (bool success, ) = payable(owner()).call{ value: balance }("");
         require(success, "Treasury: withdrawal failed");
-        
+
         emit EmergencyWithdraw(owner(), balance);
     }
 
@@ -320,7 +332,7 @@ contract BAP578Treasury is
         // Event emitted after external call to prevent reentrancy issues
         (bool success, ) = recipient.call{ value: amount }("");
         require(success, "Treasury: emergency withdrawal failed");
-        
+
         emit EmergencyWithdraw(recipient, amount);
     }
 
@@ -409,24 +421,30 @@ contract BAP578Treasury is
         string memory addressType
     ) internal {
         // Validate recipient is not zero address
-        require(recipient != address(0), string(abi.encodePacked("Treasury: ", addressType, " address is zero")));
-        
+        require(
+            recipient != address(0),
+            string(abi.encodePacked("Treasury: ", addressType, " address is zero"))
+        );
+
         // Validate recipient is authorized
         require(
             authorizedTreasuryAddresses[recipient],
             string(abi.encodePacked("Treasury: ", addressType, " address not authorized"))
         );
-        
+
         // Validate amount is greater than zero
-        require(amount > 0, string(abi.encodePacked("Treasury: ", addressType, " amount must be greater than zero")));
-        
+        require(
+            amount > 0,
+            string(abi.encodePacked("Treasury: ", addressType, " amount must be greater than zero"))
+        );
+
         // Validate contract has sufficient balance
         require(address(this).balance >= amount, "Treasury: insufficient contract balance");
-        
+
         // Execute transfer with low-level call for security
         (bool success, ) = payable(recipient).call{ value: amount }("");
         require(success, string(abi.encodePacked("Treasury: ", addressType, " transfer failed")));
-        
+
         // Emit event for transparency
         emit AuthorizedTransfer(recipient, amount, addressType);
     }
