@@ -75,27 +75,45 @@ contract ExperienceModuleRegistry is
     IBAP578 public bap578Token;
 
     /// @dev Mapping from token ID to registered experience modules
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping
+    /// @notice All keys will return empty arrays by default, which is the intended behavior
+    // slither-disable-next-line uninitialized-state
     mapping(uint256 => address[]) private _registeredModules;
 
     /// @dev Mapping from token ID to module address to approval status
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping
+    /// @notice All keys will return false by default, which is the intended behavior
+    // slither-disable-next-line uninitialized-state
     mapping(uint256 => mapping(address => bool)) private _approvedModules;
 
     /// @dev Mapping from token ID to module address to module metadata
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping
+    // slither-disable-next-line uninitialized-state
     mapping(uint256 => mapping(address => string)) private _moduleMetadata;
 
     /// @dev Mapping from module address to ExperienceModule struct
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping
+    // slither-disable-next-line uninitialized-state
     mapping(address => ExperienceModule) private _moduleRegistry;
 
     /// @dev Mapping from token ID to agent experience configuration
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping
+    // slither-disable-next-line uninitialized-state
     mapping(uint256 => AgentExperienceConfig) private _agentConfigs;
 
     /// @dev Mapping from module address to usage count across all agents
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping with all values as 0
+    // slither-disable-next-line uninitialized-state
     mapping(address => uint256) private _moduleUsageCount;
 
     /// @dev Array of all registered modules (for enumeration)
+    /// @notice This array is automatically initialized by Solidity to an empty array
+    // slither-disable-next-line uninitialized-state
     address[] private _allModules;
 
     /// @dev Mapping from module address to index in _allModules
+    /// @notice This mapping is automatically initialized by Solidity to an empty mapping with all values as 0
+    // slither-disable-next-line uninitialized-state
     mapping(address => uint256) private _moduleIndex;
 
     // ============ EVENTS ============
