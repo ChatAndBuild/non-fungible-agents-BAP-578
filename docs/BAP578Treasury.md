@@ -1,84 +1,90 @@
-# BAP578 Treasury
+# BAP578 Treasury - Donation System
 
 ## Overview
-The BAP578Treasury contract manages the collection, storage, and distribution of protocol fees and funds. It serves as the financial backbone of the BAP578 ecosystem, handling revenue from agent creation, upgrades, and transactions.
+The BAP578Treasury contract manages donations and their distribution within the BAP578 ecosystem. It serves as a transparent donation collection and distribution system, allocating funds to the Foundation, Community Treasury, and Staking Rewards.
 
 ## Key Features
-- **Fee Collection**: Collects fees from various protocol operations
-- **Revenue Distribution**: Distributes revenue to stakeholders based on governance parameters
-- **Fund Management**: Securely stores and manages protocol funds
-- **Staking Rewards**: Calculates and distributes staking rewards
-- **Governance Integration**: Configurable parameters controlled by governance
+- **Donation Collection**: Accepts ETH donations with optional messages
+- **Automatic Distribution**: Distributes donations according to fixed percentages
+- **Transparent Tracking**: Records all donations and distributions on-chain
+- **Whitelist Security**: Only authorized treasury addresses can receive funds
+- **Emergency Controls**: Owner can withdraw funds in emergency situations
+- **Circuit Breaker Integration**: Can be paused during emergencies
+
+## Distribution Allocation
+- **Foundation**: 60% (6000 basis points)
+- **Community Treasury**: 25% (2500 basis points)  
+- **Staking Rewards**: 15% (1500 basis points)
 
 ## Core Functions
 
-### Fee Management
-- `collectFee(FeeType feeType)`: Collects a fee of the specified type
-- `setFeeAmount(FeeType feeType, uint256 amount)`: Updates the fee amount for a specific fee type
-- `getFeeAmount(FeeType feeType)`: Returns the current fee amount for a specific fee type
+### Donation Management
+- `donate(string memory message)`: Accept donations with an optional message
+- `distributeDonation(uint256 donationId)`: Manually distribute a specific donation (owner only)
+- `getDonation(uint256 donationId)`: Get details of a specific donation
+- `getDonorDonations(address donor)`: Get all donation IDs for a specific donor
+- `getTotalDonations()`: Get the total number of donations
 
-### Revenue Distribution
-- `distributeRevenue()`: Distributes accumulated revenue according to distribution parameters
-- `setDistributionParameters(DistributionParams memory params)`: Updates revenue distribution parameters
-- `getDistributionParameters()`: Returns current distribution parameters
+### Treasury Address Management
+- `updateTreasuryAddresses(address foundation, address treasury, address staking)`: Update recipient addresses (owner only)
+- `getAuthorizedAddresses()`: Get list of all authorized treasury addresses
+- **Security Note**: Old addresses are properly deauthorized when updating
 
-### Fund Management
-- `withdrawFunds(address recipient, uint256 amount)`: Withdraws funds to a specified recipient
-- `depositFunds()`: Accepts deposits to the treasury
-- `getTreasuryBalance()`: Returns the current treasury balance
+### Emergency Functions
+- `withdrawETH(uint256 amount)`: Withdraw specific amount (owner only)
+- `withdrawAllETH()`: Withdraw all ETH (owner only)
+- `emergencyWithdraw(address recipient, uint256 amount)`: Emergency withdrawal to specific address (owner only)
 
-### Staking Rewards
-- `calculateRewards(address staker)`: Calculates rewards for a specific staker
-- `distributeStakingRewards()`: Distributes rewards to all stakers
-- `updateRewardRate(uint256 newRate)`: Updates the reward rate for staking
+### Statistics
+- `getTreasuryStats()`: Returns total donations received and distributions made
 
-### Governance Controls
-- `updateGovernanceAddress(address newGovernance)`: Updates the governance contract address
-- `executeGovernanceProposal(bytes memory data)`: Executes a proposal approved by governance
-- `pause()`: Pauses treasury operations in emergency situations
-- `unpause()`: Resumes treasury operations
+## Data Structures
 
-## Fee Types
+### Donation
 ```solidity
-enum FeeType {
-    CREATION,       // Fee for creating a new agent
-    UPGRADE,        // Fee for upgrading agent logic
-    TRANSACTION,    // Fee for agent transactions
-    EXPERIENCE_MODULE,  // Fee for registering experience modules
-    CUSTOM          // Custom fee type defined by governance
-}
-```
-
-## Distribution Parameters
-```solidity
-struct DistributionParams {
-    uint256 stakingRewardPercentage;    // Percentage allocated to stakers
-    uint256 developmentFundPercentage;  // Percentage allocated to development
-    uint256 communityTreasuryPercentage; // Percentage allocated to community treasury
-    uint256 burnPercentage;             // Percentage of tokens to burn
+struct Donation {
+    uint256 id;
+    address donor;
+    uint256 amount;
+    uint256 timestamp;
+    string message;
+    bool distributed;
 }
 ```
 
 ## Events
-- `FeeCollected(FeeType indexed feeType, address indexed payer, uint256 amount)`
-- `RevenueDistributed(uint256 stakingAmount, uint256 developmentAmount, uint256 communityAmount, uint256 burnAmount)`
-- `FeeUpdated(FeeType indexed feeType, uint256 oldAmount, uint256 newAmount)`
-- `DistributionParametersUpdated()`
-- `FundsWithdrawn(address indexed recipient, uint256 amount)`
-- `FundsDeposited(address indexed depositor, uint256 amount)`
-- `RewardRateUpdated(uint256 oldRate, uint256 newRate)`
-- `GovernanceAddressUpdated(address indexed oldGovernance, address indexed newGovernance)`
+- `DonationReceived(uint256 indexed donationId, address indexed donor, uint256 amount, string message, uint256 timestamp)`
+- `DonationDistributed(uint256 indexed donationId, uint256 foundationAmount, uint256 treasuryAmount, uint256 stakingAmount)`
+- `TreasuryAddressesUpdated(address foundationAddress, address communityTreasuryAddress, address stakingRewardsAddress)`
+- `EmergencyWithdraw(address indexed recipient, uint256 amount)`
+- `AuthorizedTransfer(address indexed recipient, uint256 amount, string addressType)`
 
-## Security Considerations
-- Access control ensures only authorized addresses can withdraw funds or update parameters
-- Integration with circuit breaker for emergency pauses
+## Security Features
+
+### Whitelist Mechanism
+- Only pre-authorized treasury addresses can receive distributed funds
+- Authorization is managed through `authorizedTreasuryAddresses` mapping
+- Addresses are added/removed when treasury addresses are updated
+
+### Access Control
+- Owner-only functions for critical operations
+- Circuit breaker integration for emergency pauses
 - Reentrancy protection on all fund-handling functions
-- Checks-Effects-Interactions pattern to prevent reentrancy attacks
-- Governance timelock for sensitive parameter changes
+
+### Fund Distribution Security
+- Automatic distribution upon donation
+- State updates before external calls (checks-effects-interactions pattern)
+- Validation of recipient addresses before transfers
+- Slither-suppressed false positive for arbitrary ETH sends (funds only go to whitelisted addresses)
 
 ## Integration with BAP578 Ecosystem
-- Collects fees from AgentFactory for agent creation
-- Receives transaction fees from agent operations
-- Distributes rewards to $NFA token stakers
-- Funds development initiatives based on governance decisions
-- Manages community treasury for ecosystem growth
+- Receives donations from the community
+- Distributes funds to Foundation for development
+- Allocates to Community Treasury for ecosystem initiatives
+- Provides staking rewards allocation
+- Integrates with CircuitBreaker for emergency controls
+
+## Recent Updates
+- Fixed bug in `updateTreasuryAddresses()` where old addresses are now properly removed from the authorized list
+- Enhanced documentation for security model
+- Added comprehensive test coverage for address authorization management
