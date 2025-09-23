@@ -455,9 +455,32 @@ describe('BAP578 Non-Fungible Agent', function () {
       // Set global pause
       await circuitBreaker.connect(governance).setGlobalPause(true);
 
-      // Any function with whenAgentActive modifier should fail
-      // Note: The current contract doesn't have functions with this modifier implemented
-      // This test would be relevant if there were functions that check for global pause
+      // Check that global pause is active
+      expect(await circuitBreaker.globalPause()).to.equal(true);
+
+      // The whenAgentActive modifier checks both global pause and agent status
+      // Currently, the contract doesn't expose functions with this modifier
+      // but the modifier is defined and would block operations when global pause is active
+    });
+
+    it('Should allow emergency multi-sig to trigger pause', async function () {
+      // Emergency multi-sig should also be able to set global pause
+      await circuitBreaker.connect(emergencyMultiSig).setGlobalPause(true);
+      expect(await circuitBreaker.globalPause()).to.equal(true);
+
+      // Unpause
+      await circuitBreaker.connect(emergencyMultiSig).setGlobalPause(false);
+      expect(await circuitBreaker.globalPause()).to.equal(false);
+    });
+
+    it('Should verify ownership is transferred to circuit breaker', async function () {
+      // The BAP578 contract transfers ownership to the circuit breaker on initialization
+      expect(await bap578.owner()).to.equal(circuitBreaker.address);
+      
+      // This means only the circuit breaker can perform owner-only operations
+      await expect(
+        bap578.connect(addr1).upgradeTo(addr2.address)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -569,6 +592,56 @@ describe('BAP578 Non-Fungible Agent', function () {
       await bap578.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
 
       await expect(bap578.connect(addr1).withdrawFromAgent(tokenId, 0)).to.not.be.reverted;
+    });
+
+    it('Should track lastActionTimestamp correctly', async function () {
+      const metadataURI = 'ipfs://QmTest';
+      await bap578['createAgent(address,address,string)'](
+        addr1.address,
+        mockLogicAddress,
+        metadataURI,
+      );
+      const tokenId = 1;
+
+      const initialState = await bap578.getState(tokenId);
+      const initialTimestamp = initialState.lastActionTimestamp;
+      expect(initialTimestamp).to.be.gt(0);
+
+      // Wait a bit and perform an action
+      await ethers.provider.send('evm_increaseTime', [10]);
+      await ethers.provider.send('evm_mine');
+
+      // The lastActionTimestamp should be set at creation
+      // It would be updated if there were action functions implemented
+      const finalState = await bap578.getState(tokenId);
+      expect(finalState.lastActionTimestamp).to.equal(initialTimestamp);
+    });
+
+    it('Should handle multiple agents for same owner', async function () {
+      const metadataURI = 'ipfs://QmTest';
+      
+      // Create multiple agents for the same owner
+      for (let i = 0; i < 3; i++) {
+        await bap578['createAgent(address,address,string)'](
+          addr1.address,
+          mockLogicAddress,
+          metadataURI + i,
+        );
+      }
+
+      // Check all agents are owned by addr1
+      expect(await bap578.ownerOf(1)).to.equal(addr1.address);
+      expect(await bap578.ownerOf(2)).to.equal(addr1.address);
+      expect(await bap578.ownerOf(3)).to.equal(addr1.address);
+
+      // Check balance of addr1
+      expect(await bap578.balanceOf(addr1.address)).to.equal(3);
+
+      // Check enumeration
+      for (let i = 0; i < 3; i++) {
+        const tokenId = await bap578.tokenOfOwnerByIndex(addr1.address, i);
+        expect(tokenId).to.equal(i + 1);
+      }
     });
   });
 });
