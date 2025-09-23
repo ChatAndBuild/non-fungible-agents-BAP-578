@@ -179,6 +179,8 @@ contract ExperienceModuleRegistry is
     /**
      * @dev Initializes the contract
      * @param bap578TokenAddress Address of the BAP578 token contract
+     * @notice All mappings and arrays are automatically initialized to their default values in Solidity
+     * @notice For upgradeable contracts, storage is preserved between upgrades
      */
     function initialize(address bap578TokenAddress) public initializer {
         require(
@@ -192,9 +194,26 @@ contract ExperienceModuleRegistry is
 
         bap578Token = IBAP578(bap578TokenAddress);
 
-        // Initialize state variables explicitly for security
-        // Note: Mappings are automatically initialized in Solidity, but we document this for clarity
-        // _registeredModules, _approvedModules, and _moduleMetadata are automatically initialized as empty mappings
+        // IMPORTANT: State variable initialization for upgradeable contracts
+        // In Solidity, all storage variables are automatically initialized to their default values:
+        // - Mappings: Empty mappings (all keys map to default values)
+        // - Dynamic arrays: Empty arrays with length 0
+        // - uints: 0
+        // - bools: false
+        // - addresses: address(0)
+        
+        // The following variables are automatically initialized and don't need explicit initialization:
+        // - _registeredModules: mapping(uint256 => address[]) - empty mapping
+        // - _approvedModules: mapping(uint256 => mapping(address => bool)) - empty nested mapping
+        // - _moduleMetadata: mapping(uint256 => mapping(address => string)) - empty nested mapping
+        // - _moduleRegistry: mapping(address => ExperienceModule) - empty mapping
+        // - _agentConfigs: mapping(uint256 => AgentExperienceConfig) - empty mapping
+        // - _moduleUsageCount: mapping(address => uint256) - empty mapping (all values are 0)
+        // - _allModules: address[] - empty array
+        // - _moduleIndex: mapping(address => uint256) - empty mapping
+        
+        // slither-disable-next-line uninitialized-state
+        // These variables are intentionally not explicitly initialized as Solidity handles this automatically
 
         // Emit event to confirm successful initialization
         emit ContractInitialized(bap578TokenAddress, block.timestamp);

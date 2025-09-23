@@ -255,11 +255,22 @@ contract BAP578Treasury is
         require(newCommunityTreasuryAddress != address(0), "Treasury: treasury address is zero");
         require(newStakingRewardsAddress != address(0), "Treasury: staking address is zero");
 
-        // Update addresses and authorization
-        authorizedTreasuryAddresses[foundationAddress] = false; // Deauthorize old address
-        authorizedTreasuryAddresses[communityTreasuryAddress] = false; // Deauthorize old address
-        authorizedTreasuryAddresses[stakingRewardsAddress] = false; // Deauthorize old address
+        // Store old addresses before updating
+        address oldFoundation = foundationAddress;
+        address oldTreasury = communityTreasuryAddress;
+        address oldStaking = stakingRewardsAddress;
 
+        // Deauthorize old addresses
+        authorizedTreasuryAddresses[oldFoundation] = false;
+        authorizedTreasuryAddresses[oldTreasury] = false;
+        authorizedTreasuryAddresses[oldStaking] = false;
+
+        // Remove old addresses from array
+        _removeAuthorizedAddress(oldFoundation);
+        _removeAuthorizedAddress(oldTreasury);
+        _removeAuthorizedAddress(oldStaking);
+
+        // Update to new addresses
         foundationAddress = newFoundationAddress;
         communityTreasuryAddress = newCommunityTreasuryAddress;
         stakingRewardsAddress = newStakingRewardsAddress;
@@ -269,11 +280,7 @@ contract BAP578Treasury is
         authorizedTreasuryAddresses[newCommunityTreasuryAddress] = true;
         authorizedTreasuryAddresses[newStakingRewardsAddress] = true;
 
-        // Update authorized addresses array (remove old, add new)
-        _removeAuthorizedAddress(foundationAddress);
-        _removeAuthorizedAddress(communityTreasuryAddress);
-        _removeAuthorizedAddress(stakingRewardsAddress);
-
+        // Add new addresses to array
         authorizedAddresses.push(newFoundationAddress);
         authorizedAddresses.push(newCommunityTreasuryAddress);
         authorizedAddresses.push(newStakingRewardsAddress);
@@ -411,7 +418,10 @@ contract BAP578Treasury is
 
     /**
      * @dev Internal function to validate and transfer ETH to authorized addresses only
-     * @param recipient The address to send ETH to
+     * @notice This function ONLY transfers to whitelisted treasury addresses
+     * @notice The whitelist is strictly limited to foundation, community, and staking addresses
+     * @notice This is NOT an arbitrary transfer - recipient MUST be pre-authorized
+     * @param recipient The address to send ETH to (must be in authorizedTreasuryAddresses)
      * @param amount The amount of ETH to send
      * @param addressType The type of address (for error messages)
      */
@@ -442,6 +452,7 @@ contract BAP578Treasury is
         require(address(this).balance >= amount, "Treasury: insufficient contract balance");
 
         // Execute transfer with low-level call for security
+        // slither-disable-next-line arbitrary-send-eth
         (bool success, ) = payable(recipient).call{ value: amount }("");
         require(success, string(abi.encodePacked("Treasury: ", addressType, " transfer failed")));
 
