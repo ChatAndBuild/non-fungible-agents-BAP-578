@@ -62,7 +62,7 @@ async function main() {
         const VaultPermissionManager = await ethers.getContractFactory("VaultPermissionManager");
         const vaultManager = await upgrades.deployProxy(
             VaultPermissionManager,
-            [circuitBreaker.address],
+            [circuitBreaker.address, deployer.address], // Added ownerAddr parameter
             { initializer: "initialize" }
         );
         await vaultManager.deployed();
@@ -74,14 +74,14 @@ async function main() {
         const ExperienceModuleRegistry = await ethers.getContractFactory("ExperienceModuleRegistry");
         const experienceRegistry = await upgrades.deployProxy(
             ExperienceModuleRegistry,
-            [circuitBreaker.address],
+            [bap578Implementation.address], // Should be BAP578 address, not circuitBreaker
             { initializer: "initialize" }
         );
         await experienceRegistry.deployed();
         deployments.ExperienceModuleRegistry = experienceRegistry.address;
         console.log("✅ ExperienceModuleRegistry deployed to:", experienceRegistry.address);
 
-        // 6. Deploy AgentFactory
+        // 6. Deploy AgentFactory (with default learning module as AddressZero for flexibility)
         console.log("\n📋 6. Deploying AgentFactory...");
         const AgentFactory = await ethers.getContractFactory("AgentFactory");
         const agentFactory = await upgrades.deployProxy(
@@ -90,7 +90,8 @@ async function main() {
                 bap578Implementation.address,
                 deployer.address,
                 ethers.constants.AddressZero, // No default learning module for now
-                treasury.address
+                treasury.address,
+                circuitBreaker.address  // Added missing circuitBreakerAddr parameter
             ],
             { initializer: "initialize" }
         );
@@ -123,17 +124,8 @@ async function main() {
         await circuitBreaker.setGovernance(governance.address);
         console.log("✅ Governance set in CircuitBreaker");
 
-        // Set governance in Treasury
-        await treasury.setGovernance(governance.address);
-        console.log("✅ Governance set in Treasury");
-
-        // Set governance in VaultPermissionManager
-        await vaultManager.setGovernance(governance.address);
-        console.log("✅ Governance set in VaultPermissionManager");
-
-        // Set governance in ExperienceModuleRegistry
-        await experienceRegistry.setGovernance(governance.address);
-        console.log("✅ Governance set in ExperienceModuleRegistry");
+        // Note: Treasury, VaultPermissionManager, and ExperienceModuleRegistry
+        // don't have setGovernance functions - they use ownership/admin patterns
 
         // Set AgentFactory in Governance
         await governance.setAgentFactory(agentFactory.address);
@@ -188,7 +180,7 @@ async function main() {
 
         console.log("\n💡 Testing donation functionality:");
         console.log("const treasury = await ethers.getContractAt('BAP578Treasury', '" + treasury.address + "')");
-        console.log("await treasury.donate({ value: ethers.utils.parseEther('1') })");
+        console.log("await treasury.donate('Test donation', { value: ethers.utils.parseEther('1') })");
         console.log("const balance = await treasury.getTotalDonations()");
         console.log("console.log('Total donations:', ethers.utils.formatEther(balance))");
 

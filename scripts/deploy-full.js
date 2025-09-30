@@ -61,7 +61,7 @@ async function main() {
     const VaultPermissionManager = await ethers.getContractFactory("VaultPermissionManager");
     const vaultManager = await upgrades.deployProxy(
       VaultPermissionManager,
-      [circuitBreaker.address],
+      [circuitBreaker.address, deployer.address],  // Added deployer.address as ownerAddr
       { initializer: "initialize" }
     );
     await vaultManager.deployed();
@@ -103,7 +103,8 @@ async function main() {
         bap578Implementation.address,
         deployer.address,
         merkleLearning.address,
-        treasury.address
+        treasury.address,
+        circuitBreaker.address  // Added missing circuitBreakerAddr parameter
       ],
       { initializer: "initialize" }
     );
@@ -129,18 +130,10 @@ async function main() {
     deployments.BAP578Governance = governance.address;
     console.log("✅ BAP578Governance deployed to:", governance.address);
 
-    // 9. Deploy CreatorAgent template (optional)
-    console.log("\n📋 9. Deploying CreatorAgent template...");
-    const CreatorAgent = await ethers.getContractFactory("CreatorAgent");
-    const creatorAgent = await CreatorAgent.deploy(
-      bap578Implementation.address,
-      "Template Creator",
-      "Template creator agent",
-      "General"
-    );
-    await creatorAgent.deployed();
-    deployments.CreatorAgent = creatorAgent.address;
-    console.log("✅ CreatorAgent template deployed to:", creatorAgent.address);
+    // 9. Deploy CreatorAgent template (optional - skipped as contract doesn't exist)
+    console.log("\n📋 9. Skipping CreatorAgent template deployment (contract not found)...");
+    // Note: CreatorAgent contract doesn't exist in the project yet
+    // This can be added later when the contract is implemented
 
     // 10. Setup initial configurations
     console.log("\n📋 10. Setting up initial configurations...");
@@ -150,20 +143,8 @@ async function main() {
     await circuitBreaker.setGovernance(governance.address);
     console.log("✅ Governance set in CircuitBreaker");
 
-    // Set governance in Treasury
-    console.log("Setting governance in Treasury...");
-    await treasury.setGovernance(governance.address);
-    console.log("✅ Governance set in Treasury");
-
-    // Set governance in VaultPermissionManager
-    console.log("Setting governance in VaultPermissionManager...");
-    await vaultManager.setGovernance(governance.address);
-    console.log("✅ Governance set in VaultPermissionManager");
-
-    // Set governance in ExperienceModuleRegistry
-    console.log("Setting governance in ExperienceModuleRegistry...");
-    await experienceRegistry.setGovernance(governance.address);
-    console.log("✅ Governance set in ExperienceModuleRegistry");
+    // Note: Treasury, VaultPermissionManager, and ExperienceModuleRegistry
+    // don't have setGovernance functions - they use ownership/admin patterns
 
     // Set AgentFactory in Governance
     console.log("Setting AgentFactory in Governance...");
@@ -180,20 +161,16 @@ async function main() {
     await agentFactory.approveLearningModule(merkleLearning.address, "MerkleTree", "1.0.0");
     console.log("✅ Learning module approved");
 
-    // Register experience module
-    console.log("Registering experience module...");
-    await experienceRegistry.registerModule(
-      merkleLearning.address,
-      "MerkleTreeLearning",
-      "1.0.0",
-      "Merkle tree based learning module for agents"
-    );
-    console.log("✅ Experience module registered");
+    // Register experience module (skipped - requires agent tokenId and signature)
+    // Note: Module registration should be done by individual agents after deployment
+    // console.log("Registering experience module...");
+    // await experienceRegistry.registerModule(...);
+    // console.log("✅ Experience module registered");
 
-    // Register agent template in factory
-    console.log("Registering agent template...");
-    await agentFactory.approveTemplate(creatorAgent.address, "Creator", "1.0.0");
-    console.log("✅ Agent template registered");
+    // Register agent template in factory (skipped - CreatorAgent not deployed)
+    // console.log("Registering agent template...");
+    // await agentFactory.approveTemplate(creatorAgent.address, "Creator", "1.0.0");
+    // console.log("✅ Agent template registered");
 
     // 11. Save deployment addresses
     const deploymentData = {

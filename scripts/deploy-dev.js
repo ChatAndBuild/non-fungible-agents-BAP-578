@@ -58,8 +58,8 @@ async function main() {
     const vaultManager = await VaultPermissionManager.deploy();
     await vaultManager.deployed();
     
-    // Initialize VaultPermissionManager
-    await vaultManager.initialize(circuitBreaker.address);
+    // Initialize VaultPermissionManager with both required parameters
+    await vaultManager.initialize(circuitBreaker.address, deployer.address);
     deployments.VaultPermissionManager = vaultManager.address;
     console.log("✅ VaultPermissionManager deployed to:", vaultManager.address);
 
@@ -69,8 +69,8 @@ async function main() {
     const experienceRegistry = await ExperienceModuleRegistry.deploy();
     await experienceRegistry.deployed();
     
-    // Initialize ExperienceModuleRegistry
-    await experienceRegistry.initialize(circuitBreaker.address);
+    // Initialize ExperienceModuleRegistry with BAP578 address
+    await experienceRegistry.initialize(bap578.address);
     deployments.ExperienceModuleRegistry = experienceRegistry.address;
     console.log("✅ ExperienceModuleRegistry deployed to:", experienceRegistry.address);
 
@@ -91,48 +91,27 @@ async function main() {
     const agentFactory = await AgentFactory.deploy();
     await agentFactory.deployed();
     
-    // Initialize AgentFactory with treasury
+    // Initialize AgentFactory with all 5 required parameters
     await agentFactory.initialize(
       bap578.address,
       deployer.address,
       merkleLearning.address,
-      treasury.address
+      treasury.address,
+      circuitBreaker.address  // Added missing circuitBreakerAddr parameter
     );
     deployments.AgentFactory = agentFactory.address;
     console.log("✅ AgentFactory deployed to:", agentFactory.address);
 
-    // 8. Deploy CreatorAgent template
-    console.log("\n📋 8. Deploying CreatorAgent template...");
-    const CreatorAgent = await ethers.getContractFactory("CreatorAgent");
-    const creatorAgent = await CreatorAgent.deploy(
-      bap578.address,
-      "Dev Creator",
-      "Development creator agent",
-      "Development"
-    );
-    await creatorAgent.deployed();
-    deployments.CreatorAgent = creatorAgent.address;
-    console.log("✅ CreatorAgent template deployed to:", creatorAgent.address);
-
-    // 9. Basic setup
-    console.log("\n📋 9. Setting up basic configurations...");
+    // 8. Basic setup
+    console.log("\n📋 8. Setting up basic configurations...");
     
     // Approve learning module
     await agentFactory.approveLearningModule(merkleLearning.address, "MerkleTree", "1.0.0");
     console.log("✅ Learning module approved");
 
-    // Register experience module
-    await experienceRegistry.registerModule(
-      merkleLearning.address,
-      "MerkleTreeLearning",
-      "1.0.0",
-      "Development merkle tree learning module"
-    );
-    console.log("✅ Experience module registered");
-
-    // Register agent template
-    await agentFactory.approveTemplate(creatorAgent.address, "Creator", "1.0.0");
-    console.log("✅ Agent template registered");
+    // Note: ExperienceModuleRegistry.registerModule requires 8 parameters including tokenId and signature
+    // This should be done by agents after they are created, not during deployment
+    console.log("ℹ️  Experience module registration skipped (requires agent tokenId)");
 
     console.log("\n🎉 Development deployment completed!");
     console.log("----------------------------------------------------");
@@ -144,10 +123,11 @@ async function main() {
     console.log("\n💡 Quick test commands:");
     console.log(`npx hardhat console --network ${network.name}`);
     console.log("const factory = await ethers.getContractAt('AgentFactory', '" + agentFactory.address + "')");
-    console.log("await factory.createAgent('TestAgent', 'TEST', '" + creatorAgent.address + "', 'ipfs://test')");
+    console.log("// Create an agent (0.01 ETH fee required):");
+    console.log("await factory.createAgent('TestAgent', 'TEST', ethers.constants.AddressZero, 'ipfs://test', { value: ethers.utils.parseEther('0.01') })");
     console.log("\n💡 To interact with the treasury:");
     console.log("const treasury = await ethers.getContractAt('BAP578Treasury', '" + treasury.address + "')");
-    console.log("await treasury.donate({ value: ethers.utils.parseEther('1') })");
+    console.log("await treasury.donate('Test donation', { value: ethers.utils.parseEther('1') })");
 
   } catch (error) {
     console.error("❌ Deployment failed:", error);

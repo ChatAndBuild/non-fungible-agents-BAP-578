@@ -62,7 +62,7 @@ async function main() {
     const VaultPermissionManager = await ethers.getContractFactory('VaultPermissionManager');
     const vaultManager = await upgrades.deployProxy(
       VaultPermissionManager,
-      [circuitBreaker.address],
+      [circuitBreaker.address, deployer.address], // Added ownerAddr parameter
       { initializer: 'initialize' }
     );
     await vaultManager.deployed();
@@ -74,7 +74,7 @@ async function main() {
     const ExperienceModuleRegistry = await ethers.getContractFactory('ExperienceModuleRegistry');
     const experienceRegistry = await upgrades.deployProxy(
       ExperienceModuleRegistry,
-      [circuitBreaker.address],
+      [bap578.address], // Should be BAP578 address, not circuitBreaker
       { initializer: 'initialize' }
     );
     await experienceRegistry.deployed();
@@ -102,7 +102,8 @@ async function main() {
         bap578.address,
         deployer.address,
         merkleLearning.address,
-        treasury.address
+        treasury.address,
+        circuitBreaker.address  // Added missing circuitBreakerAddr parameter
       ],
       { initializer: 'initialize' }
     );
@@ -135,17 +136,8 @@ async function main() {
     await circuitBreaker.setGovernance(governance.address);
     console.log('✅ Governance set in CircuitBreaker');
 
-    // Set governance in Treasury
-    await treasury.setGovernance(governance.address);
-    console.log('✅ Governance set in Treasury');
-
-    // Set governance in VaultPermissionManager
-    await vaultManager.setGovernance(governance.address);
-    console.log('✅ Governance set in VaultPermissionManager');
-
-    // Set governance in ExperienceModuleRegistry
-    await experienceRegistry.setGovernance(governance.address);
-    console.log('✅ Governance set in ExperienceModuleRegistry');
+    // Note: Treasury, VaultPermissionManager, and ExperienceModuleRegistry
+    // don't have setGovernance functions - they use ownership/admin patterns
 
     // Set AgentFactory in Governance
     await governance.setAgentFactory(agentFactory.address);
@@ -159,14 +151,11 @@ async function main() {
     await agentFactory.approveLearningModule(merkleLearning.address, 'MerkleTree', '1.0.0');
     console.log('✅ Learning module approved');
 
-    // Register experience module
-    await experienceRegistry.registerModule(
-      merkleLearning.address,
-      'MerkleTreeLearning',
-      '1.0.0',
-      'Merkle tree based learning module'
-    );
-    console.log('✅ Experience module registered');
+    // Register experience module (skipped - requires agent tokenId and signature)
+    // Note: Module registration should be done by individual agents after deployment
+    // console.log('Registering experience module...');
+    // await experienceRegistry.registerModule(...);
+    // console.log('✅ Experience module registered');
 
     // 10. Save deployment addresses
     const deploymentData = {
