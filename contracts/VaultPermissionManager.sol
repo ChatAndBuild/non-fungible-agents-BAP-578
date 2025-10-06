@@ -120,6 +120,11 @@ contract VaultPermissionManager is
     event AgentAuthorized(address indexed agent, bool authorized);
     event VaultDeactivated(address indexed owner, string indexed vaultId);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @dev Modifier to check if the system is not paused
      */
