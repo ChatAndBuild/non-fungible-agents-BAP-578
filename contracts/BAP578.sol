@@ -293,25 +293,17 @@ contract BAP578 is
 
     /**
      * @dev Upgrades the contract to a new implementation and calls a function on the new implementation.
-     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
-     * @param newImplementation The address of the new implementation contract
-     * @param data The calldata to execute on the new implementation after upgrade
-     * @notice Only the contract owner can perform upgrades for security
-     * @notice This function is payable to support implementations that require ETH
+     * Inherits the implementation from UUPSUpgradeable parent contract.
+     * The _authorizeUpgrade function below controls access to this function.
      */
-    function upgradeToAndCall(
-        address newImplementation,
-        bytes memory data
-    ) public payable override onlyOwner {}
+    // Function is inherited from UUPSUpgradeable and doesn't need to be re-implemented
 
     /**
      * @dev Upgrades the contract to a new implementation.
-     * This function is part of the UUPS (Universal Upgradeable Proxy Standard) pattern.
-     * @param newImplementation The address of the new implementation contract
-     * @notice Only the contract owner can perform upgrades for security
-     * @notice Use upgradeToAndCall if you need to call initialization functions on the new implementation
+     * Inherits the implementation from UUPSUpgradeable parent contract.
+     * The _authorizeUpgrade function below controls access to this function.
      */
-    function upgradeTo(address newImplementation) public override onlyOwner {}
+    // Function is inherited from UUPSUpgradeable and doesn't need to be re-implemented
 
     /**
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.

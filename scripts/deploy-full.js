@@ -80,8 +80,20 @@ async function main() {
     deployments.ExperienceModuleRegistry = experienceRegistry.address;
     console.log("✅ ExperienceModuleRegistry deployed to:", experienceRegistry.address);
 
-    // 6. Deploy Learning Modules
-    console.log("\n📋 6. Deploying Learning Modules...");
+    // 6. Deploy KnowledgeRegistry (NEW)
+    console.log("\n📋 6. Deploying KnowledgeRegistry...");
+    const KnowledgeRegistry = await ethers.getContractFactory("KnowledgeRegistry");
+    const knowledgeRegistry = await upgrades.deployProxy(
+      KnowledgeRegistry,
+      [bap578Implementation.address, 10], // 10 max sources per agent by default
+      { initializer: "initialize", kind: "uups" }
+    );
+    await knowledgeRegistry.deployed();
+    deployments.KnowledgeRegistry = knowledgeRegistry.address;
+    console.log("✅ KnowledgeRegistry deployed to:", knowledgeRegistry.address);
+
+    // 7. Deploy Learning Modules
+    console.log("\n📋 7. Deploying Learning Modules...");
     
     // Deploy MerkleTreeLearning
     const MerkleTreeLearning = await ethers.getContractFactory("MerkleTreeLearning");
@@ -94,8 +106,8 @@ async function main() {
     deployments.MerkleTreeLearning = merkleLearning.address;
     console.log("✅ MerkleTreeLearning deployed to:", merkleLearning.address);
 
-    // 7. Deploy AgentFactory
-    console.log("\n📋 7. Deploying AgentFactory...");
+    // 8. Deploy AgentFactory
+    console.log("\n📋 8. Deploying AgentFactory...");
     const AgentFactory = await ethers.getContractFactory("AgentFactory");
     const agentFactory = await upgrades.deployProxy(
       AgentFactory,
@@ -112,8 +124,8 @@ async function main() {
     deployments.AgentFactory = agentFactory.address;
     console.log("✅ AgentFactory deployed to:", agentFactory.address);
 
-    // 8. Deploy BAP578Governance
-    console.log("\n📋 8. Deploying BAP578Governance...");
+    // 9. Deploy BAP578Governance
+    console.log("\n📋 9. Deploying BAP578Governance...");
     const BAP578Governance = await ethers.getContractFactory("BAP578Governance");
     const governance = await upgrades.deployProxy(
       BAP578Governance,
@@ -130,13 +142,13 @@ async function main() {
     deployments.BAP578Governance = governance.address;
     console.log("✅ BAP578Governance deployed to:", governance.address);
 
-    // 9. Deploy CreatorAgent template (optional - skipped as contract doesn't exist)
-    console.log("\n📋 9. Skipping CreatorAgent template deployment (contract not found)...");
+    // 10. Deploy CreatorAgent template (optional - skipped as contract doesn't exist)
+    console.log("\n📋 10. Skipping CreatorAgent template deployment (contract not found)...");
     // Note: CreatorAgent contract doesn't exist in the project yet
     // This can be added later when the contract is implemented
 
-    // 10. Setup initial configurations
-    console.log("\n📋 10. Setting up initial configurations...");
+    // 11. Setup initial configurations
+    console.log("\n📋 11. Setting up initial configurations...");
     
     // Set governance in CircuitBreaker
     console.log("Setting governance in CircuitBreaker...");
@@ -172,7 +184,7 @@ async function main() {
     // await agentFactory.approveTemplate(creatorAgent.address, "Creator", "1.0.0");
     // console.log("✅ Agent template registered");
 
-    // 11. Save deployment addresses
+    // 12. Save deployment addresses
     const deploymentData = {
       network: network.name,
       chainId: network.chainId,
