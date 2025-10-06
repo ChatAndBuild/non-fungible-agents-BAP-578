@@ -88,6 +88,10 @@ contract BAP578Treasury is
 
     event AuthorizedTransfer(address indexed recipient, uint256 amount, string addressType);
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @dev Modifier to check if the system is not paused
      */
@@ -478,7 +482,7 @@ contract BAP578Treasury is
      * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
      * Called by {upgradeTo} and {upgradeToAndCall}.
      */
-    function _authorizeUpgrade(address) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
      * @dev Fallback function to accept ETH

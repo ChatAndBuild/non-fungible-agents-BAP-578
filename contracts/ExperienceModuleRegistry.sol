@@ -184,12 +184,6 @@ contract ExperienceModuleRegistry is
         _;
     }
 
-    // ============ INITIALIZATION ============
-
-    /**
-     * @dev Constructor disables initializers to prevent implementation contract from being initialized
-     * @custom:oz-upgrades-unsafe-allow constructor
-     */
     constructor() {
         _disableInitializers();
     }
