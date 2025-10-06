@@ -118,7 +118,10 @@ contract KnowledgeRegistry is
         uint256 newPriority
     );
 
-    // ============ MODIFIERS ============
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @dev Modifier to check if the caller is the owner of the specified token
@@ -139,8 +142,6 @@ contract KnowledgeRegistry is
         );
         _;
     }
-
-    // ============ INITIALIZATION ============
 
     /**
      * @dev Initializes the contract
