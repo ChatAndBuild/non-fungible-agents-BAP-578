@@ -28,37 +28,37 @@ contract KnowledgeRegistry is
      */
     struct KnowledgeSource {
         uint256 id;
-        string uri;                // Knowledge source URI (IPFS, HTTP, etc.)
-        KnowledgeType sourceType;  // Type of knowledge
-        uint256 version;           // Version number
-        uint256 priority;          // Priority (higher = more important)
-        bool active;               // Whether this source is active
-        uint256 addedAt;           // Timestamp when added
-        uint256 lastUpdated;       // Last update timestamp
-        string description;        // Human-readable description
-        bytes32 contentHash;       // Hash of the content for verification
+        string uri; // Knowledge source URI (IPFS, HTTP, etc.)
+        KnowledgeType sourceType; // Type of knowledge
+        uint256 version; // Version number
+        uint256 priority; // Priority (higher = more important)
+        bool active; // Whether this source is active
+        uint256 addedAt; // Timestamp when added
+        uint256 lastUpdated; // Last update timestamp
+        string description; // Human-readable description
+        bytes32 contentHash; // Hash of the content for verification
     }
 
     /**
      * @dev Types of knowledge sources
      */
     enum KnowledgeType {
-        BASE,           // Base training data
-        CONTEXT,        // Contextual information
-        MEMORY,         // Agent memories
-        INSTRUCTION,    // Instructions/prompts
-        REFERENCE,      // Reference documentation
-        DYNAMIC         // Dynamic/live data
+        BASE, // Base training data
+        CONTEXT, // Contextual information
+        MEMORY, // Agent memories
+        INSTRUCTION, // Instructions/prompts
+        REFERENCE, // Reference documentation
+        DYNAMIC // Dynamic/live data
     }
 
     /**
      * @dev Configuration for agent's knowledge management
      */
     struct KnowledgeConfig {
-        uint256 maxSources;        // Maximum number of sources
-        bool allowDynamicSources;  // Whether dynamic sources are allowed
-        uint256 totalSources;      // Total sources registered
-        uint256 activeSources;     // Number of active sources
+        uint256 maxSources; // Maximum number of sources
+        bool allowDynamicSources; // Whether dynamic sources are allowed
+        uint256 totalSources; // Total sources registered
+        uint256 activeSources; // Number of active sources
     }
 
     // ============ STATE VARIABLES ============
@@ -101,16 +101,9 @@ contract KnowledgeRegistry is
         string newUri
     );
 
-    event KnowledgeSourceToggled(
-        uint256 indexed tokenId,
-        uint256 indexed sourceId,
-        bool active
-    );
+    event KnowledgeSourceToggled(uint256 indexed tokenId, uint256 indexed sourceId, bool active);
 
-    event KnowledgeSourceRemoved(
-        uint256 indexed tokenId,
-        uint256 indexed sourceId
-    );
+    event KnowledgeSourceRemoved(uint256 indexed tokenId, uint256 indexed sourceId);
 
     event KnowledgeConfigUpdated(
         uint256 indexed tokenId,
@@ -132,10 +125,7 @@ contract KnowledgeRegistry is
      */
     modifier onlyTokenOwner(uint256 tokenId) {
         IBAP578.State memory agentState = bap578Token.getState(tokenId);
-        require(
-            agentState.owner == msg.sender,
-            "KnowledgeRegistry: caller is not token owner"
-        );
+        require(agentState.owner == msg.sender, "KnowledgeRegistry: caller is not token owner");
         _;
     }
 
@@ -157,18 +147,9 @@ contract KnowledgeRegistry is
      * @param bap578TokenAddress Address of the BAP578 token contract
      * @param _defaultMaxSources Default maximum sources per agent
      */
-    function initialize(
-        address bap578TokenAddress,
-        uint256 _defaultMaxSources
-    ) public initializer {
-        require(
-            bap578TokenAddress != address(0),
-            "KnowledgeRegistry: invalid BAP578 address"
-        );
-        require(
-            _defaultMaxSources > 0,
-            "KnowledgeRegistry: invalid max sources"
-        );
+    function initialize(address bap578TokenAddress, uint256 _defaultMaxSources) public initializer {
+        require(bap578TokenAddress != address(0), "KnowledgeRegistry: invalid BAP578 address");
+        require(_defaultMaxSources > 0, "KnowledgeRegistry: invalid max sources");
 
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -206,17 +187,11 @@ contract KnowledgeRegistry is
         }
 
         KnowledgeConfig storage config = agentConfigs[tokenId];
-        require(
-            config.totalSources < config.maxSources,
-            "KnowledgeRegistry: max sources reached"
-        );
+        require(config.totalSources < config.maxSources, "KnowledgeRegistry: max sources reached");
 
         // Check if dynamic sources are allowed for this type
         if (sourceType == KnowledgeType.DYNAMIC) {
-            require(
-                config.allowDynamicSources,
-                "KnowledgeRegistry: dynamic sources not allowed"
-            );
+            require(config.allowDynamicSources, "KnowledgeRegistry: dynamic sources not allowed");
         }
 
         _sourceIdCounter.increment();
@@ -260,11 +235,7 @@ contract KnowledgeRegistry is
         uint256 sourceId,
         string memory newUri,
         bytes32 newContentHash
-    ) external 
-      onlyTokenOwner(tokenId) 
-      sourceExists(tokenId, sourceId) 
-      nonReentrant 
-    {
+    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) nonReentrant {
         require(bytes(newUri).length > 0, "KnowledgeRegistry: empty URI");
 
         KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
@@ -296,10 +267,7 @@ contract KnowledgeRegistry is
     function toggleKnowledgeSource(
         uint256 tokenId,
         uint256 sourceId
-    ) external 
-      onlyTokenOwner(tokenId) 
-      sourceExists(tokenId, sourceId) 
-    {
+    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) {
         KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
         source.active = !source.active;
 
@@ -323,10 +291,7 @@ contract KnowledgeRegistry is
         uint256 tokenId,
         uint256 sourceId,
         uint256 newPriority
-    ) external 
-      onlyTokenOwner(tokenId) 
-      sourceExists(tokenId, sourceId) 
-    {
+    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) {
         KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
         uint256 oldPriority = source.priority;
         source.priority = newPriority;
@@ -343,13 +308,9 @@ contract KnowledgeRegistry is
     function removeKnowledgeSource(
         uint256 tokenId,
         uint256 sourceId
-    ) external 
-      onlyTokenOwner(tokenId) 
-      sourceExists(tokenId, sourceId) 
-      nonReentrant 
-    {
+    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) nonReentrant {
         KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
-        
+
         // Update URI tracking
         bytes32 uriHash = keccak256(abi.encodePacked(source.uri));
         _removeFromUriTracking(uriHash, tokenId);
@@ -389,7 +350,7 @@ contract KnowledgeRegistry is
         bool allowDynamicSources
     ) external onlyTokenOwner(tokenId) {
         require(maxSources > 0, "KnowledgeRegistry: invalid max sources");
-        
+
         KnowledgeConfig storage config = agentConfigs[tokenId];
         require(
             maxSources >= config.totalSources,
@@ -409,18 +370,16 @@ contract KnowledgeRegistry is
      * @param tokenId The ID of the agent token
      * @return sources Array of knowledge sources
      */
-    function getKnowledgeSources(uint256 tokenId) 
-        external 
-        view 
-        returns (KnowledgeSource[] memory sources) 
-    {
+    function getKnowledgeSources(
+        uint256 tokenId
+    ) external view returns (KnowledgeSource[] memory sources) {
         uint256[] memory sourceIds = agentSourceIds[tokenId];
         sources = new KnowledgeSource[](sourceIds.length);
-        
+
         for (uint256 i = 0; i < sourceIds.length; i++) {
             sources[i] = knowledgeSources[tokenId][sourceIds[i]];
         }
-        
+
         return sources;
     }
 
@@ -429,21 +388,19 @@ contract KnowledgeRegistry is
      * @param tokenId The ID of the agent token
      * @return sources Array of active knowledge sources
      */
-    function getActiveKnowledgeSources(uint256 tokenId) 
-        external 
-        view 
-        returns (KnowledgeSource[] memory sources) 
-    {
+    function getActiveKnowledgeSources(
+        uint256 tokenId
+    ) external view returns (KnowledgeSource[] memory sources) {
         uint256[] memory sourceIds = agentSourceIds[tokenId];
         uint256 activeCount = 0;
-        
+
         // Count active sources
         for (uint256 i = 0; i < sourceIds.length; i++) {
             if (knowledgeSources[tokenId][sourceIds[i]].active) {
                 activeCount++;
             }
         }
-        
+
         // Populate active sources
         sources = new KnowledgeSource[](activeCount);
         uint256 index = 0;
@@ -453,7 +410,7 @@ contract KnowledgeRegistry is
                 sources[index++] = source;
             }
         }
-        
+
         return sources;
     }
 
@@ -462,13 +419,11 @@ contract KnowledgeRegistry is
      * @param tokenId The ID of the agent token
      * @return sources Array of knowledge sources sorted by priority
      */
-    function getKnowledgeSourcesByPriority(uint256 tokenId) 
-        external 
-        view 
-        returns (KnowledgeSource[] memory sources) 
-    {
+    function getKnowledgeSourcesByPriority(
+        uint256 tokenId
+    ) external view returns (KnowledgeSource[] memory sources) {
         sources = this.getActiveKnowledgeSources(tokenId);
-        
+
         // Simple bubble sort for priority (descending)
         for (uint256 i = 0; i < sources.length; i++) {
             for (uint256 j = 0; j < sources.length - i - 1; j++) {
@@ -479,7 +434,7 @@ contract KnowledgeRegistry is
                 }
             }
         }
-        
+
         return sources;
     }
 
@@ -495,14 +450,14 @@ contract KnowledgeRegistry is
     ) external view returns (KnowledgeSource[] memory sources) {
         uint256[] memory sourceIds = agentSourceIds[tokenId];
         uint256 typeCount = 0;
-        
+
         // Count sources of this type
         for (uint256 i = 0; i < sourceIds.length; i++) {
             if (knowledgeSources[tokenId][sourceIds[i]].sourceType == sourceType) {
                 typeCount++;
             }
         }
-        
+
         // Populate sources of this type
         sources = new KnowledgeSource[](typeCount);
         uint256 index = 0;
@@ -512,7 +467,7 @@ contract KnowledgeRegistry is
                 sources[index++] = source;
             }
         }
-        
+
         return sources;
     }
 
@@ -521,19 +476,17 @@ contract KnowledgeRegistry is
      * @param tokenId The ID of the agent token
      * @return config The knowledge configuration
      */
-    function getKnowledgeConfig(uint256 tokenId) 
-        external 
-        view 
-        returns (KnowledgeConfig memory config) 
-    {
+    function getKnowledgeConfig(
+        uint256 tokenId
+    ) external view returns (KnowledgeConfig memory config) {
         config = agentConfigs[tokenId];
-        
+
         // Return default config if not initialized
         if (config.maxSources == 0) {
             config.maxSources = defaultMaxSources;
             config.allowDynamicSources = true;
         }
-        
+
         return config;
     }
 
@@ -542,11 +495,7 @@ contract KnowledgeRegistry is
      * @param uri The URI to check
      * @return agents Array of token IDs using this URI
      */
-    function getAgentsUsingUri(string memory uri) 
-        external 
-        view 
-        returns (uint256[] memory agents) 
-    {
+    function getAgentsUsingUri(string memory uri) external view returns (uint256[] memory agents) {
         bytes32 uriHash = keccak256(abi.encodePacked(uri));
         return uriToAgents[uriHash];
     }
