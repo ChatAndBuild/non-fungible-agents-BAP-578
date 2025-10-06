@@ -88,6 +88,7 @@ contract BAP578Treasury is
 
     event AuthorizedTransfer(address indexed recipient, uint256 amount, string addressType);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
