@@ -2,231 +2,276 @@
 
 ## Overview
 
-The Experience Module Registry is a critical component of the BAP-578 Non-Fungible Agent (NFA) ecosystem that allows agents to register and manage external experience sources. This registry provides a secure and flexible way to extend an agent's capabilities without modifying the core contract.
+The Experience Module Registry is a critical component of the BAP-578 Non-Fungible Agent (NFA) ecosystem that allows agents to register and manage external experience sources. This registry provides a secure and flexible way to extend an agent's capabilities through learning modules without modifying the core contracts.
 
 ## Purpose
 
 The primary purpose of the ExperienceModuleRegistry is to:
 
-1. Allow agent owners to register approved external experience modules
-2. Provide cryptographic verification for module registration
-3. Manage approval status for registered modules
-4. Store and retrieve metadata for experience modules
-5. Enable agents to access a network of specialized experience services
+1. Allow agent owners to register approved external experience modules with cryptographic verification
+2. Manage different types of experience modules (Static, Adaptive, Learning, Federated)
+3. Enforce security levels for modules (Experimental, Community, Professional, Enterprise)
+4. Track module usage across all agents
+5. Enable agents to configure their learning preferences
+6. Provide a global registry of all available modules
 
 ## Contract Architecture
 
-The ExperienceModuleRegistry is implemented as an upgradeable contract with the following key components:
+The ExperienceModuleRegistry is implemented as an upgradeable contract using UUPS pattern:
 
 ```solidity
-contract ExperienceModuleRegistry is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    // BAP578 token contract
-    BAP578 public bap578Token;
-    
-    // Mapping from token ID to registered experience modules
+contract ExperienceModuleRegistry is 
+    Initializable, 
+    OwnableUpgradeable, 
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable 
+{
+    // Core state variables (automatically initialized in Solidity)
+    IBAP578 public bap578Token;
     mapping(uint256 => address[]) private _registeredModules;
-    
-    // Mapping from token ID to module address to approval status
     mapping(uint256 => mapping(address => bool)) private _approvedModules;
-    
-    // Mapping from token ID to module address to module metadata
     mapping(uint256 => mapping(address => string)) private _moduleMetadata;
-
-    // Events
-    event ModuleRegistered(uint256 indexed tokenId, address indexed moduleAddress, string metadata);
-    event ModuleApproved(uint256 indexed tokenId, address indexed moduleAddress, bool approved);
-    event ModuleMetadataUpdated(uint256 indexed tokenId, address indexed moduleAddress, string metadata);
-    
-    // Functions
-    function initialize(address _bap578Token) public initializer;
-    function registerModule(uint256 tokenId, address moduleAddress, string memory metadata, bytes memory signature) external nonReentrant;
-    function setModuleApproval(uint256 tokenId, address moduleAddress, bool approved) external;
-    function updateModuleMetadata(uint256 tokenId, address moduleAddress, string memory metadata) external;
-    function getRegisteredModules(uint256 tokenId) external view returns (address[] memory);
-    function isModuleApproved(uint256 tokenId, address moduleAddress) external view returns (bool);
-    function getModuleMetadata(uint256 tokenId, address moduleAddress) external view returns (string memory);
+    mapping(address => ExperienceModule) private _moduleRegistry;
+    mapping(uint256 => AgentExperienceConfig) private _agentConfigs;
+    mapping(address => uint256) private _moduleUsageCount;
+    address[] private _allModules;
+    mapping(address => uint256) private _moduleIndex;
 }
 ```
 
-## Key Features
+## Key Data Structures
 
-### Cryptographic Verification
+### ExperienceModule
+```solidity
+struct ExperienceModule {
+    address moduleAddress;
+    bytes32 moduleHash;
+    string specification;
+    ExperienceType experienceType;
+    SecurityLevel securityLevel;
+    bool active;
+    uint256 registrationTime;
+    address creator;
+    uint256 version;
+}
+```
 
-The registry uses cryptographic signatures to verify that module registrations are authorized by the agent owner:
+### Experience Types
+```solidity
+enum ExperienceType {
+    STATIC,     // Traditional static experience (no learning)
+    ADAPTIVE,   // Basic adaptive experience (simple learning)
+    LEARNING,   // Full learning capabilities (advanced AI)
+    FEDERATED   // Cross-agent learning support (collaborative)
+}
+```
+
+### Security Levels
+```solidity
+enum SecurityLevel {
+    EXPERIMENTAL,  // For development and testing
+    COMMUNITY,     // Community-validated modules
+    PROFESSIONAL,  // Professionally audited
+    ENTERPRISE     // Enterprise-grade security
+}
+```
+
+### Agent Experience Configuration
+```solidity
+struct AgentExperienceConfig {
+    bool learningEnabled;
+    ExperienceType preferredType;
+    uint256 maxModules;
+    uint256 lastUpdate;
+}
+```
+
+## Core Functions
+
+### Module Registration
+- `registerModule(tokenId, moduleAddress, moduleHash, specification, experienceType, securityLevel, metadata, signature)`: Register a new module with cryptographic verification
+- Module is added to global registry if new
+- Module is added to agent's registry
+- Usage count is tracked
+
+### Module Management
+- `setModuleApproval(tokenId, moduleAddress, approved)`: Approve/revoke module for an agent
+- `updateModuleMetadata(tokenId, moduleAddress, metadata)`: Update module metadata
+- `deactivateModule(moduleAddress, reason)`: Deactivate a module (creator or owner only)
+
+### Agent Configuration
+- `updateAgentExperienceConfig(tokenId, learningEnabled, preferredType, maxModules)`: Configure agent's learning preferences
+
+### Query Functions
+- `getRegisteredModules(tokenId)`: Get all modules registered for an agent
+- `getApprovedModules(tokenId)`: Get only approved modules for an agent
+- `getModuleInfo(moduleAddress)`: Get full module information
+- `getAgentExperienceConfig(tokenId)`: Get agent's experience configuration
+- `getModulesByType(experienceType)`: Get modules filtered by type
+- `getModulesBySecurityLevel(securityLevel)`: Get modules filtered by security level
+- `getAllModules()`: Get all registered modules globally
+- `getModuleUsageCount(moduleAddress)`: Get usage count across all agents
+
+## Cryptographic Verification
+
+The registry uses ECDSA signatures to verify module registrations:
 
 ```solidity
-// Verify the signature
-bytes32 messageHash = keccak256(abi.encodePacked(tokenId, moduleAddress, metadata));
+bytes32 messageHash = keccak256(abi.encodePacked(
+    tokenId,
+    moduleAddress,
+    moduleHash,
+    specification,
+    uint256(experienceType),
+    uint256(securityLevel),
+    metadata
+));
 bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
 address signer = ethSignedMessageHash.recover(signature);
-
-require(signer == owner, "ExperienceModuleRegistry: invalid signature");
 ```
 
-### Module Approval Management
+## Experience Module Specification Schema
 
-Modules can be approved or revoked by the agent owner:
-
-```solidity
-function setModuleApproval(
-    uint256 tokenId,
-    address moduleAddress,
-    bool approved
-) external {
-    // Only the token owner can approve or revoke modules
-    require(bap578Token.ownerOf(tokenId) == msg.sender, "ExperienceModuleRegistry: not token owner");
-    
-    _approvedModules[tokenId][moduleAddress] = approved;
-    
-    emit ModuleApproved(tokenId, moduleAddress, approved);
-}
-```
-
-### Metadata Management
-
-Module metadata can be updated by the agent owner:
-
-```solidity
-function updateModuleMetadata(
-    uint256 tokenId,
-    address moduleAddress,
-    string memory metadata
-) external {
-    // Only the token owner can update module metadata
-    require(bap578Token.ownerOf(tokenId) == msg.sender, "ExperienceModuleRegistry: not token owner");
-    require(_approvedModules[tokenId][moduleAddress], "ExperienceModuleRegistry: module not approved");
-    
-    _moduleMetadata[tokenId][moduleAddress] = metadata;
-    
-    emit ModuleMetadataUpdated(tokenId, moduleAddress, metadata);
-}
-```
-
-## Experience Module Schema
-
-Experience modules are structured as JSON documents that include structured experience layers, custom prompts, and modular behaviors:
+Modules must provide a JSON specification with required fields:
 
 ```json
 {
-  "context_id": "nfa578-experience-001",
+  "context_id": "nfa007-experience-001",
   "owner": "0xUserWalletAddress",
-  "created": "2025-05-12T10:00:00Z",
-  "persona": "Strategic crypto analyst",
+  "created": "2025-01-20T10:00:00Z",
+  "persona": "Strategic crypto analyst with learning capabilities",
+  "learning_enabled": true,
+  "learning_type": "adaptive_experience",
   "experience_slots": [
     {
       "type": "alert_keywords",
-      "data": ["FUD", "rugpull", "hack", "$BNB", "scam"]
-    },
-    {
-      "type": "watchlist",
-      "data": ["CZ", "Binance", "Tether", "SEC"]
+      "data": ["FUD", "rugpull", "hack", "$BNB", "scam"],
+      "learning_weight": 0.8,
+      "adaptation_rate": 0.1
     },
     {
       "type": "behavior_rules",
       "data": [
         "If sentiment drops >10% in 24h, alert user",
-        "If wallet activity spikes, summarize top 5 tokens"
+        "Learn from user feedback on alerts"
       ]
     }
   ],
-  "last_updated": "2025-05-12T11:00:00Z",
-  "signed": "0xAgentSig"
+  "last_updated": "2025-01-20T11:00:00Z"
 }
 ```
 
 ## Usage Examples
 
-### Registering a Experience Module
+### Registering an Experience Module
 
 ```javascript
-// Create module metadata
-const moduleMetadata = JSON.stringify({
-  context_id: "nfa578-experience-001",
-  owner: ownerAddress,
-  created: new Date().toISOString(),
-  persona: "Strategic crypto analyst",
-  experience_slots: [
-    {
-      type: "alert_keywords",
-      data: ["FUD", "rugpull", "hack", "$BNB", "scam"]
-    }
-  ]
+// Prepare module data
+const moduleHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('module-code-hash'));
+const specification = JSON.stringify({
+    context_id: "nfa007-experience-001",
+    persona: "Strategic crypto analyst",
+    experience_slots: [...]
 });
 
-// Create message hash
+// Create signature
 const messageHash = ethers.utils.solidityKeccak256(
-  ["uint256", "address", "string"],
-  [tokenId, moduleAddress, moduleMetadata]
+    ['uint256', 'address', 'bytes32', 'string', 'uint256', 'uint256', 'string'],
+    [tokenId, moduleAddress, moduleHash, specification, 2, 1, metadata] // LEARNING, COMMUNITY
 );
-
-// Sign the message
 const signature = await wallet.signMessage(ethers.utils.arrayify(messageHash));
 
-// Register the module
+// Register module
 await experienceRegistry.registerModule(
-  tokenId,
-  moduleAddress,
-  moduleMetadata,
-  signature
+    tokenId,
+    moduleAddress,
+    moduleHash,
+    specification,
+    2, // LEARNING
+    1, // COMMUNITY
+    metadata,
+    signature
 );
 ```
 
-### Checking Module Approval
+### Configuring Agent Experience
 
 ```javascript
-// Check if a module is approved
-const isApproved = await experienceRegistry.isModuleApproved(tokenId, moduleAddress);
-
-if (isApproved) {
-  console.log("Module is approved");
-} else {
-  console.log("Module is not approved");
-}
+await experienceRegistry.updateAgentExperienceConfig(
+    tokenId,
+    true,  // learningEnabled
+    2,     // LEARNING preferredType
+    5      // maxModules
+);
 ```
 
-### Retrieving Module Metadata
+### Querying Modules by Type
 
 ```javascript
-// Get module metadata
-const metadata = await experienceRegistry.getModuleMetadata(tokenId, moduleAddress);
-const parsedMetadata = JSON.parse(metadata);
+// Get all learning modules
+const learningModules = await experienceRegistry.getModulesByType(2); // LEARNING
 
-console.log("Module persona:", parsedMetadata.persona);
-console.log("Alert keywords:", parsedMetadata.experience_slots[0].data);
+// Get enterprise-grade modules
+const enterpriseModules = await experienceRegistry.getModulesBySecurityLevel(3); // ENTERPRISE
 ```
 
 ## Security Considerations
 
-### Signature Verification
-
-The registry uses ECDSA signatures to verify that module registrations are authorized by the agent owner. This prevents unauthorized parties from registering modules for an agent.
-
 ### Access Control
+- Only token owners can register modules for their agents
+- Only token owners can approve/revoke modules
+- Only module creators or contract owner can deactivate modules
 
-Only the agent owner can approve or revoke modules and update module metadata. This ensures that the agent owner maintains control over which modules can be used by their agent.
+### Signature Verification
+- All module registrations require cryptographic proof from the token owner
+- Prevents unauthorized module registration
 
 ### Reentrancy Protection
+- Uses OpenZeppelin's ReentrancyGuard for all state-changing operations
 
-The registry uses OpenZeppelin's ReentrancyGuard to protect against reentrancy attacks during module registration.
+### Upgradeable Pattern
+- Implements UUPS pattern for future upgrades
+- Only owner can authorize upgrades
+
+### State Initialization
+- All mappings and arrays are automatically initialized by Solidity
+- No explicit initialization needed (Slither false positive suppressed)
+- Safe for upgradeable contracts
+
+## Events
+
+- `ModuleRegistered`: Emitted when a new module is registered
+- `ModuleApproved`: Emitted when module approval status changes
+- `ModuleMetadataUpdated`: Emitted when module metadata is updated
+- `AgentExperienceConfigUpdated`: Emitted when agent config is updated
+- `ModuleDeactivated`: Emitted when a module is deactivated
+- `ModuleUsageUpdated`: Emitted when module usage count changes
+- `ContractInitialized`: Emitted when contract is initialized
 
 ## Integration with BAP-578 Ecosystem
 
-The Experience Module Registry integrates with the BAP-578 ecosystem in the following ways:
+1. **Agent Creation**: Agents can register experience modules upon creation
+2. **Learning Modules**: Integrates with MerkleTreeLearning for advanced AI capabilities
+3. **Agent Factory**: Factory can set default modules for new agents
+4. **Governance**: Community can vote on module security levels
+5. **Circuit Breaker**: Emergency pause capability for security
 
-1. **Agent Creation**: When an agent is created, it can register experience modules to extend its capabilities.
-2. **Agent Logic**: Agent logic contracts can query the registry to access registered modules.
-3. **Agent Upgrades**: When an agent's logic is upgraded, it can register new modules to support new functionality.
-4. **Agent Governance**: The governance system can approve or revoke modules based on community decisions.
+## Best Practices
 
-## Future Extensions
+1. **Module Validation**: Always validate module specifications before registration
+2. **Security Levels**: Start with EXPERIMENTAL and upgrade after testing
+3. **Usage Monitoring**: Track module usage to identify popular modules
+4. **Version Management**: Use module versions to track updates
+5. **Metadata Updates**: Keep module metadata current with capabilities
 
-The Experience Module Registry is designed to be extensible and can be enhanced in the following ways:
+## Future Enhancements
 
-1. **Module Categories**: Adding support for categorizing modules by functionality.
-2. **Module Versioning**: Adding support for versioning modules to track updates.
-3. **Module Reputation**: Adding a reputation system for modules based on usage and feedback.
-4. **Module Marketplace**: Creating a marketplace for experience modules where developers can offer specialized modules.
+1. **Module Marketplace**: Create a marketplace for buying/selling modules
+2. **Reputation System**: Add reputation scoring based on usage and feedback
+3. **Module Composability**: Allow modules to interact with each other
+4. **Cross-Chain Modules**: Enable modules from other blockchains
+5. **AI Model Integration**: Direct integration with AI model providers
 
 ## Conclusion
 
-The Experience Module Registry is a powerful component of the BAP-578 ecosystem that enables agents to extend their capabilities through external experience sources. By providing a secure and flexible way to register and manage experience modules, the registry enables agents to evolve and adapt to new use cases without requiring changes to the core contract.
+The Experience Module Registry provides a robust, secure, and flexible system for extending agent capabilities through external modules. With support for different experience types, security levels, and cryptographic verification, it enables the creation of a rich ecosystem of learning and adaptation modules for BAP-578 agents.

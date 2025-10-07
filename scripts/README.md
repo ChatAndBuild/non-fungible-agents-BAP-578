@@ -111,7 +111,7 @@ npm run interact:testnet
 - Support for constructor arguments
 - Uses modern `@nomicfoundation/hardhat-verify` plugin
 
-**Important**: Verification uses a separate config file (`hardhat.verify.config.js`) to avoid plugin conflicts with OpenZeppelin upgrades.
+**Note**: Contract verification is integrated into the main `hardhat.config.js` file alongside the OpenZeppelin upgrades plugin.
 
 ### `interact.js` - Contract Interaction
 
