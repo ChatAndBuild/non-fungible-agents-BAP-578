@@ -1,0 +1,21 @@
+{
+  "network": "BSC Testnet",
+  "chainId": 97,
+  "createdAt": "2025-10-08T09:29:39.775Z",
+  "transactionHash": "0x6c68dc1ab23fe51b938d7bba804837a18ba35987734d93f1c376dd385e849085",
+  "blockNumber": 68093529,
+  "agent": {
+    "address": "0x5ee228217C78d5d1887111BA3C511CeCfe57a7Dc",
+    "tokenId": "1",
+    "name": "Test Agent BSC",
+    "symbol": "TAGENT",
+    "owner": "0x96091e2b58676D678C4D9F836Edb2327232e09b9",
+    "logic": "0x0000000000000000000000000000000000000001",
+    "metadataURI": "ipfs://QmTestAgentMetadata1759915777959"
+  },
+  "contracts": {
+    "agentFactory": "0x1D754d4c92504cAe2372a4ba641B96f7799568FF",
+    "treasury": "0x5267Ab1006E31803A9e021f4c89E0Cb67a2993Ef",
+    "governance": "0xA9463E450f743DD4075bc9ECb9ed36A0CF1E78cE"
+  }
+}

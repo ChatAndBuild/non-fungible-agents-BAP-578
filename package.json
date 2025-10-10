@@ -9,8 +9,6 @@
     "deploy": "npx hardhat run scripts/deploy.js",
     "deploy:dev": "npx hardhat run scripts/deploy-dev.js",
     "deploy:full": "npx hardhat run scripts/deploy-full.js",
-    "deploy:testnet": "npx hardhat run scripts/deploy.js --network testnet",
-    "deploy:mainnet": "npx hardhat run scripts/deploy.js --network mainnet",
     "deploy:full:testnet": "npx hardhat run scripts/deploy-full.js --network testnet",
     "deploy:full:mainnet": "npx hardhat run scripts/deploy-full.js --network mainnet",
     "verify": "npx hardhat run scripts/verify-contracts.js",
