@@ -165,6 +165,45 @@ contract AgentFactory is
             vaultHash: bytes32(0)
         });
 
+        // Call internal function with empty metadata
+        return _createAgentInternal(name, symbol, logicAddress, metadataURI, emptyMetadata);
+    }
+
+    /**
+     * @dev Creates a new agent with extended metadata including vault information
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata including vault information
+     * @return agent The address of the new agent contract
+     */
+    function createAgentWithExtendedMetadata(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI,
+        IBAP578.AgentMetadata calldata extendedMetadata
+    ) external payable returns (address agent) {
+        return _createAgentInternal(name, symbol, logicAddress, metadataURI, extendedMetadata);
+    }
+
+    /**
+     * @dev Internal function to create a new agent with extended metadata
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata for the agent
+     * @return agent The address of the new agent contract
+     */
+    function _createAgentInternal(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI,
+        IBAP578.AgentMetadata memory extendedMetadata
+    ) internal returns (address agent) {
         // Verify fee payment
         require(msg.value == AGENT_CREATION_FEE, "AgentFactory: incorrect fee amount");
 
@@ -178,7 +217,7 @@ contract AgentFactory is
             symbol: symbol,
             logicAddress: logicAddress,
             metadataURI: metadataURI,
-            extendedMetadata: emptyMetadata
+            extendedMetadata: extendedMetadata
         });
 
         agent = address(
@@ -209,6 +248,9 @@ contract AgentFactory is
             params.metadataURI,
             enhancedMetadata
         );
+
+        // Update global stats
+        _updateGlobalStats(false);
 
         emit AgentCreated(agent, msg.sender, tokenId, params.logicAddress);
 
