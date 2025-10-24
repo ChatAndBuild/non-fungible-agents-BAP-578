@@ -12,28 +12,29 @@ async function main() {
   const DEFAULT_MAX_SOURCES = 10; // Default maximum knowledge sources per agent
 
   // Get contract addresses from environment or use defaults
-  const BAP578_ADDRESS = process.env.BAP578_ADDRESS;
+  const AGENT_FACTORY_ADDRESS = process.env.AGENT_FACTORY_ADDRESS;
   
-  if (!BAP578_ADDRESS) {
-    console.error('ERROR: BAP578_ADDRESS not set in environment variables');
-    console.log('Please set BAP578_ADDRESS in your .env file');
-    console.log('Example: BAP578_ADDRESS=0x1234567890123456789012345678901234567890');
+  if (!AGENT_FACTORY_ADDRESS) {
+    console.error('ERROR: AGENT_FACTORY_ADDRESS not set in environment variables');
+    console.log('Please set AGENT_FACTORY_ADDRESS in your .env file');
+    console.log('Example: AGENT_FACTORY_ADDRESS=0x1234567890123456789012345678901234567890');
+    console.log('\nNote: The KnowledgeRegistry now requires the AgentFactory address, not BAP578 address');
     process.exit(1);
   }
 
   console.log('Configuration:');
-  console.log('- BAP578 Address:', BAP578_ADDRESS);
+  console.log('- AgentFactory Address:', AGENT_FACTORY_ADDRESS);
   console.log('- Default Max Sources:', DEFAULT_MAX_SOURCES);
   console.log('');
 
   try {
-    // Verify BAP578 contract exists
-    console.log('Verifying BAP578 contract...');
-    const bap578Code = await ethers.provider.getCode(BAP578_ADDRESS);
-    if (bap578Code === '0x') {
-      throw new Error(`No contract found at BAP578 address: ${BAP578_ADDRESS}`);
+    // Verify AgentFactory contract exists
+    console.log('Verifying AgentFactory contract...');
+    const agentFactoryCode = await ethers.provider.getCode(AGENT_FACTORY_ADDRESS);
+    if (agentFactoryCode === '0x') {
+      throw new Error(`No contract found at AgentFactory address: ${AGENT_FACTORY_ADDRESS}`);
     }
-    console.log('✓ BAP578 contract verified\n');
+    console.log('✓ AgentFactory contract verified\n');
 
     // Deploy KnowledgeRegistry
     console.log('Deploying KnowledgeRegistry...');
@@ -41,7 +42,7 @@ async function main() {
     
     const knowledgeRegistry = await upgrades.deployProxy(
       KnowledgeRegistry,
-      [BAP578_ADDRESS, DEFAULT_MAX_SOURCES],
+      [AGENT_FACTORY_ADDRESS, DEFAULT_MAX_SOURCES],
       { 
         initializer: 'initialize',
         kind: 'uups'
@@ -58,12 +59,12 @@ async function main() {
 
     // Verify deployment
     console.log('Verifying deployment...');
-    const bap578Token = await knowledgeRegistry.bap578Token();
+    const agentFactory = await knowledgeRegistry.agentFactory();
     const defaultMaxSources = await knowledgeRegistry.defaultMaxSources();
     const owner = await knowledgeRegistry.owner();
 
     console.log('✓ Deployment verified:');
-    console.log('  - BAP578 Token:', bap578Token);
+    console.log('  - AgentFactory:', agentFactory);
     console.log('  - Default Max Sources:', defaultMaxSources.toString());
     console.log('  - Owner:', owner);
     console.log('');
@@ -82,7 +83,7 @@ async function main() {
         implementation: implementationAddress
       },
       configuration: {
-        bap578Address: BAP578_ADDRESS,
+        agentFactoryAddress: AGENT_FACTORY_ADDRESS,
         defaultMaxSources: DEFAULT_MAX_SOURCES,
         owner: owner
       },
@@ -113,7 +114,7 @@ async function main() {
     console.log('Implementation:', implementationAddress);
     console.log('');
     console.log('Configuration:');
-    console.log('  BAP578 Token:', BAP578_ADDRESS);
+    console.log('  AgentFactory:', AGENT_FACTORY_ADDRESS);
     console.log('  Default Max Sources:', DEFAULT_MAX_SOURCES);
     console.log('  Owner:', owner);
     console.log('');
@@ -171,7 +172,7 @@ USAGE INSTRUCTIONS:
 ==================
 
 1. Set environment variables in .env:
-   BAP578_ADDRESS=<your-bap578-contract-address>
+   AGENT_FACTORY_ADDRESS=<your-agent-factory-contract-address>
    RUN_TEST_TRANSACTION=true  # Optional: to run a test transaction
 
 2. Deploy to local network:
@@ -186,7 +187,7 @@ USAGE INSTRUCTIONS:
 FEATURES:
 =========
 - Upgradeable deployment using UUPS pattern
-- Automatic verification of BAP578 contract existence
+- Automatic verification of AgentFactory contract existence
 - Saves deployment information to file
 - Comprehensive deployment summary
 - Error handling and validation
@@ -196,7 +197,14 @@ CONFIGURATION:
 =============
 The script uses the following configuration:
 - DEFAULT_MAX_SOURCES: Maximum knowledge sources per agent (default: 10)
-- BAP578_ADDRESS: Address of the deployed BAP578 contract (required)
+- AGENT_FACTORY_ADDRESS: Address of the deployed AgentFactory contract (required)
+
+IMPORTANT CHANGES:
+=================
+The KnowledgeRegistry has been updated to support multiple agent contracts:
+- Now requires AgentFactory address instead of a single BAP578 address
+- Each agent is a separate contract with token ID 1
+- Knowledge functions now require (agentContract, tokenId) instead of just tokenId
 
 OUTPUTS:
 ========

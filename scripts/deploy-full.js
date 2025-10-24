@@ -152,23 +152,8 @@ async function main() {
     deployments.ExperienceModuleRegistry = experienceRegistry.address;
     console.log("✅ ExperienceModuleRegistry deployed to:", experienceRegistry.address);
 
-    // 6. Deploy KnowledgeRegistry (NEW)
-    console.log("\n📋 6. Deploying KnowledgeRegistry...");
-    const KnowledgeRegistry = await ethers.getContractFactory("KnowledgeRegistry");
-    const knowledgeRegistry = await executeWithRetry(async () => {
-      const contract = await upgrades.deployProxy(
-        KnowledgeRegistry,
-        [bap578Proxy.address, 10], // Using main proxy for registry, 10 max sources per agent
-        { initializer: "initialize", kind: "uups" }
-      );
-      await contract.deployed();
-      return contract;
-    }, "KnowledgeRegistry deployment");
-    deployments.KnowledgeRegistry = knowledgeRegistry.address;
-    console.log("✅ KnowledgeRegistry deployed to:", knowledgeRegistry.address);
-
-    // 7. Deploy Learning Modules
-    console.log("\n📋 7. Deploying Learning Modules...");
+    // 6. Deploy Learning Modules (moved before AgentFactory)
+    console.log("\n📋 6. Deploying Learning Modules...");
     
     // Deploy MerkleTreeLearning
     const MerkleTreeLearning = await ethers.getContractFactory("MerkleTreeLearning");
@@ -184,8 +169,8 @@ async function main() {
     deployments.MerkleTreeLearning = merkleLearning.address;
     console.log("✅ MerkleTreeLearning deployed to:", merkleLearning.address);
 
-    // 8. Deploy AgentFactory with RAW IMPLEMENTATION
-    console.log("\n📋 8. Deploying AgentFactory (with raw implementation)...");
+    // 7. Deploy AgentFactory with RAW IMPLEMENTATION
+    console.log("\n📋 7. Deploying AgentFactory (with raw implementation)...");
     const AgentFactory = await ethers.getContractFactory("AgentFactory");
     const agentFactory = await executeWithRetry(async () => {
       const contract = await upgrades.deployProxy(
@@ -205,6 +190,22 @@ async function main() {
     deployments.AgentFactory = agentFactory.address;
     console.log("✅ AgentFactory deployed to:", agentFactory.address);
     console.log("    Using BAP578 implementation:", bap578RawImpl.address);
+
+    // 8. Deploy KnowledgeRegistry (AFTER AgentFactory, uses AgentFactory address)
+    console.log("\n📋 8. Deploying KnowledgeRegistry...");
+    const KnowledgeRegistry = await ethers.getContractFactory("KnowledgeRegistry");
+    const knowledgeRegistry = await executeWithRetry(async () => {
+      const contract = await upgrades.deployProxy(
+        KnowledgeRegistry,
+        [agentFactory.address, 10], // Now using AgentFactory address, 10 max sources per agent
+        { initializer: "initialize", kind: "uups" }
+      );
+      await contract.deployed();
+      return contract;
+    }, "KnowledgeRegistry deployment");
+    deployments.KnowledgeRegistry = knowledgeRegistry.address;
+    console.log("✅ KnowledgeRegistry deployed to:", knowledgeRegistry.address);
+    console.log("    Using AgentFactory:", agentFactory.address);
 
     // 9. Deploy BAP578Governance
     console.log("\n📋 9. Deploying BAP578Governance...");

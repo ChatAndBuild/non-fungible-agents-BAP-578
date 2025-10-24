@@ -63,23 +63,24 @@ contract KnowledgeRegistry is
 
     // ============ STATE VARIABLES ============
 
-    /// @dev Reference to the BAP578 token contract
-    IBAP578 public bap578Token;
+    /// @dev Reference to the AgentFactory contract for validation
+    address public agentFactory;
 
     /// @dev Counter for knowledge source IDs
     CountersUpgradeable.Counter private _sourceIdCounter;
 
-    /// @dev Mapping from token ID to knowledge sources
-    mapping(uint256 => mapping(uint256 => KnowledgeSource)) public knowledgeSources;
+    /// @dev Mapping from agent contract -> token ID -> source ID -> KnowledgeSource
+    mapping(address => mapping(uint256 => mapping(uint256 => KnowledgeSource))) public knowledgeSources;
 
-    /// @dev Mapping from token ID to array of source IDs
-    mapping(uint256 => uint256[]) public agentSourceIds;
+    /// @dev Mapping from agent contract -> token ID -> array of source IDs
+    mapping(address => mapping(uint256 => uint256[])) public agentSourceIds;
 
-    /// @dev Mapping from token ID to knowledge configuration
-    mapping(uint256 => KnowledgeConfig) public agentConfigs;
+    /// @dev Mapping from agent contract -> token ID -> knowledge configuration
+    mapping(address => mapping(uint256 => KnowledgeConfig)) public agentConfigs;
 
     /// @dev Mapping to track URI usage across agents (for deduplication)
-    mapping(bytes32 => uint256[]) public uriToAgents;
+    /// Maps URI hash to array of (agentContract, tokenId) packed as bytes32
+    mapping(bytes32 => bytes32[]) public uriToAgents;
 
     /// @dev Default maximum sources per agent
     uint256 public defaultMaxSources;
@@ -87,33 +88,46 @@ contract KnowledgeRegistry is
     // ============ EVENTS ============
 
     event KnowledgeSourceAdded(
+        address indexed agentContract,
         uint256 indexed tokenId,
-        uint256 indexed sourceId,
+        uint256 sourceId,
         string uri,
         KnowledgeType sourceType,
         uint256 priority
     );
 
     event KnowledgeSourceUpdated(
+        address indexed agentContract,
         uint256 indexed tokenId,
-        uint256 indexed sourceId,
+        uint256 sourceId,
         string oldUri,
         string newUri
     );
 
-    event KnowledgeSourceToggled(uint256 indexed tokenId, uint256 indexed sourceId, bool active);
+    event KnowledgeSourceToggled(
+        address indexed agentContract,
+        uint256 indexed tokenId,
+        uint256 sourceId,
+        bool active
+    );
 
-    event KnowledgeSourceRemoved(uint256 indexed tokenId, uint256 indexed sourceId);
+    event KnowledgeSourceRemoved(
+        address indexed agentContract,
+        uint256 indexed tokenId,
+        uint256 sourceId
+    );
 
     event KnowledgeConfigUpdated(
+        address indexed agentContract,
         uint256 indexed tokenId,
         uint256 maxSources,
         bool allowDynamicSources
     );
 
     event KnowledgePriorityChanged(
+        address indexed agentContract,
         uint256 indexed tokenId,
-        uint256 indexed sourceId,
+        uint256 sourceId,
         uint256 oldPriority,
         uint256 newPriority
     );
@@ -126,8 +140,10 @@ contract KnowledgeRegistry is
     /**
      * @dev Modifier to check if the caller is the owner of the specified token
      */
-    modifier onlyTokenOwner(uint256 tokenId) {
-        IBAP578.State memory agentState = bap578Token.getState(tokenId);
+    modifier onlyTokenOwner(address agentContract, uint256 tokenId) {
+        require(agentContract != address(0), "KnowledgeRegistry: invalid agent contract");
+        IBAP578 agent = IBAP578(agentContract);
+        IBAP578.State memory agentState = agent.getState(tokenId);
         require(agentState.owner == msg.sender, "KnowledgeRegistry: caller is not token owner");
         _;
     }
@@ -135,9 +151,9 @@ contract KnowledgeRegistry is
     /**
      * @dev Modifier to check if a source exists
      */
-    modifier sourceExists(uint256 tokenId, uint256 sourceId) {
+    modifier sourceExists(address agentContract, uint256 tokenId, uint256 sourceId) {
         require(
-            knowledgeSources[tokenId][sourceId].id == sourceId && sourceId != 0,
+            knowledgeSources[agentContract][tokenId][sourceId].id == sourceId && sourceId != 0,
             "KnowledgeRegistry: source does not exist"
         );
         _;
@@ -145,18 +161,18 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Initializes the contract
-     * @param bap578TokenAddress Address of the BAP578 token contract
+     * @param _agentFactory Address of the AgentFactory contract
      * @param _defaultMaxSources Default maximum sources per agent
      */
-    function initialize(address bap578TokenAddress, uint256 _defaultMaxSources) public initializer {
-        require(bap578TokenAddress != address(0), "KnowledgeRegistry: invalid BAP578 address");
+    function initialize(address _agentFactory, uint256 _defaultMaxSources) public initializer {
+        require(_agentFactory != address(0), "KnowledgeRegistry: invalid AgentFactory address");
         require(_defaultMaxSources > 0, "KnowledgeRegistry: invalid max sources");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        bap578Token = IBAP578(bap578TokenAddress);
+        agentFactory = _agentFactory;
         defaultMaxSources = _defaultMaxSources;
     }
 
@@ -164,6 +180,7 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Adds a new knowledge source for an agent
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param uri The URI of the knowledge source
      * @param sourceType The type of knowledge source
@@ -172,22 +189,23 @@ contract KnowledgeRegistry is
      * @param contentHash Hash of the content for verification
      */
     function addKnowledgeSource(
+        address agentContract,
         uint256 tokenId,
         string memory uri,
         KnowledgeType sourceType,
         uint256 priority,
         string memory description,
         bytes32 contentHash
-    ) external onlyTokenOwner(tokenId) nonReentrant returns (uint256 sourceId) {
+    ) external onlyTokenOwner(agentContract, tokenId) nonReentrant returns (uint256 sourceId) {
         require(bytes(uri).length > 0, "KnowledgeRegistry: empty URI");
 
         // Initialize config if needed
-        if (agentConfigs[tokenId].maxSources == 0) {
-            agentConfigs[tokenId].maxSources = defaultMaxSources;
-            agentConfigs[tokenId].allowDynamicSources = true;
+        if (agentConfigs[agentContract][tokenId].maxSources == 0) {
+            agentConfigs[agentContract][tokenId].maxSources = defaultMaxSources;
+            agentConfigs[agentContract][tokenId].allowDynamicSources = true;
         }
 
-        KnowledgeConfig storage config = agentConfigs[tokenId];
+        KnowledgeConfig storage config = agentConfigs[agentContract][tokenId];
         require(config.totalSources < config.maxSources, "KnowledgeRegistry: max sources reached");
 
         // Check if dynamic sources are allowed for this type
@@ -198,7 +216,35 @@ contract KnowledgeRegistry is
         _sourceIdCounter.increment();
         sourceId = _sourceIdCounter.current();
 
-        knowledgeSources[tokenId][sourceId] = KnowledgeSource({
+        // Store knowledge source
+        _storeKnowledgeSource(agentContract, tokenId, sourceId, uri, sourceType, priority, description, contentHash);
+
+        agentSourceIds[agentContract][tokenId].push(sourceId);
+        config.totalSources++;
+        config.activeSources++;
+
+        // Track URI usage (simplified to avoid stack too deep)
+        _trackUriUsage(uri, agentContract, tokenId);
+
+        emit KnowledgeSourceAdded(agentContract, tokenId, sourceId, uri, sourceType, priority);
+
+        return sourceId;
+    }
+
+    /**
+     * @dev Internal function to store knowledge source (helps avoid stack too deep)
+     */
+    function _storeKnowledgeSource(
+        address agentContract,
+        uint256 tokenId,
+        uint256 sourceId,
+        string memory uri,
+        KnowledgeType sourceType,
+        uint256 priority,
+        string memory description,
+        bytes32 contentHash
+    ) internal {
+        knowledgeSources[agentContract][tokenId][sourceId] = KnowledgeSource({
             id: sourceId,
             uri: uri,
             sourceType: sourceType,
@@ -210,121 +256,152 @@ contract KnowledgeRegistry is
             description: description,
             contentHash: contentHash
         });
+    }
 
-        agentSourceIds[tokenId].push(sourceId);
-        config.totalSources++;
-        config.activeSources++;
-
-        // Track URI usage
+    /**
+     * @dev Internal function to track URI usage (helps avoid stack too deep)
+     */
+    function _trackUriUsage(string memory uri, address agentContract, uint256 tokenId) internal {
         bytes32 uriHash = keccak256(abi.encodePacked(uri));
-        uriToAgents[uriHash].push(tokenId);
-
-        emit KnowledgeSourceAdded(tokenId, sourceId, uri, sourceType, priority);
-
-        return sourceId;
+        bytes32 agentId = keccak256(abi.encodePacked(agentContract, tokenId));
+        uriToAgents[uriHash].push(agentId);
     }
 
     /**
      * @dev Updates an existing knowledge source
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param sourceId The ID of the knowledge source
      * @param newUri The new URI
      * @param newContentHash New content hash
      */
     function updateKnowledgeSource(
+        address agentContract,
         uint256 tokenId,
         uint256 sourceId,
         string memory newUri,
         bytes32 newContentHash
-    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) nonReentrant {
+    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) nonReentrant {
         require(bytes(newUri).length > 0, "KnowledgeRegistry: empty URI");
+        
+        // Store the old URI before updating
+        string memory oldUri = knowledgeSources[agentContract][tokenId][sourceId].uri;
+        
+        // Update source fields
+        _updateSourceFields(agentContract, tokenId, sourceId, newUri, newContentHash);
+        
+        // Handle URI tracking update if URI changed
+        if (keccak256(abi.encodePacked(oldUri)) != keccak256(abi.encodePacked(newUri))) {
+            _handleUriChange(oldUri, newUri, agentContract, tokenId);
+        }
 
-        KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
-        string memory oldUri = source.uri;
-
+        emit KnowledgeSourceUpdated(agentContract, tokenId, sourceId, oldUri, newUri);
+    }
+    
+    /**
+     * @dev Internal function to update source fields (helps avoid stack too deep)
+     */
+    function _updateSourceFields(
+        address agentContract,
+        uint256 tokenId,
+        uint256 sourceId,
+        string memory newUri,
+        bytes32 newContentHash
+    ) internal {
+        KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
         source.uri = newUri;
         source.contentHash = newContentHash;
         source.version++;
         source.lastUpdated = block.timestamp;
-
-        // Update URI tracking
+    }
+    
+    /**
+     * @dev Internal function to handle URI change in tracking
+     */
+    function _handleUriChange(
+        string memory oldUri,
+        string memory newUri,
+        address agentContract,
+        uint256 tokenId
+    ) internal {
+        bytes32 agentId = keccak256(abi.encodePacked(agentContract, tokenId));
         bytes32 oldUriHash = keccak256(abi.encodePacked(oldUri));
         bytes32 newUriHash = keccak256(abi.encodePacked(newUri));
-
-        // Remove old URI tracking if different
-        if (oldUriHash != newUriHash) {
-            _removeFromUriTracking(oldUriHash, tokenId);
-            uriToAgents[newUriHash].push(tokenId);
-        }
-
-        emit KnowledgeSourceUpdated(tokenId, sourceId, oldUri, newUri);
+        
+        _removeFromUriTracking(oldUriHash, agentId);
+        uriToAgents[newUriHash].push(agentId);
     }
 
     /**
      * @dev Toggles the active status of a knowledge source
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param sourceId The ID of the knowledge source
      */
     function toggleKnowledgeSource(
+        address agentContract,
         uint256 tokenId,
         uint256 sourceId
-    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) {
-        KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
+    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) {
+        KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
         source.active = !source.active;
 
-        KnowledgeConfig storage config = agentConfigs[tokenId];
+        KnowledgeConfig storage config = agentConfigs[agentContract][tokenId];
         if (source.active) {
             config.activeSources++;
         } else {
             config.activeSources--;
         }
 
-        emit KnowledgeSourceToggled(tokenId, sourceId, source.active);
+        emit KnowledgeSourceToggled(agentContract, tokenId, sourceId, source.active);
     }
 
     /**
      * @dev Changes the priority of a knowledge source
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param sourceId The ID of the knowledge source
      * @param newPriority The new priority
      */
     function changeKnowledgePriority(
+        address agentContract,
         uint256 tokenId,
         uint256 sourceId,
         uint256 newPriority
-    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) {
-        KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
+    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) {
+        KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
         uint256 oldPriority = source.priority;
         source.priority = newPriority;
         source.lastUpdated = block.timestamp;
 
-        emit KnowledgePriorityChanged(tokenId, sourceId, oldPriority, newPriority);
+        emit KnowledgePriorityChanged(agentContract, tokenId, sourceId, oldPriority, newPriority);
     }
 
     /**
      * @dev Removes a knowledge source
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param sourceId The ID of the knowledge source
      */
     function removeKnowledgeSource(
+        address agentContract,
         uint256 tokenId,
         uint256 sourceId
-    ) external onlyTokenOwner(tokenId) sourceExists(tokenId, sourceId) nonReentrant {
-        KnowledgeSource storage source = knowledgeSources[tokenId][sourceId];
+    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) nonReentrant {
+        KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
 
-        // Update URI tracking
-        bytes32 uriHash = keccak256(abi.encodePacked(source.uri));
-        _removeFromUriTracking(uriHash, tokenId);
+        // Update URI tracking (separated to avoid stack too deep)
+        _removeSourceUriTracking(source.uri, agentContract, tokenId);
 
         // Update config
-        KnowledgeConfig storage config = agentConfigs[tokenId];
+        KnowledgeConfig storage config = agentConfigs[agentContract][tokenId];
         config.totalSources--;
         if (source.active) {
             config.activeSources--;
         }
 
         // Remove from agent's source IDs array
-        uint256[] storage sourceIds = agentSourceIds[tokenId];
+        uint256[] storage sourceIds = agentSourceIds[agentContract][tokenId];
         for (uint256 i = 0; i < sourceIds.length; i++) {
             if (sourceIds[i] == sourceId) {
                 sourceIds[i] = sourceIds[sourceIds.length - 1];
@@ -334,25 +411,36 @@ contract KnowledgeRegistry is
         }
 
         // Delete the source
-        delete knowledgeSources[tokenId][sourceId];
+        delete knowledgeSources[agentContract][tokenId][sourceId];
 
-        emit KnowledgeSourceRemoved(tokenId, sourceId);
+        emit KnowledgeSourceRemoved(agentContract, tokenId, sourceId);
+    }
+
+    /**
+     * @dev Internal function to remove source URI tracking (helps avoid stack too deep)
+     */
+    function _removeSourceUriTracking(string memory uri, address agentContract, uint256 tokenId) internal {
+        bytes32 uriHash = keccak256(abi.encodePacked(uri));
+        bytes32 agentId = keccak256(abi.encodePacked(agentContract, tokenId));
+        _removeFromUriTracking(uriHash, agentId);
     }
 
     /**
      * @dev Updates the knowledge configuration for an agent
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param maxSources Maximum number of sources allowed
      * @param allowDynamicSources Whether dynamic sources are allowed
      */
     function updateKnowledgeConfig(
+        address agentContract,
         uint256 tokenId,
         uint256 maxSources,
         bool allowDynamicSources
-    ) external onlyTokenOwner(tokenId) {
+    ) external onlyTokenOwner(agentContract, tokenId) {
         require(maxSources > 0, "KnowledgeRegistry: invalid max sources");
 
-        KnowledgeConfig storage config = agentConfigs[tokenId];
+        KnowledgeConfig storage config = agentConfigs[agentContract][tokenId];
         require(
             maxSources >= config.totalSources,
             "KnowledgeRegistry: max sources less than current total"
@@ -361,24 +449,26 @@ contract KnowledgeRegistry is
         config.maxSources = maxSources;
         config.allowDynamicSources = allowDynamicSources;
 
-        emit KnowledgeConfigUpdated(tokenId, maxSources, allowDynamicSources);
+        emit KnowledgeConfigUpdated(agentContract, tokenId, maxSources, allowDynamicSources);
     }
 
     // ============ VIEW FUNCTIONS ============
 
     /**
      * @dev Returns all knowledge sources for an agent
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @return sources Array of knowledge sources
      */
     function getKnowledgeSources(
+        address agentContract,
         uint256 tokenId
     ) external view returns (KnowledgeSource[] memory sources) {
-        uint256[] memory sourceIds = agentSourceIds[tokenId];
+        uint256[] memory sourceIds = agentSourceIds[agentContract][tokenId];
         sources = new KnowledgeSource[](sourceIds.length);
 
         for (uint256 i = 0; i < sourceIds.length; i++) {
-            sources[i] = knowledgeSources[tokenId][sourceIds[i]];
+            sources[i] = knowledgeSources[agentContract][tokenId][sourceIds[i]];
         }
 
         return sources;
@@ -386,18 +476,20 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Returns only active knowledge sources for an agent
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @return sources Array of active knowledge sources
      */
     function getActiveKnowledgeSources(
+        address agentContract,
         uint256 tokenId
     ) external view returns (KnowledgeSource[] memory sources) {
-        uint256[] memory sourceIds = agentSourceIds[tokenId];
+        uint256[] memory sourceIds = agentSourceIds[agentContract][tokenId];
         uint256 activeCount = 0;
 
         // Count active sources
         for (uint256 i = 0; i < sourceIds.length; i++) {
-            if (knowledgeSources[tokenId][sourceIds[i]].active) {
+            if (knowledgeSources[agentContract][tokenId][sourceIds[i]].active) {
                 activeCount++;
             }
         }
@@ -406,7 +498,7 @@ contract KnowledgeRegistry is
         sources = new KnowledgeSource[](activeCount);
         uint256 index = 0;
         for (uint256 i = 0; i < sourceIds.length; i++) {
-            KnowledgeSource memory source = knowledgeSources[tokenId][sourceIds[i]];
+            KnowledgeSource memory source = knowledgeSources[agentContract][tokenId][sourceIds[i]];
             if (source.active) {
                 sources[index++] = source;
             }
@@ -417,13 +509,15 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Returns knowledge sources sorted by priority
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @return sources Array of knowledge sources sorted by priority
      */
     function getKnowledgeSourcesByPriority(
+        address agentContract,
         uint256 tokenId
     ) external view returns (KnowledgeSource[] memory sources) {
-        sources = this.getActiveKnowledgeSources(tokenId);
+        sources = this.getActiveKnowledgeSources(agentContract, tokenId);
 
         // Simple bubble sort for priority (descending)
         for (uint256 i = 0; i < sources.length; i++) {
@@ -441,20 +535,22 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Returns knowledge sources of a specific type
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @param sourceType The type of knowledge sources to return
      * @return sources Array of knowledge sources of the specified type
      */
     function getKnowledgeSourcesByType(
+        address agentContract,
         uint256 tokenId,
         KnowledgeType sourceType
     ) external view returns (KnowledgeSource[] memory sources) {
-        uint256[] memory sourceIds = agentSourceIds[tokenId];
+        uint256[] memory sourceIds = agentSourceIds[agentContract][tokenId];
         uint256 typeCount = 0;
 
         // Count sources of this type
         for (uint256 i = 0; i < sourceIds.length; i++) {
-            if (knowledgeSources[tokenId][sourceIds[i]].sourceType == sourceType) {
+            if (knowledgeSources[agentContract][tokenId][sourceIds[i]].sourceType == sourceType) {
                 typeCount++;
             }
         }
@@ -463,7 +559,7 @@ contract KnowledgeRegistry is
         sources = new KnowledgeSource[](typeCount);
         uint256 index = 0;
         for (uint256 i = 0; i < sourceIds.length; i++) {
-            KnowledgeSource memory source = knowledgeSources[tokenId][sourceIds[i]];
+            KnowledgeSource memory source = knowledgeSources[agentContract][tokenId][sourceIds[i]];
             if (source.sourceType == sourceType) {
                 sources[index++] = source;
             }
@@ -474,13 +570,15 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Returns the knowledge configuration for an agent
+     * @param agentContract The address of the agent contract
      * @param tokenId The ID of the agent token
      * @return config The knowledge configuration
      */
     function getKnowledgeConfig(
+        address agentContract,
         uint256 tokenId
     ) external view returns (KnowledgeConfig memory config) {
-        config = agentConfigs[tokenId];
+        config = agentConfigs[agentContract][tokenId];
 
         // Return default config if not initialized
         if (config.maxSources == 0) {
@@ -494,9 +592,9 @@ contract KnowledgeRegistry is
     /**
      * @dev Returns all agents using a specific URI
      * @param uri The URI to check
-     * @return agents Array of token IDs using this URI
+     * @return agents Array of agent identifiers (packed agentContract+tokenId)
      */
-    function getAgentsUsingUri(string memory uri) external view returns (uint256[] memory agents) {
+    function getAgentsUsingUri(string memory uri) external view returns (bytes32[] memory agents) {
         bytes32 uriHash = keccak256(abi.encodePacked(uri));
         return uriToAgents[uriHash];
     }
@@ -513,25 +611,25 @@ contract KnowledgeRegistry is
     }
 
     /**
-     * @dev Updates the BAP578 token contract address
-     * @param newBAP578Token New BAP578 token contract address
+     * @dev Updates the AgentFactory contract address
+     * @param newAgentFactory New AgentFactory contract address
      */
-    function updateBAP578Token(address newBAP578Token) external onlyOwner {
-        require(newBAP578Token != address(0), "KnowledgeRegistry: invalid BAP578 address");
-        bap578Token = IBAP578(newBAP578Token);
+    function updateAgentFactory(address newAgentFactory) external onlyOwner {
+        require(newAgentFactory != address(0), "KnowledgeRegistry: invalid AgentFactory address");
+        agentFactory = newAgentFactory;
     }
 
     // ============ INTERNAL FUNCTIONS ============
 
     /**
-     * @dev Removes a token ID from URI tracking
+     * @dev Removes an agent ID from URI tracking
      * @param uriHash Hash of the URI
-     * @param tokenId Token ID to remove
+     * @param agentId Packed agent identifier (agentContract + tokenId)
      */
-    function _removeFromUriTracking(bytes32 uriHash, uint256 tokenId) internal {
-        uint256[] storage agents = uriToAgents[uriHash];
+    function _removeFromUriTracking(bytes32 uriHash, bytes32 agentId) internal {
+        bytes32[] storage agents = uriToAgents[uriHash];
         for (uint256 i = 0; i < agents.length; i++) {
-            if (agents[i] == tokenId) {
+            if (agents[i] == agentId) {
                 agents[i] = agents[agents.length - 1];
                 agents.pop();
                 break;

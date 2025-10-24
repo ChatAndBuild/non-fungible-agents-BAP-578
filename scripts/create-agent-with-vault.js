@@ -20,10 +20,15 @@ async function main() {
     return;
   }
 
+  // Get deployment files and sort to get the latest
   const deploymentFiles = fs.readdirSync(deploymentsDir)
     .filter(file => file.endsWith('.json'))
-    .sort()
-    .reverse();
+    .sort((a, b) => {
+      // Extract timestamp from filename (format: network-timestamp.json)
+      const timestampA = parseInt(a.split('-')[1]?.replace('.json', '') || '0');
+      const timestampB = parseInt(b.split('-')[1]?.replace('.json', '') || '0');
+      return timestampB - timestampA; // Sort descending (newest first)
+    });
 
   if (deploymentFiles.length === 0) {
     console.error("❌ No deployment files found. Run deployment first.");
@@ -82,16 +87,37 @@ async function main() {
       return;
     }
     
-    // Create the agent using the new function
+    // Check if the new function exists
     console.log("💸 Sending transaction with 0.01 ETH fee...");
-    const createTx = await agentFactory.createAgentWithExtendedMetadata(
-      agentParams.name,
-      agentParams.symbol,
-      agentParams.logicAddress,
-      agentParams.metadataURI,
-      agentParams.extendedMetadata,
-      { value: requiredFee }
-    );
+    
+    let createTx;
+    try {
+      // Try to use the createAgentWithExtendedMetadata if it exists
+      createTx = await agentFactory.createAgentWithExtendedMetadata(
+        agentParams.name,
+        agentParams.symbol,
+        agentParams.logicAddress,
+        agentParams.metadataURI,
+        agentParams.extendedMetadata,
+        { value: requiredFee }
+      );
+    } catch (error) {
+      if (error.message.includes("createAgentWithExtendedMetadata") || error.code === "UNPREDICTABLE_GAS_LIMIT") {
+        console.log("⚠️  Extended metadata function not available, using standard createAgent...");
+        console.log("    Note: Vault metadata will not be stored on-chain with this method.\n");
+        
+        // Fall back to standard createAgent
+        createTx = await agentFactory.createAgent(
+          agentParams.name,
+          agentParams.symbol,
+          agentParams.logicAddress,
+          agentParams.metadataURI,
+          { value: requiredFee }
+        );
+      } else {
+        throw error;
+      }
+    }
     
     console.log("⏳ Transaction sent, waiting for confirmation...");
     console.log(`📝 Transaction hash: ${createTx.hash}`);
