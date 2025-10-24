@@ -165,8 +165,14 @@ contract KnowledgeRegistry is
      * @param agentFactoryAddress Address of the AgentFactory contract
      * @param defaultMaxSourcesValue Default maximum sources per agent
      */
-    function initialize(address agentFactoryAddress, uint256 defaultMaxSourcesValue) public initializer {
-        require(agentFactoryAddress != address(0), "KnowledgeRegistry: invalid AgentFactory address");
+    function initialize(
+        address agentFactoryAddress,
+        uint256 defaultMaxSourcesValue
+    ) public initializer {
+        require(
+            agentFactoryAddress != address(0),
+            "KnowledgeRegistry: invalid AgentFactory address"
+        );
         require(defaultMaxSourcesValue > 0, "KnowledgeRegistry: invalid max sources");
 
         __Ownable_init();
