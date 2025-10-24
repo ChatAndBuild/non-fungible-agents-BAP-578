@@ -162,19 +162,19 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Initializes the contract
-     * @param _agentFactory Address of the AgentFactory contract
-     * @param _defaultMaxSources Default maximum sources per agent
+     * @param agentFactoryAddress Address of the AgentFactory contract
+     * @param defaultMaxSourcesValue Default maximum sources per agent
      */
-    function initialize(address _agentFactory, uint256 _defaultMaxSources) public initializer {
-        require(_agentFactory != address(0), "KnowledgeRegistry: invalid AgentFactory address");
-        require(_defaultMaxSources > 0, "KnowledgeRegistry: invalid max sources");
+    function initialize(address agentFactoryAddress, uint256 defaultMaxSourcesValue) public initializer {
+        require(agentFactoryAddress != address(0), "KnowledgeRegistry: invalid AgentFactory address");
+        require(defaultMaxSourcesValue > 0, "KnowledgeRegistry: invalid max sources");
 
         __Ownable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
-        agentFactory = _agentFactory;
-        defaultMaxSources = _defaultMaxSources;
+        agentFactory = agentFactoryAddress;
+        defaultMaxSources = defaultMaxSourcesValue;
     }
 
     // ============ CORE FUNCTIONS ============
@@ -635,11 +635,11 @@ contract KnowledgeRegistry is
 
     /**
      * @dev Updates the default maximum sources per agent
-     * @param _defaultMaxSources New default maximum
+     * @param newDefaultMaxSources New default maximum
      */
-    function setDefaultMaxSources(uint256 _defaultMaxSources) external onlyOwner {
-        require(_defaultMaxSources > 0, "KnowledgeRegistry: invalid max sources");
-        defaultMaxSources = _defaultMaxSources;
+    function setDefaultMaxSources(uint256 newDefaultMaxSources) external onlyOwner {
+        require(newDefaultMaxSources > 0, "KnowledgeRegistry: invalid max sources");
+        defaultMaxSources = newDefaultMaxSources;
     }
 
     /**
