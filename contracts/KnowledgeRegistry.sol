@@ -70,7 +70,8 @@ contract KnowledgeRegistry is
     CountersUpgradeable.Counter private _sourceIdCounter;
 
     /// @dev Mapping from agent contract -> token ID -> source ID -> KnowledgeSource
-    mapping(address => mapping(uint256 => mapping(uint256 => KnowledgeSource))) public knowledgeSources;
+    mapping(address => mapping(uint256 => mapping(uint256 => KnowledgeSource)))
+        public knowledgeSources;
 
     /// @dev Mapping from agent contract -> token ID -> array of source IDs
     mapping(address => mapping(uint256 => uint256[])) public agentSourceIds;
@@ -217,7 +218,16 @@ contract KnowledgeRegistry is
         sourceId = _sourceIdCounter.current();
 
         // Store knowledge source
-        _storeKnowledgeSource(agentContract, tokenId, sourceId, uri, sourceType, priority, description, contentHash);
+        _storeKnowledgeSource(
+            agentContract,
+            tokenId,
+            sourceId,
+            uri,
+            sourceType,
+            priority,
+            description,
+            contentHash
+        );
 
         agentSourceIds[agentContract][tokenId].push(sourceId);
         config.totalSources++;
@@ -281,15 +291,20 @@ contract KnowledgeRegistry is
         uint256 sourceId,
         string memory newUri,
         bytes32 newContentHash
-    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) nonReentrant {
+    )
+        external
+        onlyTokenOwner(agentContract, tokenId)
+        sourceExists(agentContract, tokenId, sourceId)
+        nonReentrant
+    {
         require(bytes(newUri).length > 0, "KnowledgeRegistry: empty URI");
-        
+
         // Store the old URI before updating
         string memory oldUri = knowledgeSources[agentContract][tokenId][sourceId].uri;
-        
+
         // Update source fields
         _updateSourceFields(agentContract, tokenId, sourceId, newUri, newContentHash);
-        
+
         // Handle URI tracking update if URI changed
         if (keccak256(abi.encodePacked(oldUri)) != keccak256(abi.encodePacked(newUri))) {
             _handleUriChange(oldUri, newUri, agentContract, tokenId);
@@ -297,7 +312,7 @@ contract KnowledgeRegistry is
 
         emit KnowledgeSourceUpdated(agentContract, tokenId, sourceId, oldUri, newUri);
     }
-    
+
     /**
      * @dev Internal function to update source fields (helps avoid stack too deep)
      */
@@ -314,7 +329,7 @@ contract KnowledgeRegistry is
         source.version++;
         source.lastUpdated = block.timestamp;
     }
-    
+
     /**
      * @dev Internal function to handle URI change in tracking
      */
@@ -327,7 +342,7 @@ contract KnowledgeRegistry is
         bytes32 agentId = keccak256(abi.encodePacked(agentContract, tokenId));
         bytes32 oldUriHash = keccak256(abi.encodePacked(oldUri));
         bytes32 newUriHash = keccak256(abi.encodePacked(newUri));
-        
+
         _removeFromUriTracking(oldUriHash, agentId);
         uriToAgents[newUriHash].push(agentId);
     }
@@ -342,7 +357,11 @@ contract KnowledgeRegistry is
         address agentContract,
         uint256 tokenId,
         uint256 sourceId
-    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) {
+    )
+        external
+        onlyTokenOwner(agentContract, tokenId)
+        sourceExists(agentContract, tokenId, sourceId)
+    {
         KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
         source.active = !source.active;
 
@@ -368,7 +387,11 @@ contract KnowledgeRegistry is
         uint256 tokenId,
         uint256 sourceId,
         uint256 newPriority
-    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) {
+    )
+        external
+        onlyTokenOwner(agentContract, tokenId)
+        sourceExists(agentContract, tokenId, sourceId)
+    {
         KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
         uint256 oldPriority = source.priority;
         source.priority = newPriority;
@@ -387,7 +410,12 @@ contract KnowledgeRegistry is
         address agentContract,
         uint256 tokenId,
         uint256 sourceId
-    ) external onlyTokenOwner(agentContract, tokenId) sourceExists(agentContract, tokenId, sourceId) nonReentrant {
+    )
+        external
+        onlyTokenOwner(agentContract, tokenId)
+        sourceExists(agentContract, tokenId, sourceId)
+        nonReentrant
+    {
         KnowledgeSource storage source = knowledgeSources[agentContract][tokenId][sourceId];
 
         // Update URI tracking (separated to avoid stack too deep)
@@ -419,7 +447,11 @@ contract KnowledgeRegistry is
     /**
      * @dev Internal function to remove source URI tracking (helps avoid stack too deep)
      */
-    function _removeSourceUriTracking(string memory uri, address agentContract, uint256 tokenId) internal {
+    function _removeSourceUriTracking(
+        string memory uri,
+        address agentContract,
+        uint256 tokenId
+    ) internal {
         bytes32 uriHash = keccak256(abi.encodePacked(uri));
         bytes32 agentId = keccak256(abi.encodePacked(agentContract, tokenId));
         _removeFromUriTracking(uriHash, agentId);
