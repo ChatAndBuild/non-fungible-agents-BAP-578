@@ -16,27 +16,7 @@ const AGENT_PERSONAS = {
     voiceHash: "voice_research_v1.0_analytical_professional",
     animationURI: "ipfs://QmResearchAgentAnimation3D",
     vaultURI: "ipfs://QmResearchAgentVaultConfig",
-    metadataURI: "ipfs://QmAtlasResearchAgentMetadata001",
-    knowledgeSources: [
-      {
-        uri: "ipfs://QmMarketDataAnalysis2024",
-        type: 0, // BASE
-        priority: 100,
-        description: "Core market analysis algorithms and patterns"
-      },
-      {
-        uri: "ipfs://QmDeFiProtocolsKnowledge",
-        type: 1, // CONTEXT
-        priority: 90,
-        description: "DeFi protocols and smart contract interaction patterns"
-      },
-      {
-        uri: "ipfs://QmHistoricalMarketEvents",
-        type: 2, // MEMORY
-        priority: 80,
-        description: "Historical market events and outcomes database"
-      }
-    ]
+    metadataURI: "ipfs://QmAtlasResearchAgentMetadata001"
   },
   "creative-artist": {
     name: "Nova Creative Agent",
@@ -50,27 +30,7 @@ const AGENT_PERSONAS = {
     voiceHash: "voice_creative_v1.0_expressive_artistic",
     animationURI: "ipfs://QmNovaCreativeAnimation",
     vaultURI: "ipfs://QmNovaVaultConfiguration",
-    metadataURI: "ipfs://QmNovaCreativeAgentMetadata001",
-    knowledgeSources: [
-      {
-        uri: "ipfs://QmArtHistoryDatabase",
-        type: 0, // BASE
-        priority: 100,
-        description: "Comprehensive art history and style database"
-      },
-      {
-        uri: "ipfs://QmGenerativeAlgorithms",
-        type: 3, // INSTRUCTION
-        priority: 95,
-        description: "Advanced generative art algorithms and techniques"
-      },
-      {
-        uri: "ipfs://QmTrendAnalysisModule",
-        type: 5, // DYNAMIC
-        priority: 70,
-        description: "Real-time art trend analysis and adaptation module"
-      }
-    ]
+    metadataURI: "ipfs://QmNovaCreativeAgentMetadata001"
   },
   "defi-trader": {
     name: "Quantum DeFi Agent",
@@ -84,33 +44,7 @@ const AGENT_PERSONAS = {
     voiceHash: "voice_trader_v1.0_precise_analytical",
     animationURI: "ipfs://QmQuantumTraderVisualization",
     vaultURI: "ipfs://QmQuantumSecureVault",
-    metadataURI: "ipfs://QmQuantumDeFiAgentMetadata001",
-    knowledgeSources: [
-      {
-        uri: "ipfs://QmTradingStrategiesCore",
-        type: 0, // BASE
-        priority: 100,
-        description: "Core trading strategies and risk models"
-      },
-      {
-        uri: "ipfs://QmProtocolIntegrations",
-        type: 1, // CONTEXT
-        priority: 95,
-        description: "Multi-protocol integration and interaction patterns"
-      },
-      {
-        uri: "ipfs://QmMarketMicrostructure",
-        type: 4, // REFERENCE
-        priority: 85,
-        description: "Market microstructure and MEV analysis"
-      },
-      {
-        uri: "ipfs://QmRealTimeMarketData",
-        type: 5, // DYNAMIC
-        priority: 90,
-        description: "Real-time market data feed and analysis"
-      }
-    ]
+    metadataURI: "ipfs://QmQuantumDeFiAgentMetadata001"
   }
 };
 
@@ -179,9 +113,6 @@ async function main() {
     // Get contract instances
     const agentFactory = await ethers.getContractAt("AgentFactory", contracts.AgentFactory);
     const bap578 = await ethers.getContractAt("BAP578", contracts.BAP578);
-    const knowledgeRegistry = contracts.KnowledgeRegistry 
-      ? await ethers.getContractAt("KnowledgeRegistry", contracts.KnowledgeRegistry)
-      : null;
     const treasury = await ethers.getContractAt("BAP578Treasury", contracts.BAP578Treasury);
 
     // Create agent directly through BAP578 contract (no fee required for direct creation)
@@ -230,41 +161,6 @@ async function main() {
     console.log(`  Last Action: ${new Date(agentState.lastActionTimestamp * 1000).toISOString()}`);
     console.log("");
 
-    // Add knowledge sources if KnowledgeRegistry is deployed
-    if (knowledgeRegistry && selectedPersona.knowledgeSources) {
-      console.log("🧠 Adding Knowledge Sources...");
-      console.log("-" .repeat(60));
-      
-      for (const source of selectedPersona.knowledgeSources) {
-        try {
-          console.log(`\n📚 Adding: ${source.description}`);
-          console.log(`   URI: ${source.uri}`);
-          console.log(`   Priority: ${source.priority}`);
-          
-          const addKnowledgeTx = await knowledgeRegistry.addKnowledgeSource(
-            tokenId,
-            source.uri,
-            source.type,
-            source.priority,
-            source.description,
-            ethers.utils.formatBytes32String(`hash-${Date.now()}`)
-          );
-          await addKnowledgeTx.wait();
-          console.log("   ✅ Added successfully");
-        } catch (error) {
-          console.log(`   ⚠️ Failed to add: ${error.message.substring(0, 50)}`);
-        }
-      }
-      
-      // Display knowledge configuration
-      const config = await knowledgeRegistry.getKnowledgeConfig(tokenId);
-      console.log("\n⚙️ Knowledge Configuration:");
-      console.log(`  Total Sources: ${config.totalSources}`);
-      console.log(`  Active Sources: ${config.activeSources}`);
-      console.log(`  Max Sources: ${config.maxSources}`);
-      console.log("");
-    }
-
     // Fund the agent with some ETH
     console.log("💰 Funding agent with initial ETH...");
     const fundAmount = ethers.utils.parseEther("0.05");
@@ -289,11 +185,6 @@ async function main() {
     console.log(`  Owner: ${deployer.address}`);
     console.log(`  Balance: ${ethers.utils.formatEther(updatedState.balance)} ETH`);
     
-    if (knowledgeRegistry && selectedPersona.knowledgeSources) {
-      const sources = await knowledgeRegistry.getKnowledgeSources(tokenId);
-      console.log(`  Knowledge Sources: ${sources.length}`);
-    }
-    
     console.log("\n🔧 Interaction Commands:");
     console.log("-" .repeat(60));
     console.log("# Get agent state:");
@@ -303,13 +194,6 @@ async function main() {
     console.log("\n# Pause/Unpause agent:");
     console.log(`await bap578.pause(${tokenId})`);
     console.log(`await bap578.unpause(${tokenId})`);
-    
-    if (knowledgeRegistry) {
-      console.log("\n# Get knowledge sources:");
-      console.log(`await knowledgeRegistry.getKnowledgeSources(${tokenId})`);
-      console.log("\n# Get sources by priority:");
-      console.log(`await knowledgeRegistry.getKnowledgeSourcesByPriority(${tokenId})`);
-    }
     
     // Check treasury stats after fee collection
     console.log("\n💰 Treasury Stats After Fee Collection:");
@@ -329,7 +213,7 @@ async function main() {
         console.log(`- ${persona.name} (${key})`);
       }
     });
-    console.log("\n💡 Tip: Modify the 'selectedPersonaKey' variable to create different agent types!");
+    console.log("\n� Tip: Modify the 'selectedPersonaKey' variable to create different agent types!");
 
   } catch (error) {
     console.error("❌ Error creating agent:", error.message);

@@ -191,24 +191,8 @@ async function main() {
     console.log("✅ AgentFactory deployed to:", agentFactory.address);
     console.log("    Using BAP578 implementation:", bap578RawImpl.address);
 
-    // 8. Deploy KnowledgeRegistry (AFTER AgentFactory, uses AgentFactory address)
-    console.log("\n📋 8. Deploying KnowledgeRegistry...");
-    const KnowledgeRegistry = await ethers.getContractFactory("KnowledgeRegistry");
-    const knowledgeRegistry = await executeWithRetry(async () => {
-      const contract = await upgrades.deployProxy(
-        KnowledgeRegistry,
-        [agentFactory.address, 10], // Now using AgentFactory address, 10 max sources per agent
-        { initializer: "initialize", kind: "uups" }
-      );
-      await contract.deployed();
-      return contract;
-    }, "KnowledgeRegistry deployment");
-    deployments.KnowledgeRegistry = knowledgeRegistry.address;
-    console.log("✅ KnowledgeRegistry deployed to:", knowledgeRegistry.address);
-    console.log("    Using AgentFactory:", agentFactory.address);
-
-    // 9. Deploy BAP578Governance
-    console.log("\n📋 9. Deploying BAP578Governance...");
+    // 8. Deploy BAP578Governance
+    console.log("\n📋 8. Deploying BAP578Governance...");
     const BAP578Governance = await ethers.getContractFactory("BAP578Governance");
     const governance = await executeWithRetry(async () => {
       const contract = await upgrades.deployProxy(
@@ -228,8 +212,8 @@ async function main() {
     deployments.BAP578Governance = governance.address;
     console.log("✅ BAP578Governance deployed to:", governance.address);
 
-    // 10. Setup initial configurations with proper delays
-    console.log("\n📋 10. Setting up initial configurations...");
+    // 9. Setup initial configurations with proper delays
+    console.log("\n📋 9. Setting up initial configurations...");
     console.log("⚠️ Adding delays between configuration transactions...");
     
     // Set governance in CircuitBreaker
@@ -264,7 +248,7 @@ async function main() {
       console.log("✅ Learning module approved");
     }, "Approve learning module", 3, 10000);
 
-    // 11. Save deployment addresses
+    // 10. Save deployment addresses
     const deploymentData = {
       network: network.name,
       chainId: network.chainId,
