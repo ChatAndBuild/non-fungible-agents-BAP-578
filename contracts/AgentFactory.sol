@@ -257,7 +257,7 @@ contract AgentFactory is
         // No fee verification needed for free mint
         // Refund any ETH accidentally sent
         if (msg.value > 0) {
-            (bool refundSuccess, ) = msg.sender.call{value: msg.value}("");
+            (bool refundSuccess, ) = msg.sender.call{ value: msg.value }("");
             require(refundSuccess, "AgentFactory: refund failed");
         }
 
