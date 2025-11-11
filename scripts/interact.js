@@ -40,9 +40,6 @@ async function main() {
     const bap578 = await ethers.getContractAt("BAP578", contracts.BAP578);
     const circuitBreaker = await ethers.getContractAt("CircuitBreaker", contracts.CircuitBreaker);
     const treasury = await ethers.getContractAt("BAP578Treasury", contracts.BAP578Treasury);
-    const knowledgeRegistry = contracts.KnowledgeRegistry 
-      ? await ethers.getContractAt("KnowledgeRegistry", contracts.KnowledgeRegistry)
-      : null;
     const experienceRegistry = await ethers.getContractAt("ExperienceModuleRegistry", contracts.ExperienceModuleRegistry);
 
     // Display current state
@@ -100,81 +97,8 @@ async function main() {
       console.log("  - Balance:", ethers.utils.formatEther(agentState.balance), "ETH");
       console.log("");
 
-      // Demo Section 2: KnowledgeRegistry Interactions
-      if (knowledgeRegistry) {
-        console.log("🧠 Demo 2: KnowledgeRegistry - Adding Knowledge Sources...");
-        
-        // Knowledge types enum
-        const KnowledgeType = {
-          BASE: 0,
-          CONTEXT: 1,
-          MEMORY: 2,
-          INSTRUCTION: 3,
-          REFERENCE: 4,
-          DYNAMIC: 5
-        };
-        
-        try {
-          // Add a knowledge source
-          const addKnowledgeTx = await knowledgeRegistry.addKnowledgeSource(
-            tokenId,
-            "ipfs://QmKnowledgeBase001",
-            KnowledgeType.BASE,
-            100, // priority
-            "Primary training dataset for the agent",
-            ethers.utils.formatBytes32String("kb001-hash")
-          );
-          await addKnowledgeTx.wait();
-          console.log("✅ Knowledge source added!");
-          
-          // Add another knowledge source with different type
-          const addContextTx = await knowledgeRegistry.addKnowledgeSource(
-            tokenId,
-            "ipfs://QmContextData001",
-            KnowledgeType.CONTEXT,
-            80, // lower priority
-            "Contextual information for task processing",
-            ethers.utils.formatBytes32String("ctx001-hash")
-          );
-          await addContextTx.wait();
-          console.log("✅ Context source added!");
-          
-          // Get all knowledge sources for the agent
-          const sources = await knowledgeRegistry.getKnowledgeSources(tokenId);
-          console.log(`\n📚 Agent has ${sources.length} knowledge sources:`);
-          
-          for (const source of sources) {
-            const typeNames = ["BASE", "CONTEXT", "MEMORY", "INSTRUCTION", "REFERENCE", "DYNAMIC"];
-            console.log(`  - ${typeNames[source.sourceType]} | Priority: ${source.priority} | URI: ${source.uri}`);
-            console.log(`    Description: ${source.description}`);
-            console.log(`    Active: ${source.active}, Version: ${source.version}`);
-          }
-          
-          // Get sources by priority
-          const prioritizedSources = await knowledgeRegistry.getKnowledgeSourcesByPriority(tokenId);
-          console.log("\n🏆 Knowledge sources by priority:");
-          for (let i = 0; i < prioritizedSources.length; i++) {
-            console.log(`  ${i + 1}. Priority ${prioritizedSources[i].priority}: ${prioritizedSources[i].uri}`);
-          }
-          
-          // Get configuration
-          const config = await knowledgeRegistry.getKnowledgeConfig(tokenId);
-          console.log("\n⚙️  Knowledge Configuration:");
-          console.log(`  - Max Sources: ${config.maxSources}`);
-          console.log(`  - Total Sources: ${config.totalSources}`);
-          console.log(`  - Active Sources: ${config.activeSources}`);
-          console.log(`  - Dynamic Sources Allowed: ${config.allowDynamicSources}`);
-          
-        } catch (error) {
-          console.log("⚠️ Knowledge source operations skipped (may already exist):", error.message.substring(0, 50));
-        }
-      } else {
-        console.log("⚠️ KnowledgeRegistry not deployed in this environment");
-      }
-      console.log("");
-
-      // Demo Section 3: Fund an Agent
-      console.log("💰 Demo 3: Funding the agent...");
+      // Demo Section 2: Fund an Agent
+      console.log("💰 Demo 2: Funding the agent...");
       
       const fundAmount = ethers.utils.parseEther("0.1");
       const fundTx = await bap578.fundAgent(tokenId, { value: fundAmount });
@@ -185,8 +109,8 @@ async function main() {
       console.log("💵 New Balance:", ethers.utils.formatEther(updatedState.balance), "ETH");
       console.log("");
 
-      // Demo Section 4: Treasury Donation
-      console.log("🎁 Demo 4: Making a donation to treasury...");
+      // Demo Section 3: Treasury Donation
+      console.log("🎁 Demo 3: Making a donation to treasury...");
       
       const donateTx = await treasury.donate("Supporting the ecosystem!", {
         value: ethers.utils.parseEther("0.01")
@@ -213,17 +137,10 @@ async function main() {
     console.log("# Get contract instances:");
     console.log(`const factory = await ethers.getContractAt('AgentFactory', '${contracts.AgentFactory}')`);
     console.log(`const bap578 = await ethers.getContractAt('BAP578', '${contracts.BAP578}')`);
-    console.log(`const knowledgeRegistry = await ethers.getContractAt('KnowledgeRegistry', '${contracts.KnowledgeRegistry || 'DEPLOY_FIRST'}')`);
     console.log(`const treasury = await ethers.getContractAt('BAP578Treasury', '${contracts.BAP578Treasury}')`);
     console.log("");
     console.log("# Create an agent:");
     console.log(`await bap578['createAgent(address,address,string)'](deployer.address, '0x1234...', 'ipfs://metadata')`);
-    console.log("");
-    console.log("# Add knowledge source (if KnowledgeRegistry deployed):");
-    console.log("await knowledgeRegistry.addKnowledgeSource(tokenId, 'ipfs://knowledge', 0, 100, 'description', ethers.utils.formatBytes32String('hash'))");
-    console.log("");
-    console.log("# Get knowledge sources:");
-    console.log("await knowledgeRegistry.getKnowledgeSources(tokenId)");
     console.log("");
     console.log("# Fund an agent:");
     console.log("await bap578.fundAgent(tokenId, { value: ethers.utils.parseEther('0.1') })");
@@ -234,30 +151,6 @@ async function main() {
     console.log("# Make a donation:");
     console.log("await treasury.donate('message', { value: ethers.utils.parseEther('0.01') })");
     console.log("----------------------------------------------------");
-
-    // Knowledge Registry specific commands
-    if (knowledgeRegistry) {
-      console.log("\n🧠 KnowledgeRegistry Specific Commands:");
-      console.log("----------------------------------------------------");
-      console.log("# Get sources by priority:");
-      console.log("await knowledgeRegistry.getKnowledgeSourcesByPriority(tokenId)");
-      console.log("");
-      console.log("# Toggle knowledge source:");
-      console.log("await knowledgeRegistry.toggleKnowledgeSource(tokenId, sourceId)");
-      console.log("");
-      console.log("# Update knowledge priority:");
-      console.log("await knowledgeRegistry.changeKnowledgePriority(tokenId, sourceId, newPriority)");
-      console.log("");
-      console.log("# Update knowledge configuration:");
-      console.log("await knowledgeRegistry.updateKnowledgeConfig(tokenId, maxSources, allowDynamic)");
-      console.log("");
-      console.log("# Get active sources only:");
-      console.log("await knowledgeRegistry.getActiveKnowledgeSources(tokenId)");
-      console.log("");
-      console.log("# Get sources by type (0=BASE, 1=CONTEXT, 2=MEMORY, etc.):");
-      console.log("await knowledgeRegistry.getKnowledgeSourcesByType(tokenId, 0)");
-      console.log("----------------------------------------------------");
-    }
 
   } catch (error) {
     console.error("❌ Interaction failed:", error);

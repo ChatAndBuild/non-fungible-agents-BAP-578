@@ -94,6 +94,7 @@ contract AgentFactory is
     );
     event AgentLearningDisabled(address indexed agent, uint256 indexed tokenId);
     event AgentCreationFeeCollected(address indexed creator, uint256 amount);
+    event FreeMintUsed(address indexed creator, address indexed agent);
 
     /**
      * @dev Initializes the contract
@@ -165,6 +166,159 @@ contract AgentFactory is
             vaultHash: bytes32(0)
         });
 
+        // Call internal function with empty metadata
+        return _createAgentInternal(name, symbol, logicAddress, metadataURI, emptyMetadata);
+    }
+
+    /**
+     * @dev Creates a new agent with FREE MINTING (no fee required)
+     * NOTE: Tracking of free mint usage should be done off-chain
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @return agent The address of the new agent contract
+     */
+    function createAgentFreeMint(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI
+    ) external returns (address agent) {
+        // Create empty extended metadata
+        IBAP578.AgentMetadata memory emptyMetadata = IBAP578.AgentMetadata({
+            persona: "",
+            experience: "",
+            voiceHash: "",
+            animationURI: "",
+            vaultURI: "",
+            vaultHash: bytes32(0)
+        });
+
+        // Call internal function with free mint flag
+        return _createAgentInternalFree(name, symbol, logicAddress, metadataURI, emptyMetadata);
+    }
+
+    /**
+     * @dev Creates a new agent with extended metadata with FREE MINTING (no fee required)
+     * NOTE: Tracking of free mint usage should be done off-chain
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata including vault information
+     * @return agent The address of the new agent contract
+     */
+    function createAgentWithExtendedMetadataFreeMint(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI,
+        IBAP578.AgentMetadata calldata extendedMetadata
+    ) external returns (address agent) {
+        return _createAgentInternalFree(name, symbol, logicAddress, metadataURI, extendedMetadata);
+    }
+
+    /**
+     * @dev Creates a new agent with extended metadata including vault information
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata including vault information
+     * @return agent The address of the new agent contract
+     */
+    function createAgentWithExtendedMetadata(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI,
+        IBAP578.AgentMetadata calldata extendedMetadata
+    ) external payable returns (address agent) {
+        return _createAgentInternal(name, symbol, logicAddress, metadataURI, extendedMetadata);
+    }
+
+    /**
+     * @dev Internal function to create a new agent with FREE MINTING (no fee)
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata for the agent
+     * @return agent The address of the new agent contract
+     */
+    function _createAgentInternalFree(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI,
+        IBAP578.AgentMetadata memory extendedMetadata
+    ) internal returns (address agent) {
+        // No fee verification needed for free mint
+
+        AgentCreationParams memory params = AgentCreationParams({
+            name: name,
+            symbol: symbol,
+            logicAddress: logicAddress,
+            metadataURI: metadataURI,
+            extendedMetadata: extendedMetadata
+        });
+
+        agent = address(
+            new ERC1967Proxy(
+                implementation,
+                abi.encodeWithSelector(
+                    BAP578(payable(implementation)).initialize.selector,
+                    params.name,
+                    params.symbol,
+                    circuitBreaker
+                )
+            )
+        );
+
+        // Prepare enhanced metadata
+        IBAP578.AgentMetadata memory enhancedMetadata = IBAP578.AgentMetadata({
+            persona: params.extendedMetadata.persona,
+            experience: params.extendedMetadata.experience,
+            voiceHash: params.extendedMetadata.voiceHash,
+            animationURI: params.extendedMetadata.animationURI,
+            vaultURI: params.extendedMetadata.vaultURI,
+            vaultHash: params.extendedMetadata.vaultHash
+        });
+
+        uint256 tokenId = BAP578(payable(agent)).createAgent(
+            msg.sender,
+            params.logicAddress,
+            params.metadataURI,
+            enhancedMetadata
+        );
+
+        // Update global stats
+        _updateGlobalStats(false);
+
+        // Emit free mint event
+        emit FreeMintUsed(msg.sender, agent);
+        emit AgentCreated(agent, msg.sender, tokenId, params.logicAddress);
+
+        return agent;
+    }
+
+    /**
+     * @dev Internal function to create a new agent with extended metadata
+     * @param name The name of the agent token collection
+     * @param symbol The symbol of the agent token collection
+     * @param logicAddress The address of the logic contract
+     * @param metadataURI The URI for the agent's metadata
+     * @param extendedMetadata The extended metadata for the agent
+     * @return agent The address of the new agent contract
+     */
+    function _createAgentInternal(
+        string calldata name,
+        string calldata symbol,
+        address logicAddress,
+        string calldata metadataURI,
+        IBAP578.AgentMetadata memory extendedMetadata
+    ) internal returns (address agent) {
         // Verify fee payment
         require(msg.value == AGENT_CREATION_FEE, "AgentFactory: incorrect fee amount");
 
@@ -178,7 +332,7 @@ contract AgentFactory is
             symbol: symbol,
             logicAddress: logicAddress,
             metadataURI: metadataURI,
-            extendedMetadata: emptyMetadata
+            extendedMetadata: extendedMetadata
         });
 
         agent = address(
@@ -209,6 +363,9 @@ contract AgentFactory is
             params.metadataURI,
             enhancedMetadata
         );
+
+        // Update global stats
+        _updateGlobalStats(false);
 
         emit AgentCreated(agent, msg.sender, tokenId, params.logicAddress);
 
