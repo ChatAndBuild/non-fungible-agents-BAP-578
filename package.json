@@ -1,32 +1,42 @@
 {
-  "name": "bap578-non-fungible-agents",
-  "version": "0.1.0",
-  "description": "BAP-578 Non-Fungible Agent (NFA) Token Standard Implementation",
-  "main": "index.js",
+  "name": "nonfungible-agents",
+  "version": "1.0.0",
+  "description": "NonFungibleAgents - ERC-721 NFT Smart Contract for AI Agents with structured metadata and built-in features",
+  "main": "hardhat.config.js",
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
+    "coverage": "npx hardhat coverage",
     "deploy": "npx hardhat run scripts/deploy.js",
-    "deploy:dev": "npx hardhat run scripts/deploy-dev.js",
-    "deploy:full": "npx hardhat run scripts/deploy-full.js",
-    "deploy:full:testnet": "npx hardhat run scripts/deploy-full.js --network testnet",
-    "deploy:full:mainnet": "npx hardhat run scripts/deploy-full.js --network mainnet",
-    "verify": "npx hardhat run scripts/verify-contracts.js",
-    "verify:testnet": "npx hardhat run scripts/verify-contracts.js --network testnet",
-    "verify:mainnet": "npx hardhat run scripts/verify-contracts.js --network mainnet",
-    "interact": "npx hardhat run scripts/interact.js",
-    "interact:testnet": "npx hardhat run scripts/interact.js --network testnet",
-    "interact:mainnet": "npx hardhat run scripts/interact.js --network mainnet",
+    "deploy:localhost": "npx hardhat run scripts/deploy.js --network localhost",
+    "deploy:testnet": "npx hardhat run scripts/deploy.js --network testnet",
+    "deploy:mainnet": "npx hardhat run scripts/deploy.js --network mainnet",
+    "interact": "npx hardhat run scripts/interact-nfa.js",
+    "interact:localhost": "npx hardhat run scripts/interact-nfa.js --network localhost",
+    "interact:testnet": "npx hardhat run scripts/interact-nfa.js --network testnet",
+    "interact:mainnet": "npx hardhat run scripts/interact-nfa.js --network mainnet",
+    "verify": "npx hardhat run scripts/verify.js",
+    "verify:testnet": "npx hardhat run scripts/verify.js --network testnet",
+    "verify:mainnet": "npx hardhat run scripts/verify.js --network mainnet",
+    "verify:manual": "npx hardhat run scripts/verify-manual.js",
+    "verify:manual:testnet": "npx hardhat run scripts/verify-manual.js --network testnet",
+    "node": "npx hardhat node",
+    "clean": "npx hardhat clean",
+    "size": "npx hardhat size-contracts",
     "lint": "solhint 'contracts/**/*.sol'",
-    "format": "prettier --write 'contracts/**/*.sol'"
+    "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.js' 'test/**/*.js'"
   },
   "keywords": [
     "blockchain",
     "nft",
+    "erc721",
     "agent",
+    "ai-agent",
     "bnb-chain",
     "smart-contract",
-    "token-standard"
+    "ethereum",
+    "web3",
+    "upgradeable"
   ],
   "author": "",
   "license": "MIT",
@@ -52,5 +62,12 @@
   "dependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
     "merkletreejs": "^0.5.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChatAndBuild/non-fungible-agents-BAP-578.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

@@ -10,14 +10,14 @@ const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL || 'https://bsc-dataseed.bin
 const DEPLOYER_PRIVATE_KEY =
   process.env.DEPLOYER_PRIVATE_KEY ||
   '0000000000000000000000000000000000000000000000000000000000000000';
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || '';
+const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || 'XRQH6YW76CTUT8IVW73BQPMGPUUJ2MVE19';
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
   solidity: {
-    version: '0.8.9',
+    version: '0.8.20',
     settings: {
       optimizer: {
         enabled: true,
@@ -60,11 +60,12 @@ module.exports = {
   etherscan: {
     apiKey: {
       bsc: BSCSCAN_API_KEY,
+      testnet: BSCSCAN_API_KEY,
       bscTestnet: BSCSCAN_API_KEY,
     },
     customChains: [
       {
-        network: "bscTestnet",
+        network: "testnet",
         chainId: 97,
         urls: {
           apiURL: "https://api-testnet.bscscan.com/api",
