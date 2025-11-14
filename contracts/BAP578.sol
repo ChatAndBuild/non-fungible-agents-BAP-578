@@ -103,9 +103,9 @@ contract BAP578 is
     function initialize(
         string memory name,
         string memory symbol,
-        address _treasury
+        address treasury
     ) public initializer {
-        require(_treasury != address(0), "Invalid treasury");
+        require(treasury != address(0), "Invalid treasury");
 
         __ERC721_init(name, symbol);
         __ERC721Enumerable_init();
@@ -114,7 +114,7 @@ contract BAP578 is
         __Ownable_init();
         __UUPSUpgradeable_init();
 
-        treasuryAddress = _treasury;
+        treasuryAddress = treasury;
     }
 
     // ============================================
@@ -237,17 +237,17 @@ contract BAP578 is
     /**
      * @dev Update treasury address
      */
-    function setTreasury(address _treasury) external onlyOwner {
-        treasuryAddress = _treasury;
-        emit TreasuryUpdated(_treasury);
+    function setTreasury(address newTreasury) external onlyOwner {
+        treasuryAddress = newTreasury;
+        emit TreasuryUpdated(newTreasury);
     }
 
     /**
      * @dev Pause/unpause contract
      */
-    function setPaused(bool _paused) external onlyOwner {
-        paused = _paused;
-        emit ContractPaused(_paused);
+    function setPaused(bool pausedState) external onlyOwner {
+        paused = pausedState;
+        emit ContractPaused(pausedState);
     }
 
     /**
