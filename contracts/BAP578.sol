@@ -303,12 +303,12 @@ contract BAP578 is
     /**
      * @dev Get all tokens owned by an address
      */
-    function tokensOfOwner(address owner) external view returns (uint256[] memory) {
-        uint256 tokenCount = balanceOf(owner);
+    function tokensOfOwner(address account) external view returns (uint256[] memory) {
+        uint256 tokenCount = balanceOf(account);
         uint256[] memory tokens = new uint256[](tokenCount);
 
         for (uint256 i = 0; i < tokenCount; i++) {
-            tokens[i] = tokenOfOwnerByIndex(owner, i);
+            tokens[i] = tokenOfOwnerByIndex(account, i);
         }
 
         return tokens;
