@@ -99,7 +99,7 @@ async function main() {
   console.log("");
   
   // Generate ABI for manual interaction
-  const contractArtifact = await hre.artifacts.readArtifact("NonFungibleAgents");
+  const contractArtifact = await hre.artifacts.readArtifact("BAP578");
   const abiPath = `./deployments/${network}_abi.json`;
   fs.writeFileSync(abiPath, JSON.stringify(contractArtifact.abi, null, 2));
   console.log(`ABI saved to: ${abiPath}`);

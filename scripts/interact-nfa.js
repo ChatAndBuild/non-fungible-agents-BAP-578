@@ -37,7 +37,7 @@ async function promptForMetadata() {
 }
 
 async function main() {
-  console.log("\n🤖 NonFungibleAgents - Interactive CLI\n");
+  console.log("\n🤖 BAP578 - Interactive CLI\n");
 
   // Load deployment info
   const network = hre.network.name;
@@ -52,8 +52,8 @@ async function main() {
   const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
   console.log("📍 Using contract at:", deployment.proxy);
 
-  const NonFungibleAgents = await hre.ethers.getContractFactory("NonFungibleAgents");
-  const nfa = NonFungibleAgents.attach(deployment.proxy);
+  const BAP578 = await hre.ethers.getContractFactory("BAP578");
+  const nfa = BAP578.attach(deployment.proxy);
   const [signer] = await hre.ethers.getSigners();
 
   console.log("👤 Connected as:", signer.address);

@@ -27,7 +27,7 @@ async function main() {
       await hre.run("verify:verify", {
         address: deployment.implementation,
         constructorArguments: [],
-        contract: "contracts/NonFungibleAgents.sol:NonFungibleAgents"
+        contract: "contracts/BAP578.sol:BAP578"
       });
       console.log("✅ Implementation verified!");
     } catch (error) {

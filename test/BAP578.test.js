@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
-describe("NonFungibleAgents", function () {
+describe("BAP578", function () {
   let nfa;
   let owner;
   let addr1;
@@ -24,9 +24,9 @@ describe("NonFungibleAgents", function () {
     [owner, addr1, addr2, treasury] = await ethers.getSigners();
 
     // Deploy upgradeable contract using OpenZeppelin Upgrades plugin
-    const NonFungibleAgents = await ethers.getContractFactory("NonFungibleAgents");
+    const BAP578 = await ethers.getContractFactory("BAP578");
     nfa = await upgrades.deployProxy(
-      NonFungibleAgents,
+      BAP578,
       ["Non-Fungible Agents", "NFA", treasury.address],
       { initializer: "initialize", kind: "uups" }
     );

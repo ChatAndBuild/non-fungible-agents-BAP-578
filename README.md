@@ -1,11 +1,14 @@
-# Non-Fungible Agents (NFA)
+# BAP578 - Non-Fungible Agents (NFA)
 
-ERC-721 NFT Smart Contract for AI Agents with structured metadata and built-in features on BNB Chain.
+ERC-721 NFT Smart Contract (BAP578) for AI Agents with structured metadata and built-in features on BNB Chain.
 
 ![Non-Fungible Agents](NFA-ReadMe-Header.png)
 
 ## Features
 
+- **Contract Name**: BAP578
+- **Token Name**: Non-Fungible Agents
+- **Symbol**: NFA
 - **3 Free Mints Per User** - Every user gets 3 free mints automatically
 - **0.01 BNB Fee** - After free mints are exhausted
 - **Structured Agent Metadata** - Persona, experience, voice, animations, and vault data

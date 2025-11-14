@@ -9,10 +9,10 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
- * @title NonFungibleAgents
+ * @title BAP578
  * @dev NFT contract for Non-Fungible Agents with structured metadata
  */
-contract NonFungibleAgents is
+contract BAP578 is
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,

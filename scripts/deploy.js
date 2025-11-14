@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  console.log("\n🚀 Deploying NonFungibleAgents NFT Contract...\n");
+  console.log("\n🚀 Deploying BAP578 NFT Contract...\n");
 
   // Get deployer account
   const [deployer] = await hre.ethers.getSigners();
@@ -14,10 +14,10 @@ async function main() {
 
   // Deploy upgradeable contract using OpenZeppelin Upgrades plugin
   console.log("\n📝 Deploying upgradeable contract...");
-  const NonFungibleAgents = await hre.ethers.getContractFactory("NonFungibleAgents");
+  const BAP578 = await hre.ethers.getContractFactory("BAP578");
   
   const nfa = await hre.upgrades.deployProxy(
-    NonFungibleAgents,
+    BAP578,
     ["Non-Fungible Agents", "NFA", treasuryAddress],
     { initializer: "initialize", kind: "uups" }
   );
