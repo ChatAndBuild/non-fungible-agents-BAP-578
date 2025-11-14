@@ -139,10 +139,9 @@ contract BAP578 is
         } else {
             // Require payment
             require(msg.value == MINT_FEE, "Incorrect fee");
-            // Send fee to treasury
-            if (treasuryAddress != address(0)) {
-                payable(treasuryAddress).transfer(msg.value);
-            }
+            // Validate and send fee to treasury
+            require(treasuryAddress != address(0), "Treasury not set");
+            payable(treasuryAddress).transfer(msg.value);
         }
 
         // Mint NFT
@@ -182,13 +181,13 @@ contract BAP578 is
         uint256 amount
     ) external onlyTokenOwner(tokenId) nonReentrant {
         require(agentStates[tokenId].balance >= amount, "Insufficient balance");
-        
+
         // Update state first
         agentStates[tokenId].balance -= amount;
-        
+
         // Emit event before external call
         emit AgentWithdraw(tokenId, amount);
-        
+
         // External call last (Checks-Effects-Interactions pattern)
         payable(msg.sender).transfer(amount);
     }
@@ -244,6 +243,7 @@ contract BAP578 is
      * @dev Update treasury address
      */
     function setTreasury(address newTreasury) external onlyOwner {
+        require(newTreasury != address(0), "Treasury cannot be zero address");
         treasuryAddress = newTreasury;
         emit TreasuryUpdated(newTreasury);
     }
