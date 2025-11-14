@@ -10,21 +10,23 @@ const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL || 'https://bsc-dataseed.bin
 const DEPLOYER_PRIVATE_KEY =
   process.env.DEPLOYER_PRIVATE_KEY ||
   '0000000000000000000000000000000000000000000000000000000000000000';
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || 'XRQH6YW76CTUT8IVW73BQPMGPUUJ2MVE19';
+const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || '';
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
   solidity: {
-    version: '0.8.20',
+    version: "0.8.28", // any version you want
     settings: {
+      viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 200,
         details: {
-          yul: false,
-        }
+          yulDetails: {
+            optimizerSteps: "u",
+          },
+        },
       },
     },
   },
