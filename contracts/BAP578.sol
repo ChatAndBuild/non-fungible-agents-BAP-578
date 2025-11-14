@@ -182,9 +182,15 @@ contract BAP578 is
         uint256 amount
     ) external onlyTokenOwner(tokenId) nonReentrant {
         require(agentStates[tokenId].balance >= amount, "Insufficient balance");
+        
+        // Update state first
         agentStates[tokenId].balance -= amount;
-        payable(msg.sender).transfer(amount);
+        
+        // Emit event before external call
         emit AgentWithdraw(tokenId, amount);
+        
+        // External call last (Checks-Effects-Interactions pattern)
+        payable(msg.sender).transfer(amount);
     }
 
     /**
