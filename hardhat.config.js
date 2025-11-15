@@ -1,4 +1,5 @@
 require('@nomiclabs/hardhat-ethers');
+require("@nomicfoundation/hardhat-verify");
 require('@nomicfoundation/hardhat-chai-matchers');
 require("@openzeppelin/hardhat-upgrades");
 require('dotenv').config();
