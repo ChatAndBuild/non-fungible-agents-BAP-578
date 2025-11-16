@@ -246,31 +246,71 @@ async function main() {
           }
 
           console.log('\n🔑 Admin Functions:');
-          console.log('1. Set free mints');
-          console.log('2. Update treasury');
-          console.log('3. Pause/unpause');
-          console.log('4. Emergency withdraw');
-          console.log('5. Back');
+          console.log('1. Grant additional free mints');
+          console.log('2. Check user free mints status');
+          console.log('3. Update treasury');
+          console.log('4. Pause/unpause');
+          console.log('5. Emergency withdraw');
+          console.log('6. Back');
 
           const adminChoice = await question('\n> ');
 
           switch (adminChoice) {
             case '1':
+              console.log('\n📝 Grant Additional Free Mints');
+              console.log('Note: This function manages additional free mints beyond the default 3');
+              console.log('- Setting to 0 will reset user to default behavior');
+              console.log('- Each user gets 3 free mints by default automatically');
+              
               const freeUser = await question('User address: ');
-              const freeAmount = await question('Number of free mints: ');
-              const freeTx = await nfa.setFreeMints(freeUser, freeAmount);
-              await freeTx.wait();
-              console.log('✅ Free mints set');
+              
+              // Show current status first
+              const currentClaimed = await nfa.freeMintsClaimed(freeUser);
+              const currentRemaining = await nfa.getFreeMints(freeUser);
+              console.log(`\nCurrent status for ${freeUser}:`);
+              console.log(`- Free mints claimed: ${currentClaimed}`);
+              console.log(`- Free mints remaining: ${currentRemaining}`);
+              
+              const freeAmount = await question('\nAdditional free mints to grant (0 to reset): ');
+              
+              try {
+                const freeTx = await nfa.grantAdditionalFreeMints(freeUser, freeAmount);
+                await freeTx.wait();
+                console.log(`✅ Updated free mints for ${freeUser}`);
+                
+                // Show updated free mints for the user
+                const newRemaining = await nfa.getFreeMints(freeUser);
+                console.log(`User now has ${newRemaining} free mints remaining`);
+              } catch (error) {
+                console.error('❌ Failed to grant free mints:', error.message);
+              }
               break;
 
             case '2':
+              const checkUser = await question('User address to check (or press enter for self): ');
+              const addressToCheck = checkUser || signer.address;
+              
+              try {
+                const claimed = await nfa.freeMintsClaimed(addressToCheck);
+                const remaining = await nfa.getFreeMints(addressToCheck);
+                
+                console.log(`\n🎁 Free Mints Status for ${addressToCheck}:`);
+                console.log(`- Free mints claimed: ${claimed}`);
+                console.log(`- Free mints remaining: ${remaining}`);
+                console.log(`- Default per user: ${await nfa.FREE_MINTS_PER_USER()}`);
+              } catch (error) {
+                console.error('❌ Failed to check free mints:', error.message);
+              }
+              break;
+
+            case '3':
               const newTreasury = await question('New treasury address: ');
               const treasuryTx = await nfa.setTreasury(newTreasury);
               await treasuryTx.wait();
               console.log('✅ Treasury updated');
               break;
 
-            case '3':
+            case '4':
               const currentPaused = await nfa.paused();
               console.log(`Contract is currently ${currentPaused ? 'paused' : 'active'}`);
               const setPause = await question(`${currentPaused ? 'Unpause' : 'Pause'}? (y/n): `);
@@ -281,7 +321,7 @@ async function main() {
               }
               break;
 
-            case '4':
+            case '5':
               const contractBalance = await hre.ethers.provider.getBalance(nfa.address);
               console.log(`Contract balance: ${hre.ethers.utils.formatEther(contractBalance)} BNB`);
               if (contractBalance.gt(0)) {
