@@ -1,4 +1,5 @@
 require('@nomiclabs/hardhat-ethers');
+require("@nomicfoundation/hardhat-verify");
 require('@nomicfoundation/hardhat-chai-matchers');
 require("@openzeppelin/hardhat-upgrades");
 require('dotenv').config();
@@ -17,14 +18,16 @@ const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || '';
  */
 module.exports = {
   solidity: {
-    version: '0.8.9',
+    version: "0.8.28", // any version you want
     settings: {
+      viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 200,
         details: {
-          yul: false,
-        }
+          yulDetails: {
+            optimizerSteps: "u",
+          },
+        },
       },
     },
   },
@@ -60,11 +63,12 @@ module.exports = {
   etherscan: {
     apiKey: {
       bsc: BSCSCAN_API_KEY,
+      testnet: BSCSCAN_API_KEY,
       bscTestnet: BSCSCAN_API_KEY,
     },
     customChains: [
       {
-        network: "bscTestnet",
+        network: "testnet",
         chainId: 97,
         urls: {
           apiURL: "https://api-testnet.bscscan.com/api",

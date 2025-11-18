@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
@@ -7,16 +7,12 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URISto
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
-import "./interfaces/IBAP578.sol";
-import "./interfaces/ICircuitBreaker.sol";
 
 /**
- * @title BAP578 - Non-Fungible Agent (NFA) Token Standard
- * @dev Implementation of the BAP-578 standard for autonomous agent tokens
+ * @title BAP578
+ * @dev NFT contract for Non-Fungible Agents with structured metadata
  */
 contract BAP578 is
-    IBAP578,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
@@ -24,46 +20,92 @@ contract BAP578 is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
+    // ============================================
+    // STRUCTS
+    // ============================================
 
-    // Token ID counter
-    CountersUpgradeable.Counter private _tokenIdCounter;
+    struct AgentMetadata {
+        string persona; // JSON-encoded string for character traits, style, tone
+        string experience; // Short summary string for agent's role/purpose
+        string voiceHash; // Reference ID to stored audio profile
+        string animationURI; // URI to video or animation file
+        string vaultURI; // URI to the agent's vault (extended data storage)
+        bytes32 vaultHash; // Hash of the vault contents for verification
+    }
 
-    // Mapping from token ID to agent state
-    mapping(uint256 => State) private _agentStates;
+    struct AgentState {
+        uint256 balance;
+        bool active;
+        address logicAddress;
+        uint256 createdAt;
+    }
 
-    // Mapping from token ID to extended agent metadata
-    mapping(uint256 => AgentMetadata) private _agentExtendedMetadata;
+    // ============================================
+    // STATE VARIABLES
+    // ============================================
 
-    ICircuitBreaker public circuitBreaker;
+    // Token counter
+    uint256 private _tokenIdCounter;
 
-    /**
-     * @dev Modifier to check if the caller is the owner of the token
-     */
-    modifier onlyAgentOwner(uint256 tokenId) {
-        require(ownerOf(tokenId) == msg.sender, "BAP578: caller is not agent owner");
+    // Agent data
+    mapping(uint256 => AgentState) public agentStates;
+    mapping(uint256 => AgentMetadata) public agentMetadata;
+
+    // Minting fee
+    uint256 public constant MINT_FEE = 0.01 ether;
+
+    // Free mints tracking (everyone gets 3 free mints)
+    mapping(address => uint256) public freeMintsClaimed;
+    uint256 public constant FREE_MINTS_PER_USER = 3;
+
+    // Treasury address for fee distribution
+    address public treasuryAddress;
+
+    // Pause state for emergency
+    bool public paused;
+
+    // ============================================
+    // EVENTS
+    // ============================================
+
+    event AgentCreated(
+        uint256 indexed tokenId,
+        address indexed owner,
+        address logicAddress,
+        string metadataURI
+    );
+    event AgentFunded(uint256 indexed tokenId, uint256 amount);
+    event AgentWithdraw(uint256 indexed tokenId, uint256 amount);
+    event AgentStatusChanged(uint256 indexed tokenId, bool active);
+    event LogicAddressUpdated(uint256 indexed tokenId, address newLogicAddress);
+    event MetadataUpdated(uint256 indexed tokenId);
+    event TreasuryUpdated(address newTreasury);
+    event ContractPaused(bool paused);
+
+    // ============================================
+    // MODIFIERS
+    // ============================================
+
+    modifier whenNotPaused() {
+        require(!paused, "Contract is paused");
         _;
     }
 
-    /**
-     * @dev Modifier to check if the agent is active
-     */
-    modifier whenAgentActive(uint256 tokenId) {
-        require(!ICircuitBreaker(circuitBreaker).globalPause(), "BAP578: global pause active");
-        require(_agentStates[tokenId].status == Status.Active, "BAP578: agent not active");
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(ownerOf(tokenId) == msg.sender, "Not token owner");
         _;
     }
 
-    /**
-     * @dev Initializes the contract
-     * @dev This function can only be called once due to the initializer modifier
-     */
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+
     function initialize(
         string memory name,
         string memory symbol,
-        address circuitBreakerAddress
+        address treasury
     ) public initializer {
-        require(circuitBreakerAddress != address(0), "BAP578: Circuit Breaker address is zero");
+        require(treasury != address(0), "Invalid treasury");
 
         __ERC721_init(name, symbol);
         __ERC721Enumerable_init();
@@ -72,179 +114,249 @@ contract BAP578 is
         __Ownable_init();
         __UUPSUpgradeable_init();
 
-        circuitBreaker = ICircuitBreaker(circuitBreakerAddress);
-
-        // Transfer ownership to governance for additional security
-        _transferOwnership(circuitBreakerAddress);
+        treasuryAddress = treasury;
     }
 
+    // ============================================
+    // MAIN FUNCTIONS
+    // ============================================
+
     /**
-     * @dev Creates a new agent token with extended metadata
-     * @param to The address that will own the agent
-     * @param logicAddress The address of the logic contract
-     * @param metadataURI The URI for the agent's metadata
-     * @param extendedMetadata The extended metadata for the agent
-     * @return tokenId The ID of the new agent token
+     * @dev Create a new agent NFT
      */
     function createAgent(
         address to,
         address logicAddress,
         string memory metadataURI,
         AgentMetadata memory extendedMetadata
-    ) external nonReentrant returns (uint256 tokenId) {
-        require(logicAddress != address(0), "BAP578: logic address is zero");
+    ) external payable whenNotPaused nonReentrant returns (uint256) {
+        // Check if user has free mints remaining
+        uint256 freeMintsRemaining = FREE_MINTS_PER_USER - freeMintsClaimed[msg.sender];
 
-        _tokenIdCounter.increment();
-        tokenId = _tokenIdCounter.current();
+        if (freeMintsRemaining > 0) {
+            // Use free mint
+            freeMintsClaimed[msg.sender]++;
+        } else {
+            // Require payment
+            require(msg.value == MINT_FEE, "Incorrect fee");
+            // Validate and send fee to treasury
+            require(treasuryAddress != address(0), "Treasury not set");
+            payable(treasuryAddress).transfer(msg.value);
+        }
 
+        // Mint NFT
+        uint256 tokenId = ++_tokenIdCounter;
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
 
-        _agentStates[tokenId] = State({
+        // Initialize agent state
+        agentStates[tokenId] = AgentState({
             balance: 0,
-            status: Status.Active,
-            owner: to,
+            active: true,
             logicAddress: logicAddress,
-            lastActionTimestamp: block.timestamp
+            createdAt: block.timestamp
         });
 
-        _agentExtendedMetadata[tokenId] = extendedMetadata;
+        // Store extended metadata
+        agentMetadata[tokenId] = extendedMetadata;
 
+        emit AgentCreated(tokenId, to, logicAddress, metadataURI);
         return tokenId;
     }
 
     /**
-     * @dev Creates a new agent token with basic metadata
-     * @param to The address that will own the agent
-     * @param logicAddress The address of the logic contract
-     * @param metadataURI The URI for the agent's metadata
-     * @return tokenId The ID of the new agent token
-     */
-    function createAgent(
-        address to,
-        address logicAddress,
-        string memory metadataURI
-    ) external returns (uint256 tokenId) {
-        // Create empty extended metadata
-        AgentMetadata memory emptyMetadata = AgentMetadata({
-            persona: "",
-            experience: "",
-            voiceHash: "",
-            animationURI: "",
-            vaultURI: "",
-            vaultHash: bytes32(0)
-        });
-
-        return this.createAgent(to, logicAddress, metadataURI, emptyMetadata);
-    }
-
-    /**
-     * @dev Updates the logic address for the agent
-     * @param tokenId The ID of the agent token
-     * @param newLogic The address of the new logic contract
-     */
-    function setLogicAddress(uint256 tokenId, address newLogic) external onlyAgentOwner(tokenId) {
-        require(newLogic != address(0), "BAP578: new logic address is zero");
-
-        address oldLogic = _agentStates[tokenId].logicAddress;
-        _agentStates[tokenId].logicAddress = newLogic;
-
-        emit LogicUpgraded(address(this), oldLogic, newLogic);
-    }
-
-    /**
-     * @dev Funds the agent with BNB for gas fees
-     * @param tokenId The ID of the agent token
+     * @dev Fund an agent with ETH
      */
     function fundAgent(uint256 tokenId) external payable {
-        require(_exists(tokenId), "BAP578: agent does not exist");
-
-        _agentStates[tokenId].balance += msg.value;
-
-        emit AgentFunded(address(this), msg.sender, msg.value);
+        require(_exists(tokenId), "Token does not exist");
+        agentStates[tokenId].balance += msg.value;
+        emit AgentFunded(tokenId, msg.value);
     }
 
     /**
-     * @dev Returns the current state of the agent
-     * @param tokenId The ID of the agent token
-     * @return The agent's state
+     * @dev Withdraw funds from agent (owner only)
      */
-    function getState(uint256 tokenId) external view returns (State memory) {
-        require(_exists(tokenId), "BAP578: agent does not exist");
-        return _agentStates[tokenId];
-    }
+    function withdrawFromAgent(
+        uint256 tokenId,
+        uint256 amount
+    ) external onlyTokenOwner(tokenId) nonReentrant {
+        require(agentStates[tokenId].balance >= amount, "Insufficient balance");
 
-    /**
-     * @dev Gets the agent's extended metadata
-     * @param tokenId The ID of the agent token
-     * @return The agent's extended metadata
-     */
-    function getAgentMetadata(uint256 tokenId) external view returns (AgentMetadata memory) {
-        require(_exists(tokenId), "BAP578: agent does not exist");
-        return _agentExtendedMetadata[tokenId];
-    }
+        // Update state first
+        agentStates[tokenId].balance -= amount;
 
-    /**
-     * @dev Pauses the agent
-     * @param tokenId The ID of the agent token
-     */
-    function pause(uint256 tokenId) external onlyAgentOwner(tokenId) {
-        require(_agentStates[tokenId].status == Status.Active, "BAP578: agent not active");
+        // Emit event before external call
+        emit AgentWithdraw(tokenId, amount);
 
-        _agentStates[tokenId].status = Status.Paused;
-
-        emit StatusChanged(address(this), Status.Paused);
-    }
-
-    /**
-     * @dev Resumes the agent
-     * @param tokenId The ID of the agent token
-     */
-    function unpause(uint256 tokenId) external onlyAgentOwner(tokenId) {
-        require(_agentStates[tokenId].status == Status.Paused, "BAP578: agent not paused");
-
-        _agentStates[tokenId].status = Status.Active;
-
-        emit StatusChanged(address(this), Status.Active);
-    }
-
-    /**
-     * @dev Terminates the agent permanently
-     * @param tokenId The ID of the agent token
-     */
-    function terminate(uint256 tokenId) external onlyAgentOwner(tokenId) {
-        require(
-            _agentStates[tokenId].status != Status.Terminated,
-            "BAP578: agent already terminated"
-        );
-
-        _agentStates[tokenId].status = Status.Terminated;
-
-        // Return any remaining balance to the owner
-        uint256 remainingBalance = _agentStates[tokenId].balance;
-        if (remainingBalance > 0) {
-            _agentStates[tokenId].balance = 0;
-            payable(ownerOf(tokenId)).transfer(remainingBalance);
-        }
-
-        emit StatusChanged(address(this), Status.Terminated);
-    }
-
-    /**
-     * @dev Withdraws BNB from the agent
-     * @param tokenId The ID of the agent token
-     * @param amount The amount to withdraw
-     */
-    function withdrawFromAgent(uint256 tokenId, uint256 amount) external onlyAgentOwner(tokenId) {
-        require(amount <= _agentStates[tokenId].balance, "BAP578: insufficient balance");
-
-        _agentStates[tokenId].balance -= amount;
+        // External call last (Checks-Effects-Interactions pattern)
         payable(msg.sender).transfer(amount);
     }
 
     /**
-     * @dev See {IERC165-supportsInterface}
+     * @dev Toggle agent active status
      */
+    function setAgentStatus(uint256 tokenId, bool active) external onlyTokenOwner(tokenId) {
+        agentStates[tokenId].active = active;
+        emit AgentStatusChanged(tokenId, active);
+    }
+
+    /**
+     * @dev Update logic address for an agent
+     */
+    function setLogicAddress(
+        uint256 tokenId,
+        address newLogicAddress
+    ) external onlyTokenOwner(tokenId) {
+        agentStates[tokenId].logicAddress = newLogicAddress;
+        emit LogicAddressUpdated(tokenId, newLogicAddress);
+    }
+
+    /**
+     * @dev Update agent metadata
+     */
+    function updateAgentMetadata(
+        uint256 tokenId,
+        string memory newMetadataURI,
+        AgentMetadata memory newExtendedMetadata
+    ) external onlyTokenOwner(tokenId) {
+        _setTokenURI(tokenId, newMetadataURI);
+        agentMetadata[tokenId] = newExtendedMetadata;
+        emit MetadataUpdated(tokenId);
+    }
+
+    // ============================================
+    // ADMIN FUNCTIONS
+    // ============================================
+
+    /**
+     * @dev Grant additional free mints to an address (admin override)
+     */
+    function grantAdditionalFreeMints(address user, uint256 additionalAmount) external onlyOwner {
+        // This allows owner to grant mints beyond the default 3
+        // Setting to 0 resets to default behavior
+        if (freeMintsClaimed[user] > additionalAmount) {
+            freeMintsClaimed[user] = 0; // Reset if giving more than claimed
+        }
+    }
+
+    /**
+     * @dev Update treasury address
+     */
+    function setTreasury(address newTreasury) external onlyOwner {
+        require(newTreasury != address(0), "Treasury cannot be zero address");
+        treasuryAddress = newTreasury;
+        emit TreasuryUpdated(newTreasury);
+    }
+
+    /**
+     * @dev Pause/unpause contract
+     */
+    function setPaused(bool pausedState) external onlyOwner {
+        paused = pausedState;
+        emit ContractPaused(pausedState);
+    }
+
+    /**
+     * @dev Emergency withdraw (owner only)
+     */
+    function emergencyWithdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No balance");
+        payable(owner()).transfer(balance);
+    }
+
+    // ============================================
+    // VIEW FUNCTIONS
+    // ============================================
+
+    /**
+     * @dev Get agent state information
+     */
+    function getAgentState(
+        uint256 tokenId
+    )
+        external
+        view
+        returns (
+            uint256 balance,
+            bool active,
+            address logicAddress,
+            uint256 createdAt,
+            address owner
+        )
+    {
+        require(_exists(tokenId), "Token does not exist");
+        AgentState memory state = agentStates[tokenId];
+        return (state.balance, state.active, state.logicAddress, state.createdAt, ownerOf(tokenId));
+    }
+
+    /**
+     * @dev Get agent metadata
+     */
+    function getAgentMetadata(
+        uint256 tokenId
+    ) external view returns (AgentMetadata memory metadata, string memory metadataURI) {
+        require(_exists(tokenId), "Token does not exist");
+        return (agentMetadata[tokenId], tokenURI(tokenId));
+    }
+
+    /**
+     * @dev Get all tokens owned by an address
+     */
+    function tokensOfOwner(address account) external view returns (uint256[] memory) {
+        uint256 tokenCount = balanceOf(account);
+        uint256[] memory tokens = new uint256[](tokenCount);
+
+        for (uint256 i = 0; i < tokenCount; i++) {
+            tokens[i] = tokenOfOwnerByIndex(account, i);
+        }
+
+        return tokens;
+    }
+
+    /**
+     * @dev Get total supply
+     */
+    function getTotalSupply() external view returns (uint256) {
+        return totalSupply();
+    }
+
+    /**
+     * @dev Get remaining free mints for an address
+     */
+    function getFreeMints(address user) external view returns (uint256) {
+        uint256 claimed = freeMintsClaimed[user];
+        if (claimed >= FREE_MINTS_PER_USER) {
+            return 0;
+        }
+        return FREE_MINTS_PER_USER - claimed;
+    }
+
+    // ============================================
+    // OVERRIDES
+    // ============================================
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+    }
+
+    function _burn(
+        uint256 tokenId
+    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(
+        uint256 tokenId
+    ) public view override(ERC721Upgradeable, ERC721URIStorageUpgradeable) returns (string memory) {
+        return super.tokenURI(tokenId);
+    }
+
     function supportsInterface(
         bytes4 interfaceId
     )
@@ -253,63 +365,11 @@ contract BAP578 is
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
-        return interfaceId == type(IBAP578).interfaceId || super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 
-    /**
-     * @dev See {ERC721-_beforeTokenTransfer}
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId,
-        uint256 batchSize
-    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
-        super._beforeTokenTransfer(from, to, tokenId, batchSize);
-
-        // Update owner in agent state when transferred
-        if (from != address(0) && to != address(0)) {
-            _agentStates[tokenId].owner = to;
-        }
-    }
-
-    /**
-     * @dev See {ERC721URIStorage-_burn}
-     */
-    function _burn(
-        uint256 tokenId
-    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
-        super._burn(tokenId);
-    }
-
-    /**
-     * @dev See {ERC721URIStorage-tokenURI}
-     */
-    function tokenURI(
-        uint256 tokenId
-    ) public view override(ERC721Upgradeable, ERC721URIStorageUpgradeable) returns (string memory) {
-        return super.tokenURI(tokenId);
-    }
-
-    /**
-     * @dev Upgrades the contract to a new implementation and calls a function on the new implementation.
-     * Inherits the implementation from UUPSUpgradeable parent contract.
-     * The _authorizeUpgrade function below controls access to this function.
-     */
-    // Function is inherited from UUPSUpgradeable and doesn't need to be re-implemented
-
-    /**
-     * @dev Upgrades the contract to a new implementation.
-     * Inherits the implementation from UUPSUpgradeable parent contract.
-     * The _authorizeUpgrade function below controls access to this function.
-     */
-    // Function is inherited from UUPSUpgradeable and doesn't need to be re-implemented
-
-    /**
-     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
-     * Called by {upgradeTo} and {upgradeToAndCall}.
-     */
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
+    // Allow contract to receive ETH
     receive() external payable {}
 }

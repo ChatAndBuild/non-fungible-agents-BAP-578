@@ -1,647 +1,353 @@
 const { expect } = require('chai');
 const { ethers, upgrades } = require('hardhat');
 
-describe('BAP578 Non-Fungible Agent', function () {
-  let BAP578;
-  let bap578;
-  let CircuitBreaker;
-  let circuitBreaker;
+describe('BAP578', function () {
+  let nfa;
   let owner;
-  let governance;
-  let emergencyMultiSig;
   let addr1;
   let addr2;
-  let addrs;
+  let treasury;
 
-  // Mock logic contract address for testing
-  const mockLogicAddress = '0x1234567890123456789012345678901234567890';
+  // Helper function to create AgentMetadata
+  function createAgentMetadata(overrides = {}) {
+    return {
+      persona: overrides.persona || '{"traits": "friendly", "style": "casual"}',
+      experience: overrides.experience || 'AI Assistant specialized in blockchain',
+      voiceHash: overrides.voiceHash || 'voice_001',
+      animationURI: overrides.animationURI || 'ipfs://animation1',
+      vaultURI: overrides.vaultURI || 'ipfs://vault1',
+      vaultHash: overrides.vaultHash || ethers.utils.formatBytes32String('vault1'),
+    };
+  }
 
   beforeEach(async function () {
-    [owner, governance, emergencyMultiSig, addr1, addr2, ...addrs] = await ethers.getSigners();
+    [owner, addr1, addr2, treasury] = await ethers.getSigners();
 
-    // Deploy CircuitBreaker first
-    CircuitBreaker = await ethers.getContractFactory('CircuitBreaker');
-    circuitBreaker = await upgrades.deployProxy(
-      CircuitBreaker,
-      [governance.address, emergencyMultiSig.address],
-      { initializer: 'initialize' },
-    );
-    await circuitBreaker.deployed();
-
-    // Deploy BAP578 with CircuitBreaker as governance
-    BAP578 = await ethers.getContractFactory('BAP578');
-    bap578 = await upgrades.deployProxy(
-      BAP578,
-      ['Non-Fungible Agent', 'NFA', circuitBreaker.address],
-      { initializer: 'initialize', kind: 'uups' },
-    );
-    await bap578.deployed();
+    // Deploy upgradeable contract using OpenZeppelin Upgrades plugin
+    const BAP578 = await ethers.getContractFactory('BAP578');
+    nfa = await upgrades.deployProxy(BAP578, ['Non-Fungible Agents', 'NFA', treasury.address], {
+      initializer: 'initialize',
+      kind: 'uups',
+    });
+    await nfa.deployed();
   });
 
   describe('Deployment', function () {
-    it('Should set the right owner', async function () {
-      // Ownership is transferred to governance (CircuitBreaker) during initialization
-      expect(await bap578.owner()).to.equal(circuitBreaker.address);
+    it('Should set the correct name and symbol', async function () {
+      expect(await nfa.name()).to.equal('Non-Fungible Agents');
+      expect(await nfa.symbol()).to.equal('NFA');
     });
 
-    it('Should set the right name and symbol', async function () {
-      expect(await bap578.name()).to.equal('Non-Fungible Agent');
-      expect(await bap578.symbol()).to.equal('NFA');
+    it('Should set the correct treasury address', async function () {
+      expect(await nfa.treasuryAddress()).to.equal(treasury.address);
     });
 
-    it('Should set the right circuit breaker', async function () {
-      expect(await bap578.circuitBreaker()).to.equal(circuitBreaker.address);
+    it('Should set the correct owner', async function () {
+      expect(await nfa.owner()).to.equal(owner.address);
+    });
+  });
+
+  describe('Free Mints', function () {
+    it('Should give each user 3 free mints by default', async function () {
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(3);
+      expect(await nfa.getFreeMints(addr2.address)).to.equal(3);
+      expect(await nfa.FREE_MINTS_PER_USER()).to.equal(3);
     });
 
-    it('Should not allow initialization with zero Circuit Breaker address', async function () {
-      const BAP578Factory = await ethers.getContractFactory('BAP578');
+    it('Should allow first 3 mints for free', async function () {
+      const metadata = createAgentMetadata();
+
+      // First free mint
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(2);
+
+      // Second free mint
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata2', metadata);
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(1);
+
+      // Third free mint
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata3', metadata);
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(0);
+
+      // Fourth mint should require payment
       await expect(
-        upgrades.deployProxy(BAP578Factory, ['Test', 'TEST', ethers.constants.AddressZero], {
-          initializer: 'initialize',
-          kind: 'uups',
-        }),
-      ).to.be.revertedWith('BAP578: Circuit Breaker address is zero');
+        nfa
+          .connect(addr1)
+          .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata4', metadata),
+      ).to.be.revertedWith('Incorrect fee');
     });
 
-    it('Should support IBAP578 interface', async function () {
-      // Check if contract supports the IBAP578 interface
-      const interfaceId = '0x01ffc9a7'; // ERC165 interface ID
-      expect(await bap578.supportsInterface(interfaceId)).to.equal(true);
+    it('Should require payment after free mints are used', async function () {
+      const metadata = createAgentMetadata();
+
+      // Use all 3 free mints
+      for (let i = 0; i < 3; i++) {
+        await nfa
+          .connect(addr1)
+          .createAgent(
+            addr1.address,
+            ethers.constants.AddressZero,
+            `ipfs://metadata${i}`,
+            metadata,
+          );
+      }
+
+      // Next mint should require payment
+      const fee = await nfa.MINT_FEE();
+      const treasuryBefore = await treasury.getBalance();
+
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata4', metadata, {
+          value: fee,
+        });
+
+      const treasuryAfter = await treasury.getBalance();
+      expect(treasuryAfter.sub(treasuryBefore)).to.equal(fee);
     });
   });
 
   describe('Agent Creation', function () {
-    it('Should create an agent with extended metadata', async function () {
-      const metadataURI = 'ipfs://QmTest';
-      const extendedMetadata = {
-        persona: 'Test Persona',
-        experience: 'Test Experience',
-        voiceHash: 'Test Voice Hash',
-        animationURI: 'ipfs://QmTestAnimation',
-        vaultURI: 'ipfs://QmTestVault',
-        vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
-      };
+    it('Should create an agent with free mint', async function () {
+      const metadata = createAgentMetadata();
 
-      await bap578[
-        'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
-      ](addr1.address, mockLogicAddress, metadataURI, extendedMetadata);
+      const tx = await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
 
-      const tokenId = 1; // First token ID
-      expect(await bap578.ownerOf(tokenId)).to.equal(addr1.address);
-      expect(await bap578.tokenURI(tokenId)).to.equal(metadataURI);
+      await expect(tx)
+        .to.emit(nfa, 'AgentCreated')
+        .withArgs(1, addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1');
 
-      const agentMetadata = await bap578.getAgentMetadata(tokenId);
-      expect(agentMetadata.persona).to.equal(extendedMetadata.persona);
-      expect(agentMetadata.experience).to.equal(extendedMetadata.experience);
-      expect(agentMetadata.voiceHash).to.equal(extendedMetadata.voiceHash);
-      expect(agentMetadata.animationURI).to.equal(extendedMetadata.animationURI);
-      expect(agentMetadata.vaultURI).to.equal(extendedMetadata.vaultURI);
-      expect(agentMetadata.vaultHash).to.equal(extendedMetadata.vaultHash);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.logicAddress).to.equal(mockLogicAddress);
-      expect(agentState.status).to.equal(1); // Active status
-      expect(agentState.owner).to.equal(addr1.address);
-      expect(agentState.balance).to.equal(0);
+      expect(await nfa.balanceOf(addr1.address)).to.equal(1);
+      expect(await nfa.ownerOf(1)).to.equal(addr1.address);
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(2); // 2 free mints remaining
     });
 
-    it('Should create an agent with basic metadata', async function () {
-      const metadataURI = 'ipfs://QmTestBasic';
+    it('Should create an agent with payment after free mints', async function () {
+      const metadata = createAgentMetadata();
 
-      await bap578['createAgent(address,address,string)'](
+      // Use all free mints
+      for (let i = 0; i < 3; i++) {
+        await nfa
+          .connect(addr1)
+          .createAgent(
+            addr1.address,
+            ethers.constants.AddressZero,
+            `ipfs://metadata${i}`,
+            metadata,
+          );
+      }
+
+      // Pay for next mint
+      const fee = await nfa.MINT_FEE();
+      const tx = await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata4', metadata, {
+          value: fee,
+        });
+
+      await expect(tx)
+        .to.emit(nfa, 'AgentCreated')
+        .withArgs(4, addr1.address, ethers.constants.AddressZero, 'ipfs://metadata4');
+    });
+
+    it('Should store extended metadata correctly', async function () {
+      const metadata = createAgentMetadata({
+        persona: '{"traits": "professional", "style": "formal"}',
+        experience: 'Financial advisor agent',
+      });
+
+      await nfa.createAgent(
         addr1.address,
-        mockLogicAddress,
-        metadataURI,
+        ethers.constants.AddressZero,
+        'ipfs://metadata1',
+        metadata,
       );
 
-      const tokenId = 1;
-      expect(await bap578.ownerOf(tokenId)).to.equal(addr1.address);
-      expect(await bap578.tokenURI(tokenId)).to.equal(metadataURI);
-
-      const agentMetadata = await bap578.getAgentMetadata(tokenId);
-      expect(agentMetadata.persona).to.equal('');
-      expect(agentMetadata.experience).to.equal('');
-      expect(agentMetadata.voiceHash).to.equal('');
-      expect(agentMetadata.animationURI).to.equal('');
-      expect(agentMetadata.vaultURI).to.equal('');
-      expect(agentMetadata.vaultHash).to.equal(ethers.constants.HashZero);
-    });
-
-    it('Should not allow creating agent with zero logic address', async function () {
-      const metadataURI = 'ipfs://QmTest';
-
-      await expect(
-        bap578['createAgent(address,address,string)'](
-          addr1.address,
-          ethers.constants.AddressZero,
-          metadataURI,
-        ),
-      ).to.be.revertedWith('BAP578: logic address is zero');
-    });
-
-    it('Should increment token IDs correctly', async function () {
-      const metadataURI = 'ipfs://QmTest';
-
-      // Create first agent
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-
-      // Create second agent
-      await bap578['createAgent(address,address,string)'](
-        addr2.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-
-      expect(await bap578.ownerOf(1)).to.equal(addr1.address);
-      expect(await bap578.ownerOf(2)).to.equal(addr2.address);
-      expect(await bap578.totalSupply()).to.equal(2);
+      const [storedMetadata, metadataURI] = await nfa.getAgentMetadata(1);
+      expect(storedMetadata.persona).to.equal(metadata.persona);
+      expect(storedMetadata.experience).to.equal(metadata.experience);
+      expect(storedMetadata.voiceHash).to.equal(metadata.voiceHash);
+      expect(storedMetadata.animationURI).to.equal(metadata.animationURI);
+      expect(storedMetadata.vaultURI).to.equal(metadata.vaultURI);
+      expect(storedMetadata.vaultHash).to.equal(metadata.vaultHash);
+      expect(metadataURI).to.equal('ipfs://metadata1');
     });
   });
 
-  describe('Agent State Management', function () {
-    let tokenId;
-
+  describe('Agent Management', function () {
     beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-      tokenId = 1;
+      const metadata = createAgentMetadata();
+
+      // Create an agent using free mint
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
     });
 
-    it('Should pause and unpause an agent', async function () {
-      // Initially active
-      let agentState = await bap578.getState(tokenId);
-      expect(agentState.status).to.equal(1); // Active
-
-      // Pause the agent
-      await expect(bap578.connect(addr1).pause(tokenId))
-        .to.emit(bap578, 'StatusChanged')
-        .withArgs(bap578.address, 0); // Paused
-
-      agentState = await bap578.getState(tokenId);
-      expect(agentState.status).to.equal(0); // Paused
-
-      // Unpause the agent
-      await expect(bap578.connect(addr1).unpause(tokenId))
-        .to.emit(bap578, 'StatusChanged')
-        .withArgs(bap578.address, 1); // Active
-
-      agentState = await bap578.getState(tokenId);
-      expect(agentState.status).to.equal(1); // Active
-    });
-
-    it('Should not allow non-owner to pause agent', async function () {
-      await expect(bap578.connect(addr2).pause(tokenId)).to.be.revertedWith(
-        'BAP578: caller is not agent owner',
-      );
-    });
-
-    it('Should not allow pausing already paused agent', async function () {
-      await bap578.connect(addr1).pause(tokenId);
-
-      await expect(bap578.connect(addr1).pause(tokenId)).to.be.revertedWith(
-        'BAP578: agent not active',
-      );
-    });
-
-    it('Should not allow unpausing active agent', async function () {
-      await expect(bap578.connect(addr1).unpause(tokenId)).to.be.revertedWith(
-        'BAP578: agent not paused',
-      );
-    });
-
-    it('Should terminate an agent', async function () {
-      // Fund the agent first
-      await bap578.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
-
-      const initialBalance = await ethers.provider.getBalance(addr1.address);
-
-      await expect(bap578.connect(addr1).terminate(tokenId))
-        .to.emit(bap578, 'StatusChanged')
-        .withArgs(bap578.address, 2); // Terminated
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.status).to.equal(2); // Terminated
-      expect(agentState.balance).to.equal(0); // Balance should be returned
-
-      // Check that balance was returned to owner
-      const finalBalance = await ethers.provider.getBalance(addr1.address);
-      expect(finalBalance).to.be.gt(initialBalance);
-    });
-
-    it('Should not allow terminating already terminated agent', async function () {
-      await bap578.connect(addr1).terminate(tokenId);
-
-      await expect(bap578.connect(addr1).terminate(tokenId)).to.be.revertedWith(
-        'BAP578: agent already terminated',
-      );
-    });
-  });
-
-  describe('Agent Funding', function () {
-    let tokenId;
-
-    beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-      tokenId = 1;
+    it('Should update agent status', async function () {
+      await nfa.connect(addr1).setAgentStatus(1, false);
+      const state = await nfa.getAgentState(1);
+      expect(state.active).to.equal(false);
     });
 
     it('Should fund an agent', async function () {
-      const fundAmount = ethers.utils.parseEther('1.0');
+      const amount = ethers.utils.parseEther('1');
+      await nfa.fundAgent(1, { value: amount });
 
-      await expect(bap578.connect(addr1).fundAgent(tokenId, { value: fundAmount }))
-        .to.emit(bap578, 'AgentFunded')
-        .withArgs(bap578.address, addr1.address, fundAmount);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.balance).to.equal(fundAmount);
+      const state = await nfa.getAgentState(1);
+      expect(state.balance).to.equal(amount);
     });
 
-    it('Should allow multiple funding transactions', async function () {
-      const fundAmount1 = ethers.utils.parseEther('1.0');
-      const fundAmount2 = ethers.utils.parseEther('0.5');
+    it('Should withdraw from agent', async function () {
+      const amount = ethers.utils.parseEther('1');
+      await nfa.fundAgent(1, { value: amount });
 
-      await bap578.connect(addr1).fundAgent(tokenId, { value: fundAmount1 });
-      await bap578.connect(addr1).fundAgent(tokenId, { value: fundAmount2 });
+      const balanceBefore = await addr1.getBalance();
+      const tx = await nfa.connect(addr1).withdrawFromAgent(1, amount);
+      const receipt = await tx.wait();
+      const gasUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
 
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.balance).to.equal(fundAmount1.add(fundAmount2));
+      const balanceAfter = await addr1.getBalance();
+      expect(balanceAfter.sub(balanceBefore).add(gasUsed)).to.equal(amount);
+
+      const state = await nfa.getAgentState(1);
+      expect(state.balance).to.equal(0);
     });
 
-    it('Should not allow funding non-existent agent', async function () {
-      await expect(
-        bap578.connect(addr1).fundAgent(999, { value: ethers.utils.parseEther('1.0') }),
-      ).to.be.revertedWith('BAP578: agent does not exist');
+    it('Should update logic address', async function () {
+      const newLogicAddress = addr2.address;
+      await nfa.connect(addr1).setLogicAddress(1, newLogicAddress);
+
+      const state = await nfa.getAgentState(1);
+      expect(state.logicAddress).to.equal(newLogicAddress);
     });
 
-    it('Should allow anyone to fund an agent', async function () {
-      const fundAmount = ethers.utils.parseEther('1.0');
+    it('Should update agent metadata', async function () {
+      const newMetadata = createAgentMetadata({
+        persona: '{"traits": "analytical", "style": "technical"}',
+        experience: 'Data analysis expert',
+      });
 
-      await expect(bap578.connect(addr2).fundAgent(tokenId, { value: fundAmount }))
-        .to.emit(bap578, 'AgentFunded')
-        .withArgs(bap578.address, addr2.address, fundAmount);
+      await nfa.connect(addr1).updateAgentMetadata(1, 'ipfs://newmetadata', newMetadata);
 
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.balance).to.equal(fundAmount);
+      const [storedMetadata, metadataURI] = await nfa.getAgentMetadata(1);
+      expect(storedMetadata.persona).to.equal(newMetadata.persona);
+      expect(storedMetadata.experience).to.equal(newMetadata.experience);
+      expect(metadataURI).to.equal('ipfs://newmetadata');
     });
-  });
 
-  describe('Agent Withdrawal', function () {
-    let tokenId;
-
-    beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
+    it('Should only allow owner to manage agent', async function () {
+      await expect(nfa.connect(addr2).setAgentStatus(1, false)).to.be.revertedWith(
+        'Not token owner',
       );
-      tokenId = 1;
 
-      // Fund the agent
-      await bap578.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('2.0') });
-    });
-
-    it('Should allow owner to withdraw from agent', async function () {
-      const withdrawAmount = ethers.utils.parseEther('1.0');
-      const initialBalance = await ethers.provider.getBalance(addr1.address);
-
-      await bap578.connect(addr1).withdrawFromAgent(tokenId, withdrawAmount);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.balance).to.equal(ethers.utils.parseEther('1.0'));
-
-      const finalBalance = await ethers.provider.getBalance(addr1.address);
-      expect(finalBalance).to.be.gt(initialBalance);
-    });
-
-    it('Should not allow withdrawing more than balance', async function () {
-      const withdrawAmount = ethers.utils.parseEther('3.0');
-
-      await expect(
-        bap578.connect(addr1).withdrawFromAgent(tokenId, withdrawAmount),
-      ).to.be.revertedWith('BAP578: insufficient balance');
-    });
-
-    it('Should not allow non-owner to withdraw', async function () {
-      const withdrawAmount = ethers.utils.parseEther('1.0');
-
-      await expect(
-        bap578.connect(addr2).withdrawFromAgent(tokenId, withdrawAmount),
-      ).to.be.revertedWith('BAP578: caller is not agent owner');
-    });
-
-    it('Should allow withdrawing entire balance', async function () {
-      const agentState = await bap578.getState(tokenId);
-      const fullBalance = agentState.balance;
-
-      await bap578.connect(addr1).withdrawFromAgent(tokenId, fullBalance);
-
-      const updatedState = await bap578.getState(tokenId);
-      expect(updatedState.balance).to.equal(0);
-    });
-  });
-
-  describe('Logic Address Management', function () {
-    let tokenId;
-
-    beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
+      await expect(nfa.connect(addr2).withdrawFromAgent(1, 100)).to.be.revertedWith(
+        'Not token owner',
       );
-      tokenId = 1;
-    });
 
-    it('Should allow owner to update logic address', async function () {
-      const newLogicAddress = '0x0987654321098765432109876543210987654321';
-
-      await expect(bap578.connect(addr1).setLogicAddress(tokenId, newLogicAddress))
-        .to.emit(bap578, 'LogicUpgraded')
-        .withArgs(bap578.address, mockLogicAddress, newLogicAddress);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.logicAddress).to.equal(newLogicAddress);
-    });
-
-    it('Should not allow non-owner to update logic address', async function () {
-      const newLogicAddress = '0x0987654321098765432109876543210987654321';
-
-      await expect(
-        bap578.connect(addr2).setLogicAddress(tokenId, newLogicAddress),
-      ).to.be.revertedWith('BAP578: caller is not agent owner');
-    });
-
-    it('Should not allow setting logic address to zero', async function () {
-      await expect(
-        bap578.connect(addr1).setLogicAddress(tokenId, ethers.constants.AddressZero),
-      ).to.be.revertedWith('BAP578: new logic address is zero');
-    });
-  });
-
-  describe('Token Transfer', function () {
-    let tokenId;
-
-    beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
+      await expect(nfa.connect(addr2).setLogicAddress(1, addr2.address)).to.be.revertedWith(
+        'Not token owner',
       );
-      tokenId = 1;
-    });
-
-    it('Should update agent state owner on transfer', async function () {
-      // Transfer token from addr1 to addr2
-      await bap578.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
-
-      expect(await bap578.ownerOf(tokenId)).to.equal(addr2.address);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.owner).to.equal(addr2.address);
-    });
-
-    it('Should allow new owner to manage agent after transfer', async function () {
-      // Transfer token
-      await bap578.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
-
-      // New owner should be able to pause the agent
-      await bap578.connect(addr2).pause(tokenId);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.status).to.equal(0); // Paused
-    });
-
-    it('Should not allow old owner to manage agent after transfer', async function () {
-      // Transfer token
-      await bap578.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId);
-
-      // Old owner should not be able to pause the agent
-      await expect(bap578.connect(addr1).pause(tokenId)).to.be.revertedWith(
-        'BAP578: caller is not agent owner',
-      );
-    });
-  });
-
-  describe('Circuit Breaker Integration', function () {
-    let tokenId;
-
-    beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-      tokenId = 1;
-    });
-
-    it('Should respect global pause from circuit breaker', async function () {
-      // Set global pause
-      await circuitBreaker.connect(governance).setGlobalPause(true);
-
-      // Check that global pause is active
-      expect(await circuitBreaker.globalPause()).to.equal(true);
-
-      // The whenAgentActive modifier checks both global pause and agent status
-      // Currently, the contract doesn't expose functions with this modifier
-      // but the modifier is defined and would block operations when global pause is active
-    });
-
-    it('Should allow emergency multi-sig to trigger pause', async function () {
-      // Emergency multi-sig should also be able to set global pause
-      await circuitBreaker.connect(emergencyMultiSig).setGlobalPause(true);
-      expect(await circuitBreaker.globalPause()).to.equal(true);
-
-      // Unpause
-      await circuitBreaker.connect(emergencyMultiSig).setGlobalPause(false);
-      expect(await circuitBreaker.globalPause()).to.equal(false);
-    });
-
-    it('Should verify ownership is transferred to circuit breaker', async function () {
-      // The BAP578 contract transfers ownership to the circuit breaker on initialization
-      expect(await bap578.owner()).to.equal(circuitBreaker.address);
-      
-      // This means only the circuit breaker can perform owner-only operations
-      await expect(
-        bap578.connect(addr1).upgradeTo(addr2.address)
-      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
   describe('View Functions', function () {
-    let tokenId;
-
     beforeEach(async function () {
-      const metadataURI = 'ipfs://QmTest';
-      const extendedMetadata = {
-        persona: 'Test Persona',
-        experience: 'Test Experience',
-        voiceHash: 'Test Voice Hash',
-        animationURI: 'ipfs://QmTestAnimation',
-        vaultURI: 'ipfs://QmTestVault',
-        vaultHash: ethers.utils.formatBytes32String('test-vault-hash'),
-      };
+      const metadata1 = createAgentMetadata();
+      const metadata2 = createAgentMetadata({ experience: 'Second agent' });
 
-      await bap578[
-        'createAgent(address,address,string,(string,string,string,string,string,bytes32))'
-      ](addr1.address, mockLogicAddress, metadataURI, extendedMetadata);
-      tokenId = 1;
+      // Use free mints to create agents
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, addr2.address, 'ipfs://metadata1', metadata1);
+
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata2', metadata2);
     });
 
-    it('Should return correct agent state', async function () {
-      const agentState = await bap578.getState(tokenId);
-
-      expect(agentState.balance).to.equal(0);
-      expect(agentState.status).to.equal(1); // Active
-      expect(agentState.owner).to.equal(addr1.address);
-      expect(agentState.logicAddress).to.equal(mockLogicAddress);
-      expect(agentState.lastActionTimestamp).to.be.gt(0);
+    it('Should get agent state information', async function () {
+      const state = await nfa.getAgentState(1);
+      expect(state.balance).to.equal(0);
+      expect(state.active).to.equal(true);
+      expect(state.logicAddress).to.equal(addr2.address);
+      expect(state.owner).to.equal(addr1.address);
+      expect(state.createdAt).to.be.gt(0);
     });
 
-    it('Should return correct agent metadata', async function () {
-      const agentMetadata = await bap578.getAgentMetadata(tokenId);
-
-      expect(agentMetadata.persona).to.equal('Test Persona');
-      expect(agentMetadata.experience).to.equal('Test Experience');
-      expect(agentMetadata.voiceHash).to.equal('Test Voice Hash');
-      expect(agentMetadata.animationURI).to.equal('ipfs://QmTestAnimation');
-      expect(agentMetadata.vaultURI).to.equal('ipfs://QmTestVault');
-      expect(agentMetadata.vaultHash).to.equal(ethers.utils.formatBytes32String('test-vault-hash'));
+    it('Should get tokens of owner', async function () {
+      const tokens = await nfa.tokensOfOwner(addr1.address);
+      expect(tokens.length).to.equal(2);
+      expect(tokens[0]).to.equal(1);
+      expect(tokens[1]).to.equal(2);
     });
 
-    it('Should revert when getting state of non-existent agent', async function () {
-      await expect(bap578.getState(999)).to.be.revertedWith('BAP578: agent does not exist');
+    it('Should get total supply', async function () {
+      expect(await nfa.getTotalSupply()).to.equal(2);
     });
 
-    it('Should revert when getting metadata of non-existent agent', async function () {
-      await expect(bap578.getAgentMetadata(999)).to.be.revertedWith('BAP578: agent does not exist');
+    it('Should get free mints remaining', async function () {
+      // addr1 used 2 free mints, should have 1 remaining
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(1);
+
+      // addr2 hasn't used any, should have 3
+      expect(await nfa.getFreeMints(addr2.address)).to.equal(3);
     });
   });
 
-  describe('Contract Upgrade', function () {
-    it('Should only allow owner to upgrade contract', async function () {
-      // Only the owner (which is the circuitBreaker) can upgrade
-      // This test would require deploying a new implementation
-      // For now, we just test that non-owners cannot call upgrade functions
+  describe('Admin Functions', function () {
+    it('Should pause the contract', async function () {
+      await nfa.setPaused(true);
+      expect(await nfa.paused()).to.be.true;
 
-      await expect(bap578.connect(addr1).upgradeTo(addr2.address)).to.be.revertedWith(
+      // Should not allow creation when paused
+      const metadata = createAgentMetadata();
+      await expect(
+        nfa.createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://test', metadata),
+      ).to.be.revertedWith('Contract is paused');
+    });
+
+    it('Should update treasury', async function () {
+      await nfa.setTreasury(addr2.address);
+      expect(await nfa.treasuryAddress()).to.equal(addr2.address);
+    });
+
+    it('Should only allow owner to call admin functions', async function () {
+      await expect(nfa.connect(addr1).setPaused(true)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
-    });
-  });
 
-  describe('Receive Function', function () {
-    it('Should accept direct BNB transfers', async function () {
-      const sendAmount = ethers.utils.parseEther('1.0');
+      await expect(nfa.connect(addr1).setTreasury(addr2.address)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
 
       await expect(
-        addr1.sendTransaction({
-          to: bap578.address,
-          value: sendAmount,
-        }),
-      ).to.not.be.reverted;
-
-      const contractBalance = await ethers.provider.getBalance(bap578.address);
-      expect(contractBalance).to.equal(sendAmount);
-    });
-  });
-
-  describe('Edge Cases', function () {
-    it('Should handle zero value funding', async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-      const tokenId = 1;
-
-      await expect(bap578.connect(addr1).fundAgent(tokenId, { value: 0 }))
-        .to.emit(bap578, 'AgentFunded')
-        .withArgs(bap578.address, addr1.address, 0);
-
-      const agentState = await bap578.getState(tokenId);
-      expect(agentState.balance).to.equal(0);
+        nfa.connect(addr1).grantAdditionalFreeMints(addr2.address, 5),
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
 
-    it('Should handle zero amount withdrawal', async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-      const tokenId = 1;
+    it('Should perform emergency withdraw', async function () {
+      // Send some ETH to contract
+      await owner.sendTransaction({
+        to: nfa.address,
+        value: ethers.utils.parseEther('1'),
+      });
 
-      await bap578.connect(addr1).fundAgent(tokenId, { value: ethers.utils.parseEther('1.0') });
+      const balanceBefore = await owner.getBalance();
+      const tx = await nfa.emergencyWithdraw();
+      const receipt = await tx.wait();
+      const gasUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
 
-      await expect(bap578.connect(addr1).withdrawFromAgent(tokenId, 0)).to.not.be.reverted;
-    });
-
-    it('Should track lastActionTimestamp correctly', async function () {
-      const metadataURI = 'ipfs://QmTest';
-      await bap578['createAgent(address,address,string)'](
-        addr1.address,
-        mockLogicAddress,
-        metadataURI,
-      );
-      const tokenId = 1;
-
-      const initialState = await bap578.getState(tokenId);
-      const initialTimestamp = initialState.lastActionTimestamp;
-      expect(initialTimestamp).to.be.gt(0);
-
-      // Wait a bit and perform an action
-      await ethers.provider.send('evm_increaseTime', [10]);
-      await ethers.provider.send('evm_mine');
-
-      // The lastActionTimestamp should be set at creation
-      // It would be updated if there were action functions implemented
-      const finalState = await bap578.getState(tokenId);
-      expect(finalState.lastActionTimestamp).to.equal(initialTimestamp);
-    });
-
-    it('Should handle multiple agents for same owner', async function () {
-      const metadataURI = 'ipfs://QmTest';
-      
-      // Create multiple agents for the same owner
-      for (let i = 0; i < 3; i++) {
-        await bap578['createAgent(address,address,string)'](
-          addr1.address,
-          mockLogicAddress,
-          metadataURI + i,
-        );
-      }
-
-      // Check all agents are owned by addr1
-      expect(await bap578.ownerOf(1)).to.equal(addr1.address);
-      expect(await bap578.ownerOf(2)).to.equal(addr1.address);
-      expect(await bap578.ownerOf(3)).to.equal(addr1.address);
-
-      // Check balance of addr1
-      expect(await bap578.balanceOf(addr1.address)).to.equal(3);
-
-      // Check enumeration
-      for (let i = 0; i < 3; i++) {
-        const tokenId = await bap578.tokenOfOwnerByIndex(addr1.address, i);
-        expect(tokenId).to.equal(i + 1);
-      }
+      const balanceAfter = await owner.getBalance();
+      expect(balanceAfter.sub(balanceBefore).add(gasUsed)).to.equal(ethers.utils.parseEther('1'));
     });
   });
 });
