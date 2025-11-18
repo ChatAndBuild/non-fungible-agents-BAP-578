@@ -35,7 +35,7 @@ async function main() {
   console.log('- Symbol:', await nfa.symbol());
   console.log('- Owner:', await nfa.owner());
   console.log('- Treasury:', await nfa.treasuryAddress());
-  console.log('- Mint Fee:', hre.ethers.utils.formatEther(await nfa.MINT_FEE()), 'ETH');
+  console.log('- Mint Fee:', hre.ethers.utils.formatEther(await nfa.MINT_FEE()), 'BNB');
 
   // Optionally create first agent as example
   const createFirstAgent = false; // Set to true if you want to mint an example agent
