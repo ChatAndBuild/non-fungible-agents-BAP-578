@@ -141,7 +141,8 @@ contract BAP578 is
             require(msg.value == MINT_FEE, "Incorrect fee");
             // Validate and send fee to treasury
             require(treasuryAddress != address(0), "Treasury not set");
-            payable(treasuryAddress).transfer(msg.value);
+            (bool success, ) = payable(treasuryAddress).call{ value: msg.value }("");
+            require(success, "Treasury transfer failed");
         }
 
         // Mint NFT
@@ -189,7 +190,8 @@ contract BAP578 is
         emit AgentWithdraw(tokenId, amount);
 
         // External call last (Checks-Effects-Interactions pattern)
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{ value: amount }("");
+        require(success, "Withdrawal failed");
     }
 
     /**
@@ -262,7 +264,8 @@ contract BAP578 is
     function emergencyWithdraw() external onlyOwner {
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance");
-        payable(owner()).transfer(balance);
+        (bool success, ) = payable(owner()).call{ value: balance }("");
+        require(success, "Emergency withdraw failed");
     }
 
     // ============================================
