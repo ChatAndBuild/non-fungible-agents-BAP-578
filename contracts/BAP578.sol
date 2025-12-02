@@ -168,7 +168,7 @@ contract BAP578 is
     /**
      * @dev Fund an agent with ETH
      */
-    function fundAgent(uint256 tokenId) external payable {
+    function fundAgent(uint256 tokenId) external payable whenNotPaused {
         require(_exists(tokenId), "Token does not exist");
         agentStates[tokenId].balance += msg.value;
         emit AgentFunded(tokenId, msg.value);

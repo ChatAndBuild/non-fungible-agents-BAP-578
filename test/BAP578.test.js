@@ -244,6 +244,22 @@ describe('BAP578', function () {
       expect(metadataURI).to.equal('ipfs://newmetadata');
     });
 
+    it('Should not allow funding when contract is paused', async function () {
+      // Create an agent first
+      const metadata = createAgentMetadata();
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
+
+      // Pause the contract
+      await nfa.setPaused(true);
+
+      // Attempt to fund agent while paused - should revert
+      await expect(
+        nfa.connect(addr1).fundAgent(1, { value: ethers.utils.parseEther('0.1') }),
+      ).to.be.revertedWith('Contract is paused');
+    });
+
     it('Should only allow owner to manage agent', async function () {
       await expect(nfa.connect(addr2).setAgentStatus(1, false)).to.be.revertedWith(
         'Not token owner',
