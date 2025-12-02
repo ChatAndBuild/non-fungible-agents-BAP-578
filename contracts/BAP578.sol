@@ -81,6 +81,7 @@ contract BAP578 is
     event MetadataUpdated(uint256 indexed tokenId);
     event TreasuryUpdated(address newTreasury);
     event ContractPaused(bool paused);
+    event FreeMintGranted(address indexed user, uint256 amount);
 
     // ============================================
     // MODIFIERS
@@ -130,7 +131,7 @@ contract BAP578 is
         string memory metadataURI,
         AgentMetadata memory extendedMetadata
     ) external payable whenNotPaused nonReentrant returns (uint256) {
-        // Validate logic address (must be zero or a contract)
+        require(to != address(0), "Cannot mint to zero address");
         require(
             logicAddress == address(0) || logicAddress.code.length > 0,
             "Invalid logic address"
@@ -250,6 +251,7 @@ contract BAP578 is
         if (freeMintsClaimed[user] > additionalAmount) {
             freeMintsClaimed[user] = 0; // Reset if giving more than claimed
         }
+        emit FreeMintGranted(user, additionalAmount);
     }
 
     /**
@@ -316,6 +318,7 @@ contract BAP578 is
 
     /**
      * @dev Get all tokens owned by an address
+     * @dev Warning: Unbounded loop - might get expensive with large token counts
      */
     function tokensOfOwner(address account) external view returns (uint256[] memory) {
         uint256 tokenCount = balanceOf(account);
