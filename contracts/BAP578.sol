@@ -385,6 +385,7 @@ contract BAP578 is
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    // Allow contract to receive ETH
-    receive() external payable {}
+    receive() external payable {
+        revert("Use fundAgent() instead");
+    }
 }

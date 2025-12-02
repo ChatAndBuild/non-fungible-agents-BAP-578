@@ -362,11 +362,15 @@ describe('BAP578', function () {
     });
 
     it('Should perform emergency withdraw', async function () {
-      // Send some ETH to contract
-      await owner.sendTransaction({
-        to: nfa.address,
-        value: ethers.utils.parseEther('1'),
-      });
+      const metadata = createAgentMetadata();
+      await nfa.connect(addr1).createAgent(
+        addr1.address,
+        ethers.constants.AddressZero,
+        'ipfs://metadata',
+        metadata,
+      );
+
+      await nfa.connect(addr1).fundAgent(1, { value: ethers.utils.parseEther('1') });
 
       const balanceBefore = await owner.getBalance();
       const tx = await nfa.emergencyWithdraw();
@@ -375,6 +379,15 @@ describe('BAP578', function () {
 
       const balanceAfter = await owner.getBalance();
       expect(balanceAfter.sub(balanceBefore).add(gasUsed)).to.equal(ethers.utils.parseEther('1'));
+    });
+
+    it('Should reject direct ETH transfers', async function () {
+      await expect(
+        owner.sendTransaction({
+          to: nfa.address,
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).to.be.revertedWith('Use fundAgent() instead');
     });
   });
 });
