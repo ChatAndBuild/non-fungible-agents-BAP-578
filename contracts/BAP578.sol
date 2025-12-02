@@ -348,6 +348,7 @@ contract BAP578 is
     function _burn(
         uint256 tokenId
     ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
+        require(agentStates[tokenId].balance == 0, "Agent balance must be 0");
         super._burn(tokenId);
     }
 
