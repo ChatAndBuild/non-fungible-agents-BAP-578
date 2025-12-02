@@ -130,6 +130,12 @@ contract BAP578 is
         string memory metadataURI,
         AgentMetadata memory extendedMetadata
     ) external payable whenNotPaused nonReentrant returns (uint256) {
+        // Validate logic address (must be zero or a contract)
+        require(
+            logicAddress == address(0) || logicAddress.code.length > 0,
+            "Invalid logic address"
+        );
+
         // Check if user has free mints remaining
         uint256 freeMintsRemaining = FREE_MINTS_PER_USER - freeMintsClaimed[msg.sender];
 
@@ -204,11 +210,16 @@ contract BAP578 is
 
     /**
      * @dev Update logic address for an agent
+     * @dev Logic address must be either zero address or a contract address
      */
     function setLogicAddress(
         uint256 tokenId,
         address newLogicAddress
     ) external onlyTokenOwner(tokenId) {
+        require(
+            newLogicAddress == address(0) || newLogicAddress.code.length > 0,
+            "Invalid logic address"
+        );
         agentStates[tokenId].logicAddress = newLogicAddress;
         emit LogicAddressUpdated(tokenId, newLogicAddress);
     }

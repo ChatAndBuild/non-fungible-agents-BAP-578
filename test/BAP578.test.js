@@ -223,7 +223,7 @@ describe('BAP578', function () {
     });
 
     it('Should update logic address', async function () {
-      const newLogicAddress = addr2.address;
+      const newLogicAddress = ethers.constants.AddressZero;
       await nfa.connect(addr1).setLogicAddress(1, newLogicAddress);
 
       const state = await nfa.getAgentState(1);
@@ -273,6 +273,18 @@ describe('BAP578', function () {
         'Not token owner',
       );
     });
+
+    it('Should reject EOA as logic address', async function () {
+      const metadata = createAgentMetadata();
+
+      await expect(
+        nfa.connect(addr1).createAgent(addr1.address, addr2.address, 'ipfs://metadata', metadata),
+      ).to.be.revertedWith('Invalid logic address');
+
+      await expect(
+        nfa.connect(addr1).setLogicAddress(1, addr2.address),
+      ).to.be.revertedWith('Invalid logic address');
+    });
   });
 
   describe('View Functions', function () {
@@ -280,10 +292,9 @@ describe('BAP578', function () {
       const metadata1 = createAgentMetadata();
       const metadata2 = createAgentMetadata({ experience: 'Second agent' });
 
-      // Use free mints to create agents
       await nfa
         .connect(addr1)
-        .createAgent(addr1.address, addr2.address, 'ipfs://metadata1', metadata1);
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata1);
 
       await nfa
         .connect(addr1)
@@ -294,7 +305,7 @@ describe('BAP578', function () {
       const state = await nfa.getAgentState(1);
       expect(state.balance).to.equal(0);
       expect(state.active).to.equal(true);
-      expect(state.logicAddress).to.equal(addr2.address);
+      expect(state.logicAddress).to.equal(ethers.constants.AddressZero);
       expect(state.owner).to.equal(addr1.address);
       expect(state.createdAt).to.be.gt(0);
     });
