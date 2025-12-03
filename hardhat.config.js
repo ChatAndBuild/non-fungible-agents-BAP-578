@@ -1,7 +1,7 @@
 require('@nomiclabs/hardhat-ethers');
-require("@nomicfoundation/hardhat-verify");
+require('@nomicfoundation/hardhat-verify');
 require('@nomicfoundation/hardhat-chai-matchers');
-require("@openzeppelin/hardhat-upgrades");
+require('@openzeppelin/hardhat-upgrades');
 require('dotenv').config();
 
 // Load environment variables
@@ -13,39 +13,39 @@ const DEPLOYER_PRIVATE_KEY =
   '0000000000000000000000000000000000000000000000000000000000000000';
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || '';
 
+if (DEPLOYER_PRIVATE_KEY === '0000000000000000000000000000000000000000000000000000000000000000') {
+  console.error('⚠️  DEPLOYER_PRIVATE_KEY not set. Only localhost network available.');
+}
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
   solidity: {
-    version: "0.8.28", // any version you want
+    version: '0.8.28', // any version you want
     settings: {
       viaIR: true,
       optimizer: {
         enabled: true,
         details: {
           yulDetails: {
-            optimizerSteps: "u",
+            optimizerSteps: 'u',
           },
         },
+        runs: 8888,
       },
     },
   },
   networks: {
-    hardhat: {
-      chainId: 31337,
-    },
     testnet: {
       url: TESTNET_RPC_URL,
       accounts: [DEPLOYER_PRIVATE_KEY],
       chainId: 97,
-      gasPrice: 10000000000,
     },
     mainnet: {
       url: MAINNET_RPC_URL,
       accounts: [DEPLOYER_PRIVATE_KEY],
       chainId: 56,
-      gasPrice: 5000000000,
     },
   },
   paths: {
@@ -58,7 +58,7 @@ module.exports = {
     timeout: 40000,
   },
   sourcify: {
-    enabled: true
+    enabled: true,
   },
   etherscan: {
     apiKey: {
@@ -68,13 +68,13 @@ module.exports = {
     },
     customChains: [
       {
-        network: "testnet",
+        network: 'testnet',
         chainId: 97,
         urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com"
-        }
-      }
-    ]
+          apiURL: 'https://api-testnet.bscscan.com/api',
+          browserURL: 'https://testnet.bscscan.com',
+        },
+      },
+    ],
   },
 };

@@ -9,7 +9,7 @@ async function main() {
   console.log('💰 Account balance:', (await deployer.getBalance()).toString());
 
   // Set treasury address (can be changed to a multisig or different address)
-  const treasuryAddress = deployer.address;
+  const treasuryAddress = '0xF029745dc04256b57659b10099F22b26CBbcf08d';
   console.log('🏦 Treasury address:', treasuryAddress);
 
   // Deploy upgradeable contract using OpenZeppelin Upgrades plugin

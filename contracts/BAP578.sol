@@ -41,6 +41,12 @@ contract BAP578 is
     }
 
     // ============================================
+    // CONSTANTS
+    // ============================================
+
+    uint256 public constant MINT_FEE = 0.01 ether;
+
+    // ============================================
     // STATE VARIABLES
     // ============================================
 
@@ -51,12 +57,11 @@ contract BAP578 is
     mapping(uint256 => AgentState) public agentStates;
     mapping(uint256 => AgentMetadata) public agentMetadata;
 
-    // Minting fee
-    uint256 public constant MINT_FEE = 0.01 ether;
-
-    // Free mints tracking (everyone gets 3 free mints)
+    // Free mints tracking
+    uint256 public freeMintsPerUser;
     mapping(address => uint256) public freeMintsClaimed;
-    uint256 public constant FREE_MINTS_PER_USER = 3;
+    mapping(uint256 tokenId => bool) public isFreeMint;
+    mapping(address => uint256) public bonusFreeMints;
 
     // Treasury address for fee distribution
     address public treasuryAddress;
@@ -101,6 +106,11 @@ contract BAP578 is
     // INITIALIZATION
     // ============================================
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         string memory name,
         string memory symbol,
@@ -116,6 +126,7 @@ contract BAP578 is
         __UUPSUpgradeable_init();
 
         treasuryAddress = treasury;
+        freeMintsPerUser = 3;
     }
 
     // ============================================
@@ -137,11 +148,15 @@ contract BAP578 is
             "Invalid logic address"
         );
 
-        // Check if user has free mints remaining
-        uint256 freeMintsRemaining = FREE_MINTS_PER_USER - freeMintsClaimed[msg.sender];
+        // Check if user has free mints remaining (base + bonus)
+        uint256 totalFreeMints = freeMintsPerUser + bonusFreeMints[msg.sender];
+        uint256 freeMintsRemaining = totalFreeMints > freeMintsClaimed[msg.sender]
+            ? totalFreeMints - freeMintsClaimed[msg.sender]
+            : 0;
 
         if (freeMintsRemaining > 0) {
-            // Use free mint
+            require(to == msg.sender, "Free mints can only be minted to self");
+            isFreeMint[_tokenIdCounter + 1] = true;
             freeMintsClaimed[msg.sender]++;
         } else {
             // Require payment
@@ -246,11 +261,7 @@ contract BAP578 is
      * @dev Grant additional free mints to an address (admin override)
      */
     function grantAdditionalFreeMints(address user, uint256 additionalAmount) external onlyOwner {
-        // This allows owner to grant mints beyond the default 3
-        // Setting to 0 resets to default behavior
-        if (freeMintsClaimed[user] > additionalAmount) {
-            freeMintsClaimed[user] = 0; // Reset if giving more than claimed
-        }
+        bonusFreeMints[user] += additionalAmount;
         emit FreeMintGranted(user, additionalAmount);
     }
 
@@ -261,6 +272,13 @@ contract BAP578 is
         require(newTreasury != address(0), "Treasury cannot be zero address");
         treasuryAddress = newTreasury;
         emit TreasuryUpdated(newTreasury);
+    }
+
+    /**
+     * @dev Update free mints per user
+     */
+    function setFreeMintsPerUser(uint256 amount) external onlyOwner {
+        freeMintsPerUser = amount;
     }
 
     /**
@@ -342,11 +360,9 @@ contract BAP578 is
      * @dev Get remaining free mints for an address
      */
     function getFreeMints(address user) external view returns (uint256) {
+        uint256 totalFreeMints = freeMintsPerUser + bonusFreeMints[user];
         uint256 claimed = freeMintsClaimed[user];
-        if (claimed >= FREE_MINTS_PER_USER) {
-            return 0;
-        }
-        return FREE_MINTS_PER_USER - claimed;
+        return claimed >= totalFreeMints ? 0 : totalFreeMints - claimed;
     }
 
     // ============================================
@@ -359,6 +375,12 @@ contract BAP578 is
         uint256 tokenId,
         uint256 batchSize
     ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+        if (isFreeMint[tokenId]) {
+            require(
+                from == address(0) || to == address(0),
+                "Free minted tokens are non-transferable"
+            );
+        }
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
