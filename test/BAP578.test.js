@@ -51,7 +51,7 @@ describe('BAP578', function () {
     it('Should give each user 3 free mints by default', async function () {
       expect(await nfa.getFreeMints(addr1.address)).to.equal(3);
       expect(await nfa.getFreeMints(addr2.address)).to.equal(3);
-      expect(await nfa.FREE_MINTS_PER_USER()).to.equal(3);
+      expect(await nfa.freeMintsPerUser()).to.equal(3);
     });
 
     it('Should allow first 3 mints for free', async function () {

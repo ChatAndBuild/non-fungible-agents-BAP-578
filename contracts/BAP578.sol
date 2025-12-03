@@ -44,7 +44,6 @@ contract BAP578 is
     // CONSTANTS
     // ============================================
 
-    uint256 public constant FREE_MINTS_PER_USER = 3;
     uint256 public constant MINT_FEE = 0.01 ether;
 
     // ============================================
@@ -59,6 +58,7 @@ contract BAP578 is
     mapping(uint256 => AgentMetadata) public agentMetadata;
 
     // Free mints tracking
+    uint256 public freeMintsPerUser;
     mapping(address => uint256) public freeMintsClaimed;
     mapping(uint256 tokenId => bool) public isFreeMint;
     mapping(address => uint256) public bonusFreeMints;
@@ -121,6 +121,7 @@ contract BAP578 is
         __UUPSUpgradeable_init();
 
         treasuryAddress = treasury;
+        freeMintsPerUser = 3;
     }
 
     // ============================================
@@ -143,7 +144,7 @@ contract BAP578 is
         );
 
         // Check if user has free mints remaining (base + bonus)
-        uint256 totalFreeMints = FREE_MINTS_PER_USER + bonusFreeMints[msg.sender];
+        uint256 totalFreeMints = freeMintsPerUser + bonusFreeMints[msg.sender];
         uint256 freeMintsRemaining = totalFreeMints > freeMintsClaimed[msg.sender]
             ? totalFreeMints - freeMintsClaimed[msg.sender]
             : 0;
@@ -269,6 +270,13 @@ contract BAP578 is
     }
 
     /**
+     * @dev Update free mints per user
+     */
+    function setFreeMintsPerUser(uint256 amount) external onlyOwner {
+        freeMintsPerUser = amount;
+    }
+
+    /**
      * @dev Pause/unpause contract
      */
     function setPaused(bool pausedState) external onlyOwner {
@@ -347,7 +355,7 @@ contract BAP578 is
      * @dev Get remaining free mints for an address
      */
     function getFreeMints(address user) external view returns (uint256) {
-        uint256 totalFreeMints = FREE_MINTS_PER_USER + bonusFreeMints[user];
+        uint256 totalFreeMints = freeMintsPerUser + bonusFreeMints[user];
         uint256 claimed = freeMintsClaimed[user];
         return claimed >= totalFreeMints ? 0 : totalFreeMints - claimed;
     }
