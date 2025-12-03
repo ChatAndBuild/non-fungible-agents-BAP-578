@@ -223,7 +223,7 @@ describe('BAP578', function () {
     });
 
     it('Should update logic address', async function () {
-      const newLogicAddress = addr2.address;
+      const newLogicAddress = ethers.constants.AddressZero;
       await nfa.connect(addr1).setLogicAddress(1, newLogicAddress);
 
       const state = await nfa.getAgentState(1);
@@ -244,6 +244,22 @@ describe('BAP578', function () {
       expect(metadataURI).to.equal('ipfs://newmetadata');
     });
 
+    it('Should not allow funding when contract is paused', async function () {
+      // Create an agent first
+      const metadata = createAgentMetadata();
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
+
+      // Pause the contract
+      await nfa.setPaused(true);
+
+      // Attempt to fund agent while paused - should revert
+      await expect(
+        nfa.connect(addr1).fundAgent(1, { value: ethers.utils.parseEther('0.1') }),
+      ).to.be.revertedWith('Contract is paused');
+    });
+
     it('Should only allow owner to manage agent', async function () {
       await expect(nfa.connect(addr2).setAgentStatus(1, false)).to.be.revertedWith(
         'Not token owner',
@@ -257,6 +273,18 @@ describe('BAP578', function () {
         'Not token owner',
       );
     });
+
+    it('Should reject EOA as logic address', async function () {
+      const metadata = createAgentMetadata();
+
+      await expect(
+        nfa.connect(addr1).createAgent(addr1.address, addr2.address, 'ipfs://metadata', metadata),
+      ).to.be.revertedWith('Invalid logic address');
+
+      await expect(
+        nfa.connect(addr1).setLogicAddress(1, addr2.address),
+      ).to.be.revertedWith('Invalid logic address');
+    });
   });
 
   describe('View Functions', function () {
@@ -264,10 +292,9 @@ describe('BAP578', function () {
       const metadata1 = createAgentMetadata();
       const metadata2 = createAgentMetadata({ experience: 'Second agent' });
 
-      // Use free mints to create agents
       await nfa
         .connect(addr1)
-        .createAgent(addr1.address, addr2.address, 'ipfs://metadata1', metadata1);
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata1);
 
       await nfa
         .connect(addr1)
@@ -278,7 +305,7 @@ describe('BAP578', function () {
       const state = await nfa.getAgentState(1);
       expect(state.balance).to.equal(0);
       expect(state.active).to.equal(true);
-      expect(state.logicAddress).to.equal(addr2.address);
+      expect(state.logicAddress).to.equal(ethers.constants.AddressZero);
       expect(state.owner).to.equal(addr1.address);
       expect(state.createdAt).to.be.gt(0);
     });
@@ -335,11 +362,15 @@ describe('BAP578', function () {
     });
 
     it('Should perform emergency withdraw', async function () {
-      // Send some ETH to contract
-      await owner.sendTransaction({
-        to: nfa.address,
-        value: ethers.utils.parseEther('1'),
-      });
+      const metadata = createAgentMetadata();
+      await nfa.connect(addr1).createAgent(
+        addr1.address,
+        ethers.constants.AddressZero,
+        'ipfs://metadata',
+        metadata,
+      );
+
+      await nfa.connect(addr1).fundAgent(1, { value: ethers.utils.parseEther('1') });
 
       const balanceBefore = await owner.getBalance();
       const tx = await nfa.emergencyWithdraw();
@@ -348,6 +379,15 @@ describe('BAP578', function () {
 
       const balanceAfter = await owner.getBalance();
       expect(balanceAfter.sub(balanceBefore).add(gasUsed)).to.equal(ethers.utils.parseEther('1'));
+    });
+
+    it('Should reject direct ETH transfers', async function () {
+      await expect(
+        owner.sendTransaction({
+          to: nfa.address,
+          value: ethers.utils.parseEther('1'),
+        }),
+      ).to.be.revertedWith('Use fundAgent() instead');
     });
   });
 });

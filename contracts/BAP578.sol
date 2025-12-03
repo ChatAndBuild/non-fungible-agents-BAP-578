@@ -81,6 +81,7 @@ contract BAP578 is
     event MetadataUpdated(uint256 indexed tokenId);
     event TreasuryUpdated(address newTreasury);
     event ContractPaused(bool paused);
+    event FreeMintGranted(address indexed user, uint256 amount);
 
     // ============================================
     // MODIFIERS
@@ -130,6 +131,12 @@ contract BAP578 is
         string memory metadataURI,
         AgentMetadata memory extendedMetadata
     ) external payable whenNotPaused nonReentrant returns (uint256) {
+        require(to != address(0), "Cannot mint to zero address");
+        require(
+            logicAddress == address(0) || logicAddress.code.length > 0,
+            "Invalid logic address"
+        );
+
         // Check if user has free mints remaining
         uint256 freeMintsRemaining = FREE_MINTS_PER_USER - freeMintsClaimed[msg.sender];
 
@@ -141,7 +148,8 @@ contract BAP578 is
             require(msg.value == MINT_FEE, "Incorrect fee");
             // Validate and send fee to treasury
             require(treasuryAddress != address(0), "Treasury not set");
-            payable(treasuryAddress).transfer(msg.value);
+            (bool success, ) = payable(treasuryAddress).call{ value: msg.value }("");
+            require(success, "Treasury transfer failed");
         }
 
         // Mint NFT
@@ -167,7 +175,7 @@ contract BAP578 is
     /**
      * @dev Fund an agent with ETH
      */
-    function fundAgent(uint256 tokenId) external payable {
+    function fundAgent(uint256 tokenId) external payable whenNotPaused {
         require(_exists(tokenId), "Token does not exist");
         agentStates[tokenId].balance += msg.value;
         emit AgentFunded(tokenId, msg.value);
@@ -189,7 +197,8 @@ contract BAP578 is
         emit AgentWithdraw(tokenId, amount);
 
         // External call last (Checks-Effects-Interactions pattern)
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{ value: amount }("");
+        require(success, "Withdrawal failed");
     }
 
     /**
@@ -202,11 +211,16 @@ contract BAP578 is
 
     /**
      * @dev Update logic address for an agent
+     * @dev Logic address must be either zero address or a contract address
      */
     function setLogicAddress(
         uint256 tokenId,
         address newLogicAddress
     ) external onlyTokenOwner(tokenId) {
+        require(
+            newLogicAddress == address(0) || newLogicAddress.code.length > 0,
+            "Invalid logic address"
+        );
         agentStates[tokenId].logicAddress = newLogicAddress;
         emit LogicAddressUpdated(tokenId, newLogicAddress);
     }
@@ -237,6 +251,7 @@ contract BAP578 is
         if (freeMintsClaimed[user] > additionalAmount) {
             freeMintsClaimed[user] = 0; // Reset if giving more than claimed
         }
+        emit FreeMintGranted(user, additionalAmount);
     }
 
     /**
@@ -262,7 +277,8 @@ contract BAP578 is
     function emergencyWithdraw() external onlyOwner {
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance");
-        payable(owner()).transfer(balance);
+        (bool success, ) = payable(owner()).call{ value: balance }("");
+        require(success, "Emergency withdraw failed");
     }
 
     // ============================================
@@ -302,6 +318,7 @@ contract BAP578 is
 
     /**
      * @dev Get all tokens owned by an address
+     * @dev Warning: Unbounded loop - might get expensive with large token counts
      */
     function tokensOfOwner(address account) external view returns (uint256[] memory) {
         uint256 tokenCount = balanceOf(account);
@@ -348,6 +365,7 @@ contract BAP578 is
     function _burn(
         uint256 tokenId
     ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
+        require(agentStates[tokenId].balance == 0, "Agent balance must be 0");
         super._burn(tokenId);
     }
 
@@ -370,6 +388,7 @@ contract BAP578 is
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    // Allow contract to receive ETH
-    receive() external payable {}
+    receive() external payable {
+        revert("Use fundAgent() instead");
+    }
 }
