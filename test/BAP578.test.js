@@ -440,4 +440,56 @@ describe('BAP578', function () {
       ).to.be.revertedWith('Use fundAgent() instead');
     });
   });
+
+  describe('UUPS Upgrade', function () {
+    it('Should upgrade to V2 and preserve state', async function () {
+      const metadata = createAgentMetadata();
+
+      // Create an agent before upgrade
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
+
+      // Fund the agent
+      await nfa.connect(addr1).fundAgent(1, { value: ethers.utils.parseEther('0.5') });
+
+      // Store state before upgrade
+      const totalSupplyBefore = await nfa.totalSupply();
+      const ownerBefore = await nfa.owner();
+      const treasuryBefore = await nfa.treasuryAddress();
+      const agentStateBefore = await nfa.getAgentState(1);
+
+      // Upgrade to V2
+      const BAP578V2Mock = await ethers.getContractFactory('BAP578V2Mock');
+      const nfaV2 = await upgrades.upgradeProxy(nfa.address, BAP578V2Mock);
+
+      // Verify state is preserved
+      expect(await nfaV2.totalSupply()).to.equal(totalSupplyBefore);
+      expect(await nfaV2.owner()).to.equal(ownerBefore);
+      expect(await nfaV2.treasuryAddress()).to.equal(treasuryBefore);
+
+      const agentStateAfter = await nfaV2.getAgentState(1);
+      expect(agentStateAfter.balance).to.equal(agentStateBefore.balance);
+      expect(agentStateAfter.active).to.equal(agentStateBefore.active);
+
+      // Verify V2 functionality works
+      expect(await nfaV2.version()).to.equal('v2');
+      await nfaV2.setNewV2Variable(42);
+      expect(await nfaV2.newV2Variable()).to.equal(42);
+
+      // Verify original functionality still works after upgrade
+      await nfa
+        .connect(addr2)
+        .createAgent(addr2.address, ethers.constants.AddressZero, 'ipfs://metadata2', metadata);
+      expect(await nfaV2.totalSupply()).to.equal(2);
+    });
+
+    it('Should only allow owner to upgrade', async function () {
+      const BAP578V2Mock = await ethers.getContractFactory('BAP578V2Mock', addr1);
+
+      await expect(upgrades.upgradeProxy(nfa.address, BAP578V2Mock)).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
+    });
+  });
 });
