@@ -111,6 +111,33 @@ describe('BAP578', function () {
       const treasuryAfter = await treasury.getBalance();
       expect(treasuryAfter.sub(treasuryBefore)).to.equal(fee);
     });
+
+    it('Should not allow free mints to different address', async function () {
+      const metadata = createAgentMetadata();
+
+      await expect(
+        nfa
+          .connect(addr1)
+          .createAgent(addr2.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata),
+      ).to.be.revertedWith('Free mints can only be minted to self');
+    });
+
+    it('Should not allow transfer of free-minted tokens', async function () {
+      const metadata = createAgentMetadata();
+
+      // Create a free mint token
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
+
+      // Verify it's marked as free mint
+      expect(await nfa.isFreeMint(1)).to.equal(true);
+
+      // Try to transfer - should fail
+      await expect(
+        nfa.connect(addr1).transferFrom(addr1.address, addr2.address, 1),
+      ).to.be.revertedWith('Free minted tokens are non-transferable');
+    });
   });
 
   describe('Agent Creation', function () {
@@ -164,12 +191,9 @@ describe('BAP578', function () {
         experience: 'Financial advisor agent',
       });
 
-      await nfa.createAgent(
-        addr1.address,
-        ethers.constants.AddressZero,
-        'ipfs://metadata1',
-        metadata,
-      );
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata1', metadata);
 
       const [storedMetadata, metadataURI] = await nfa.getAgentMetadata(1);
       expect(storedMetadata.persona).to.equal(metadata.persona);
@@ -281,9 +305,9 @@ describe('BAP578', function () {
         nfa.connect(addr1).createAgent(addr1.address, addr2.address, 'ipfs://metadata', metadata),
       ).to.be.revertedWith('Invalid logic address');
 
-      await expect(
-        nfa.connect(addr1).setLogicAddress(1, addr2.address),
-      ).to.be.revertedWith('Invalid logic address');
+      await expect(nfa.connect(addr1).setLogicAddress(1, addr2.address)).to.be.revertedWith(
+        'Invalid logic address',
+      );
     });
   });
 
@@ -363,12 +387,9 @@ describe('BAP578', function () {
 
     it('Should perform emergency withdraw', async function () {
       const metadata = createAgentMetadata();
-      await nfa.connect(addr1).createAgent(
-        addr1.address,
-        ethers.constants.AddressZero,
-        'ipfs://metadata',
-        metadata,
-      );
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata', metadata);
 
       await nfa.connect(addr1).fundAgent(1, { value: ethers.utils.parseEther('1') });
 

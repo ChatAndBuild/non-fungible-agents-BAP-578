@@ -64,6 +64,9 @@ contract BAP578 is
     // Pause state for emergency
     bool public paused;
 
+    // Free mint tracking
+    mapping(uint256 tokenId => bool) public isFreeMint;
+
     // ============================================
     // EVENTS
     // ============================================
@@ -141,7 +144,8 @@ contract BAP578 is
         uint256 freeMintsRemaining = FREE_MINTS_PER_USER - freeMintsClaimed[msg.sender];
 
         if (freeMintsRemaining > 0) {
-            // Use free mint
+            require(to == msg.sender, "Free mints can only be minted to self");
+            isFreeMint[_tokenIdCounter + 1] = true;
             freeMintsClaimed[msg.sender]++;
         } else {
             // Require payment
@@ -359,6 +363,12 @@ contract BAP578 is
         uint256 tokenId,
         uint256 batchSize
     ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+        if (isFreeMint[tokenId]) {
+            require(
+                from == address(0) || to == address(0),
+                "Free minted tokens are non-transferable"
+            );
+        }
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
