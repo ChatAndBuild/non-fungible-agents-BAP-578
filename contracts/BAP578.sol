@@ -41,6 +41,13 @@ contract BAP578 is
     }
 
     // ============================================
+    // CONSTANTS
+    // ============================================
+
+    uint256 public constant FREE_MINTS_PER_USER = 3;
+    uint256 public constant MINT_FEE = 0.01 ether;
+
+    // ============================================
     // STATE VARIABLES
     // ============================================
 
@@ -51,21 +58,15 @@ contract BAP578 is
     mapping(uint256 => AgentState) public agentStates;
     mapping(uint256 => AgentMetadata) public agentMetadata;
 
-    // Minting fee
-    uint256 public constant MINT_FEE = 0.01 ether;
-
-    // Free mints tracking (everyone gets 3 free mints)
+    // Free mints tracking
     mapping(address => uint256) public freeMintsClaimed;
-    uint256 public constant FREE_MINTS_PER_USER = 3;
+    mapping(uint256 tokenId => bool) public isFreeMint;
 
     // Treasury address for fee distribution
     address public treasuryAddress;
 
     // Pause state for emergency
     bool public paused;
-
-    // Free mint tracking
-    mapping(uint256 tokenId => bool) public isFreeMint;
 
     // ============================================
     // EVENTS
