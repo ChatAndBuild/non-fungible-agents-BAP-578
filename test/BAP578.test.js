@@ -385,6 +385,35 @@ describe('BAP578', function () {
       ).to.be.revertedWith('Ownable: caller is not the owner');
     });
 
+    it('Should grant additional free mints', async function () {
+      const metadata = createAgentMetadata();
+
+      // Use all 3 default free mints
+      for (let i = 0; i < 3; i++) {
+        await nfa
+          .connect(addr1)
+          .createAgent(addr1.address, ethers.constants.AddressZero, `ipfs://metadata${i}`, metadata);
+      }
+
+      // Verify no free mints remaining
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(0);
+
+      // Grant 2 additional free mints
+      await nfa.grantAdditionalFreeMints(addr1.address, 2);
+
+      // Verify bonus mints are available
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(2);
+      expect(await nfa.bonusFreeMints(addr1.address)).to.equal(2);
+
+      // Use one bonus mint
+      await nfa
+        .connect(addr1)
+        .createAgent(addr1.address, ethers.constants.AddressZero, 'ipfs://metadata4', metadata);
+
+      // Verify 1 free mint remaining
+      expect(await nfa.getFreeMints(addr1.address)).to.equal(1);
+    });
+
     it('Should perform emergency withdraw', async function () {
       const metadata = createAgentMetadata();
       await nfa

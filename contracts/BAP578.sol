@@ -61,6 +61,7 @@ contract BAP578 is
     // Free mints tracking
     mapping(address => uint256) public freeMintsClaimed;
     mapping(uint256 tokenId => bool) public isFreeMint;
+    mapping(address => uint256) public bonusFreeMints;
 
     // Treasury address for fee distribution
     address public treasuryAddress;
@@ -141,8 +142,11 @@ contract BAP578 is
             "Invalid logic address"
         );
 
-        // Check if user has free mints remaining
-        uint256 freeMintsRemaining = FREE_MINTS_PER_USER - freeMintsClaimed[msg.sender];
+        // Check if user has free mints remaining (base + bonus)
+        uint256 totalFreeMints = FREE_MINTS_PER_USER + bonusFreeMints[msg.sender];
+        uint256 freeMintsRemaining = totalFreeMints > freeMintsClaimed[msg.sender]
+            ? totalFreeMints - freeMintsClaimed[msg.sender]
+            : 0;
 
         if (freeMintsRemaining > 0) {
             require(to == msg.sender, "Free mints can only be minted to self");
@@ -251,11 +255,7 @@ contract BAP578 is
      * @dev Grant additional free mints to an address (admin override)
      */
     function grantAdditionalFreeMints(address user, uint256 additionalAmount) external onlyOwner {
-        // This allows owner to grant mints beyond the default 3
-        // Setting to 0 resets to default behavior
-        if (freeMintsClaimed[user] > additionalAmount) {
-            freeMintsClaimed[user] = 0; // Reset if giving more than claimed
-        }
+        bonusFreeMints[user] += additionalAmount;
         emit FreeMintGranted(user, additionalAmount);
     }
 
@@ -347,11 +347,9 @@ contract BAP578 is
      * @dev Get remaining free mints for an address
      */
     function getFreeMints(address user) external view returns (uint256) {
+        uint256 totalFreeMints = FREE_MINTS_PER_USER + bonusFreeMints[user];
         uint256 claimed = freeMintsClaimed[user];
-        if (claimed >= FREE_MINTS_PER_USER) {
-            return 0;
-        }
-        return FREE_MINTS_PER_USER - claimed;
+        return claimed >= totalFreeMints ? 0 : totalFreeMints - claimed;
     }
 
     // ============================================
