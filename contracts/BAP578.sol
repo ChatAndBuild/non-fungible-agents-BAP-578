@@ -41,12 +41,6 @@ contract BAP578 is
     }
 
     // ============================================
-    // CONSTANTS
-    // ============================================
-
-    uint256 public constant MINT_FEE = 0.01 ether;
-
-    // ============================================
     // STATE VARIABLES
     // ============================================
 
@@ -59,6 +53,7 @@ contract BAP578 is
 
     // Free mints tracking
     uint256 public freeMintsPerUser;
+    uint256 public mintFee;
     mapping(address => uint256) public freeMintsClaimed;
     mapping(uint256 tokenId => bool) public isFreeMint;
     mapping(address => uint256) public bonusFreeMints;
@@ -114,7 +109,9 @@ contract BAP578 is
     function initialize(
         string memory name,
         string memory symbol,
-        address treasury
+        address treasury,
+        uint256 _mintFee,
+        uint256 _freeMintsPerUser
     ) public initializer {
         require(treasury != address(0), "Invalid treasury");
 
@@ -126,7 +123,8 @@ contract BAP578 is
         __UUPSUpgradeable_init();
 
         treasuryAddress = treasury;
-        freeMintsPerUser = 3;
+        freeMintsPerUser = _freeMintsPerUser;
+        mintFee = _mintFee;
     }
 
     // ============================================
@@ -158,9 +156,9 @@ contract BAP578 is
             require(to == msg.sender, "Free mints can only be minted to self");
             isFreeMint[_tokenIdCounter + 1] = true;
             freeMintsClaimed[msg.sender]++;
-        } else {
+        } else if (mintFee > 0) {
             // Require payment
-            require(msg.value == MINT_FEE, "Incorrect fee");
+            require(msg.value == mintFee, "Incorrect fee");
             // Validate and send fee to treasury
             require(treasuryAddress != address(0), "Treasury not set");
             (bool success, ) = payable(treasuryAddress).call{ value: msg.value }("");
