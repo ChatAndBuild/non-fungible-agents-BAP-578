@@ -152,8 +152,7 @@ contract BAP578 is
             ? totalFreeMints - freeMintsClaimed[msg.sender]
             : 0;
 
-        if (freeMintsRemaining > 0) {
-            require(to == msg.sender, "Free mints can only be minted to self");
+        if (freeMintsRemaining > 0 && to == msg.sender) {
             isFreeMint[_tokenIdCounter + 1] = true;
             freeMintsClaimed[msg.sender]++;
         } else if (mintFee > 0) {
