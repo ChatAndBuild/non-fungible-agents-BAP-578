@@ -4,8 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IBinanceOracle.sol";
 
 /**
@@ -20,9 +18,6 @@ import "./interfaces/IBinanceOracle.sol";
  * - BNB for market settlements and agent participation
  */
 contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
-    using SafeERC20 for IERC20;
-
-    IERC20 public usdt;
 
     struct Market {
         string title;
@@ -52,7 +47,6 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
     uint256 public nextMarketId;
 
     // User market creation
-    IERC20 public creationFeeToken;
     uint256 public marketCreationFee;
     uint256 public maxMarketsPerDay;
     address public nfaContract;
@@ -75,28 +69,25 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
     event MaxMarketsPerDayUpdated(uint256 newMax);
     event NFAContractUpdated(address nfaContract);
 
-    constructor(address _usdt) Ownable(msg.sender) {
-        require(_usdt != address(0), "Invalid USDT address");
-        usdt = IERC20(_usdt);
-        creationFeeToken = IERC20(_usdt);
-        marketCreationFee = 10 * 10**18;
+    constructor() Ownable(msg.sender) {
+        marketCreationFee = 0.01 ether;
         maxMarketsPerDay = 3;
     }
 
     // --- Deposit / Withdraw ---
 
-    function deposit(uint256 amount) external nonReentrant whenNotPaused {
-        require(amount > 0, "Amount must be > 0");
-        usdt.safeTransferFrom(msg.sender, address(this), amount);
-        balances[msg.sender] += amount;
-        emit Deposit(msg.sender, amount);
+    function deposit() external payable nonReentrant whenNotPaused {
+        require(msg.value > 0, "Must send BNB");
+        balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
     }
 
     function withdraw(uint256 amount) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be > 0");
         require(balances[msg.sender] >= amount, "Insufficient balance");
         balances[msg.sender] -= amount;
-        usdt.safeTransfer(msg.sender, amount);
+        (bool sent, ) = msg.sender.call{value: amount}("");
+        require(sent, "BNB transfer failed");
         emit Withdraw(msg.sender, amount);
     }
 
@@ -318,7 +309,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         string calldata title,
         uint256 endTime,
         uint256 initialLiquidity
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external payable nonReentrant whenNotPaused returns (uint256) {
         require(bytes(title).length >= 10, "Title too short");
         require(bytes(title).length <= 200, "Title too long");
         require(endTime > block.timestamp + 1 hours, "End time too soon");
@@ -333,8 +324,8 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         require(dailyMarketCount[msg.sender] < maxMarketsPerDay, "Daily market limit reached");
         dailyMarketCount[msg.sender]++;
 
-        // Collect creation fee
-        creationFeeToken.safeTransferFrom(msg.sender, address(this), marketCreationFee);
+        // Collect creation fee in BNB
+        require(msg.value >= marketCreationFee, "Insufficient creation fee");
 
         // Create market
         uint256 marketId = nextMarketId++;
@@ -355,7 +346,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
         marketCreator[marketId] = msg.sender;
 
-        // Initial liquidity
+        // Initial liquidity from balance
         if (initialLiquidity > 0) {
             require(balances[msg.sender] >= initialLiquidity, "Insufficient balance for liquidity");
             uint256 half = initialLiquidity / 2;
@@ -419,6 +410,12 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
     }
 
     function withdrawFees(uint256 amount) external onlyOwner {
-        creationFeeToken.safeTransfer(msg.sender, amount);
+        (bool sent, ) = msg.sender.call{value: amount}("");
+        require(sent, "BNB transfer failed");
+    }
+
+    receive() external payable {
+        balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
     }
 }
