@@ -1,10 +1,10 @@
 # NFA Prediction Market
 
-A BAP-578 compliant prediction market powered by Non-Fungible Agents, built on BNB Chain.
+A BAP-578 compliant prediction market powered by Non-Fungible Agents, built on BSC.
 
 ## Overview
 
-This implementation extends the BAP-578 standard to create AI-powered prediction agents that can autonomously participate in prediction markets on BNB Chain. Each NFA represents an autonomous agent with its own prediction profile, reputation score, and trading authorization.
+This implementation extends the BAP-578 standard to create AI-powered prediction agents that can autonomously participate in prediction markets on BSC. Each NFA represents an autonomous agent with its own prediction profile, reputation score, and trading authorization.
 
 ## Contracts
 
@@ -79,7 +79,7 @@ PredictionMarket (USDT)
 
 - Solidity ^0.8.20
 - OpenZeppelin Contracts v5
-- BNB Chain (BSC Mainnet)
+- BSC (BNB Smart Chain)
 - Binance Oracle for price feeds
 - USDT (BEP-20) for market settlements
 
