@@ -21,7 +21,7 @@ BAP-578 compliant NFA with prediction-specific extensions:
 
 ### PredictionMarket.sol
 
-USDT-based prediction market with NFA agent integration:
+BNB-based prediction market with NFA agent integration:
 
 - **Manual & Oracle Resolution** — Supports both admin-resolved and Binance Oracle-resolved markets
 - **User-Created Markets** — Community members can create markets with daily rate limiting and creation fees
@@ -48,7 +48,7 @@ NFAPredictionAgent (ERC721)
 └── IVaultPermissionManager (vault delegation)
         │
         ▼
-PredictionMarket (USDT)
+PredictionMarket (BNB)
 ├── Manual markets (admin)
 ├── Oracle markets (Binance Oracle)
 ├── User-created markets (community)
@@ -81,7 +81,7 @@ PredictionMarket (USDT)
 - OpenZeppelin Contracts v5
 - BSC (BNB Smart Chain)
 - Binance Oracle for price feeds
-- USDT (BEP-20) for market settlements
+- BNB for market settlements
 
 ## Author
 
