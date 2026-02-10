@@ -1,10 +1,10 @@
-# NFA BNB Prediction Market
+# NFA Prediction Market
 
-A BAP-578 compliant BNB prediction market powered by Non-Fungible Agents on BNB Chain.
+A BAP-578 compliant prediction market powered by Non-Fungible Agents, built on BNB Chain.
 
 ## Overview
 
-This implementation extends the BAP-578 standard to create AI-powered prediction agents that can autonomously participate in BNB prediction markets. Each NFA represents an autonomous agent with its own prediction profile, reputation score, and trading authorization.
+This implementation extends the BAP-578 standard to create AI-powered prediction agents that can autonomously participate in prediction markets on BNB Chain. Each NFA represents an autonomous agent with its own prediction profile, reputation score, and trading authorization.
 
 ## Contracts
 
