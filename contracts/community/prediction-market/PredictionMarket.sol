@@ -10,13 +10,14 @@ import "./interfaces/IBinanceOracle.sol";
 
 /**
  * @title PredictionMarket
- * @dev USDT-based prediction market with NFA agent integration on BNB Chain.
+ * @dev BNB-based prediction market with NFA agent integration on BSC.
  *
  * Features:
  * - Manual and oracle-based (Binance Oracle) market resolution
  * - User-created markets with daily rate limiting and creation fees
  * - NFA agent auto-trading via agentTakePosition()
  * - Winner-takes-proportional-share payout model
+ * - BNB for market settlements and agent participation
  */
 contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
     using SafeERC20 for IERC20;

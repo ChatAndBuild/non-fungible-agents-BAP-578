@@ -25,6 +25,7 @@ import "./interfaces/IVaultPermissionManager.sol";
  * - Vault permission manager with tiered delegation
  *
  * Designed to integrate with PredictionMarket.sol for agent-driven trading.
+ * All agent funding, trading, and settlements are denominated in BNB.
  */
 contract NFAPredictionAgent is ERC721Enumerable, ReentrancyGuard, Pausable, Ownable, IBAP578, ILearningModule, IMemoryModuleRegistry, IVaultPermissionManager {
 
