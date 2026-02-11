@@ -90,14 +90,14 @@ contract NFA is Ownable, IBAP578 {
 
     mapping(uint256 => address) private _owners;
     mapping(address => uint256) private _balances;
-    
+
     // ERC721 Approvals
     mapping(uint256 => address) private _tokenApprovals;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
     address public signerAddress;
     mapping(address => uint256) public nonces;
-    
+
     uint256 public mintLimitPerAddress;
     mapping(address => uint256) private _mintedCount;
 
@@ -116,7 +116,8 @@ contract NFA is Ownable, IBAP578 {
 
     // EIP-712
     bytes32 public DOMAIN_SEPARATOR;
-    bytes32 public constant MINT_REQUEST_TYPEHASH = keccak256("MintRequest(address wallet,uint256 nonce,uint256 expiry)");
+    bytes32 public constant MINT_REQUEST_TYPEHASH =
+        keccak256("MintRequest(address wallet,uint256 nonce,uint256 expiry)");
 
     struct MintRequest {
         address wallet;
@@ -127,7 +128,7 @@ contract NFA is Ownable, IBAP578 {
     constructor(address _requiredToken) Ownable() {
         require(_requiredToken != address(0), "NFA: zero address token");
         REQUIRED_TOKEN = _requiredToken;
-        
+
         signerAddress = msg.sender;
         mintLimitPerAddress = 2;
 
@@ -234,7 +235,7 @@ contract NFA is Ownable, IBAP578 {
         _owners[tokenId] = to;
 
         emit Transfer(from, to, tokenId);
-        
+
         // Update State owner
         if (_states[tokenId].status != Status.Terminated) {
             _states[tokenId].owner = to;
@@ -264,7 +265,7 @@ contract NFA is Ownable, IBAP578 {
         return true;
     }
 
-    // BAP + Minting 
+    // BAP + Minting
 
     function getMintedCount(address user) external view returns (uint256) {
         return _mintedCount[user];
@@ -279,7 +280,7 @@ contract NFA is Ownable, IBAP578 {
     function _mint(address to) internal {
         require(_nextTokenId < MAX_SUPPLY, "NFA: max supply");
         require(_mintedCount[to] < mintLimitPerAddress, "NFA: exceed mint limit per address");
-        
+
         uint256 tokenBalance = IERC20(REQUIRED_TOKEN).balanceOf(to);
         require(tokenBalance >= MIN_TOKEN_BALANCE, "NFA: insufficient token balance");
 
