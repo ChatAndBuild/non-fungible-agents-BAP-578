@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interfaces/IBinanceOracle.sol";
 
 /**
@@ -18,7 +18,6 @@ import "./interfaces/IBinanceOracle.sol";
  * - BNB for market settlements and agent participation
  */
 contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
-
     struct Market {
         string title;
         uint256 endTime;
@@ -29,10 +28,10 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         bool exists;
         // Oracle fields
         bool oracleEnabled;
-        address priceFeed;        // Oracle adapter address
-        int256 targetPrice;       // Target price (8 decimals)
-        uint8 resolutionType;     // 0=manual, 1=price_above, 2=price_below
-        int256 resolvedPrice;     // Actual price at resolution
+        address priceFeed; // Oracle adapter address
+        int256 targetPrice; // Target price (8 decimals)
+        uint8 resolutionType; // 0=manual, 1=price_above, 2=price_below
+        int256 resolvedPrice; // Actual price at resolution
     }
 
     struct Position {
@@ -66,15 +65,30 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
     event MarketResolved(uint256 indexed marketId, bool outcome);
     event PositionTaken(uint256 indexed marketId, address indexed user, bool isYes, uint256 amount);
     event WinningsClaimed(uint256 indexed marketId, address indexed user, uint256 amount);
-    event OracleMarketCreated(uint256 indexed marketId, address priceFeed, int256 targetPrice, uint8 resolutionType);
+    event OracleMarketCreated(
+        uint256 indexed marketId,
+        address priceFeed,
+        int256 targetPrice,
+        uint8 resolutionType
+    );
     event OracleResolution(uint256 indexed marketId, int256 price, bool outcome);
-    event UserMarketCreated(uint256 indexed marketId, address indexed creator, string title, uint256 creationFee);
-    event AgentPositionTaken(uint256 indexed marketId, uint256 indexed agentTokenId, bool isYes, uint256 amount);
+    event UserMarketCreated(
+        uint256 indexed marketId,
+        address indexed creator,
+        string title,
+        uint256 creationFee
+    );
+    event AgentPositionTaken(
+        uint256 indexed marketId,
+        uint256 indexed agentTokenId,
+        bool isYes,
+        uint256 amount
+    );
     event MarketCreationFeeUpdated(uint256 newFee);
     event MaxMarketsPerDayUpdated(uint256 newMax);
     event NFAContractUpdated(address nfaContract);
 
-    constructor() Ownable(msg.sender) {
+    constructor() {
         marketCreationFee = 0.01 ether;
         maxMarketsPerDay = 3;
     }
@@ -91,7 +105,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         require(amount > 0, "Amount must be > 0");
         require(balances[msg.sender] >= amount, "Insufficient balance");
         balances[msg.sender] -= amount;
-        (bool sent, ) = msg.sender.call{value: amount}("");
+        (bool sent, ) = msg.sender.call{ value: amount }("");
         require(sent, "BNB transfer failed");
         emit Withdraw(msg.sender, amount);
     }
@@ -152,10 +166,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         return marketId;
     }
 
-    function resolveMarket(
-        uint256 marketId,
-        bool outcome
-    ) external onlyOwner {
+    function resolveMarket(uint256 marketId, bool outcome) external onlyOwner {
         Market storage market = markets[marketId];
         require(market.exists, "Market does not exist");
         require(!market.resolved, "Already resolved");
@@ -245,8 +256,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         pos.claimed = true;
 
         // Winner gets back their stake + proportional share of loser pool
-        uint256 reward = winnerAmount +
-            (winnerAmount * totalLoserPool) / totalWinnerPool;
+        uint256 reward = winnerAmount + (winnerAmount * totalLoserPool) / totalWinnerPool;
 
         balances[msg.sender] += reward;
         emit WinningsClaimed(marketId, msg.sender, reward);
@@ -399,7 +409,10 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         emit AgentPositionTaken(marketId, agentTokenId, isYes, amount);
     }
 
-    function agentClaimWinnings(uint256 agentTokenId, uint256 marketId) external nonReentrant whenNotPaused {
+    function agentClaimWinnings(
+        uint256 agentTokenId,
+        uint256 marketId
+    ) external nonReentrant whenNotPaused {
         require(msg.sender == nfaContract, "Only NFA contract");
         Market storage market = markets[marketId];
         require(market.exists, "Market does not exist");
@@ -426,8 +439,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
         pos.claimed = true;
 
-        uint256 reward = winnerAmount +
-            (winnerAmount * totalLoserPool) / totalWinnerPool;
+        uint256 reward = winnerAmount + (winnerAmount * totalLoserPool) / totalWinnerPool;
 
         // Credit reward to NFA contract balance for the agent to withdraw
         balances[nfaContract] += reward;
@@ -454,7 +466,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
     function withdrawFees(uint256 amount) external onlyOwner {
         require(amount <= accumulatedFees, "Exceeds accumulated fees");
         accumulatedFees -= amount;
-        (bool sent, ) = msg.sender.call{value: amount}("");
+        (bool sent, ) = msg.sender.call{ value: amount }("");
         require(sent, "BNB transfer failed");
     }
 

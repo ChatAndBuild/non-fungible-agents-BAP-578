@@ -2,7 +2,11 @@
 pragma solidity ^0.8.20;
 
 interface IBAP578 {
-    enum AgentState { ACTIVE, PAUSED, TERMINATED }
+    enum AgentState {
+        ACTIVE,
+        PAUSED,
+        TERMINATED
+    }
 
     struct AgentMetadata {
         string name;
