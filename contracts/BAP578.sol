@@ -159,9 +159,18 @@ contract BAP578 is
         // Validate metadata string lengths
         require(bytes(metadataURI).length <= MAX_METADATA_URI_LENGTH, "URI too long");
         require(bytes(extendedMetadata.persona).length <= MAX_PERSONA_LENGTH, "Persona too long");
-        require(bytes(extendedMetadata.experience).length <= MAX_STRING_LENGTH, "Experience too long");
-        require(bytes(extendedMetadata.voiceHash).length <= MAX_STRING_LENGTH, "VoiceHash too long");
-        require(bytes(extendedMetadata.animationURI).length <= MAX_STRING_LENGTH, "AnimationURI too long");
+        require(
+            bytes(extendedMetadata.experience).length <= MAX_STRING_LENGTH,
+            "Experience too long"
+        );
+        require(
+            bytes(extendedMetadata.voiceHash).length <= MAX_STRING_LENGTH,
+            "VoiceHash too long"
+        );
+        require(
+            bytes(extendedMetadata.animationURI).length <= MAX_STRING_LENGTH,
+            "AnimationURI too long"
+        );
         require(bytes(extendedMetadata.vaultURI).length <= MAX_STRING_LENGTH, "VaultURI too long");
 
         // Check if user has free mints remaining (base + bonus)
@@ -284,11 +293,26 @@ contract BAP578 is
         AgentMetadata memory newExtendedMetadata
     ) external onlyTokenOwner(tokenId) {
         require(bytes(newMetadataURI).length <= MAX_METADATA_URI_LENGTH, "URI too long");
-        require(bytes(newExtendedMetadata.persona).length <= MAX_PERSONA_LENGTH, "Persona too long");
-        require(bytes(newExtendedMetadata.experience).length <= MAX_STRING_LENGTH, "Experience too long");
-        require(bytes(newExtendedMetadata.voiceHash).length <= MAX_STRING_LENGTH, "VoiceHash too long");
-        require(bytes(newExtendedMetadata.animationURI).length <= MAX_STRING_LENGTH, "AnimationURI too long");
-        require(bytes(newExtendedMetadata.vaultURI).length <= MAX_STRING_LENGTH, "VaultURI too long");
+        require(
+            bytes(newExtendedMetadata.persona).length <= MAX_PERSONA_LENGTH,
+            "Persona too long"
+        );
+        require(
+            bytes(newExtendedMetadata.experience).length <= MAX_STRING_LENGTH,
+            "Experience too long"
+        );
+        require(
+            bytes(newExtendedMetadata.voiceHash).length <= MAX_STRING_LENGTH,
+            "VoiceHash too long"
+        );
+        require(
+            bytes(newExtendedMetadata.animationURI).length <= MAX_STRING_LENGTH,
+            "AnimationURI too long"
+        );
+        require(
+            bytes(newExtendedMetadata.vaultURI).length <= MAX_STRING_LENGTH,
+            "VaultURI too long"
+        );
 
         _setTokenURI(tokenId, newMetadataURI);
         agentMetadata[tokenId] = newExtendedMetadata;
