@@ -159,7 +159,7 @@ contract NFA is Ownable, IBAP578 {
     // Core ERC721 Metadata function for marketplaces
     function tokenURI(uint256 tokenId) public view returns (string memory) {
         require(_owners[tokenId] != address(0), "NFA: nonexistent token");
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _toString(tokenId))) : "";
+        return bytes(baseURI).length > 0 ? string.concat(baseURI, _toString(tokenId)) : "";
     }
 
     // Owner sets base URL (e.g., "https://your-api.com/metadata/")
