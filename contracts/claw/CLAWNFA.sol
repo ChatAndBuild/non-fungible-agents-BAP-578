@@ -81,6 +81,16 @@ contract NFA is Ownable, IBAP578 {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event AllowedLogicContractUpdated(address indexed logic, bool allowed);
+    event BaseURIUpdated(string previousBaseURI, string newBaseURI);
+    event SignerAddressUpdated(address indexed oldSigner, address indexed newSigner);
+    event OwnerWithdrawal(address indexed owner, uint256 amount);
+    event AgentWithdrawn(uint256 indexed tokenId, address indexed recipient, uint256 amount);
+    event AgentActionExecuted(uint256 indexed tokenId, bytes result);
+    event AgentLogicUpgraded(uint256 indexed tokenId, address oldLogic, address newLogic);
+    event AgentFundedByToken(uint256 indexed tokenId, address indexed funder, uint256 amount);
+    event AgentStatusChanged(uint256 indexed tokenId, Status newStatus);
+    event UnattributedFundsReceived(address indexed sender, uint256 amount);
 
     string public name = "Non-Fungible Agent";
     string public symbol = "NFA";
@@ -113,16 +123,27 @@ contract NFA is Ownable, IBAP578 {
 
     mapping(uint256 => State) private _states;
     mapping(uint256 => AgentMetadata) private _agentMetadata;
+    uint256 private _totalAgentFunds;
+    bool private _locked;
 
     // EIP-712
     bytes32 public DOMAIN_SEPARATOR;
     bytes32 public constant MINT_REQUEST_TYPEHASH =
         keccak256("MintRequest(address wallet,uint256 nonce,uint256 expiry)");
+    uint256 private constant _SECP256K1_HALF_ORDER =
+        0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
     struct MintRequest {
         address wallet;
         uint256 nonce;
         uint256 expiry;
+    }
+
+    modifier nonReentrant() {
+        require(!_locked, "NFA: reentrant call");
+        _locked = true;
+        _;
+        _locked = false;
     }
 
     constructor(address _requiredToken) Ownable() {
@@ -164,7 +185,9 @@ contract NFA is Ownable, IBAP578 {
 
     // Owner sets base URL (e.g., "https://your-api.com/metadata/")
     function setBaseURI(string calldata newBaseURI) external onlyOwner {
+        string memory oldBaseURI = baseURI;
         baseURI = newBaseURI;
+        emit BaseURIUpdated(oldBaseURI, newBaseURI);
     }
 
     function ownerOf(uint256 tokenId) public view returns (address) {
@@ -174,7 +197,12 @@ contract NFA is Ownable, IBAP578 {
     }
 
     function balanceOf(address user) external view returns (uint256) {
+        require(user != address(0), "NFA: zero address");
         return _balances[user];
+    }
+
+    function totalSupply() external view returns (uint256) {
+        return _nextTokenId;
     }
 
     // ERC721 Approvals
@@ -236,10 +264,8 @@ contract NFA is Ownable, IBAP578 {
 
         emit Transfer(from, to, tokenId);
 
-        // Update State owner
-        if (_states[tokenId].status != Status.Terminated) {
-            _states[tokenId].owner = to;
-        }
+        // Keep ERC721 owner and tracked state owner consistent.
+        _states[tokenId].owner = to;
     }
 
     function _checkOnERC721Received(
@@ -308,6 +334,7 @@ contract NFA is Ownable, IBAP578 {
         require(req.wallet == msg.sender, "NFA: wallet mismatch");
         require(req.expiry > block.timestamp, "NFA: signature expired");
         require(nonces[msg.sender] == req.nonce, "NFA: invalid nonce");
+        require(signerAddress != address(0), "NFA: signer not set");
 
         // Verify Signature using EIP-712
         bytes32 digest = keccak256(
@@ -319,7 +346,7 @@ contract NFA is Ownable, IBAP578 {
         );
 
         address recovered = _recover(digest, signature);
-        require(recovered == signerAddress, "NFA: invalid signature");
+        require(recovered != address(0) && recovered == signerAddress, "NFA: invalid signature");
 
         // Increment nonce
         nonces[msg.sender]++;
@@ -336,14 +363,25 @@ contract NFA is Ownable, IBAP578 {
 
         s.lastActionTimestamp = block.timestamp;
 
-        (bool ok, bytes memory result) = s.logicAddress.delegatecall(data);
-        require(ok, "NFA: action failed");
+        (bool ok, bytes memory result) = s.logicAddress.call(data);
+        if (!ok) {
+            if (result.length == 0) {
+                revert("NFA: action failed");
+            }
+            /// @solidity memory-safe-assembly
+            assembly {
+                revert(add(32, result), mload(result))
+            }
+        }
 
         emit ActionExecuted(address(this), result);
+        emit AgentActionExecuted(tokenId, result);
     }
 
     function setAllowedLogicContract(address logic, bool allowed) external onlyOwner {
+        require(logic != address(0), "NFA: zero address logic");
         allowedLogicContracts[logic] = allowed;
+        emit AllowedLogicContractUpdated(logic, allowed);
     }
 
     function setLogicAddress(uint256 tokenId, address newLogic) external override {
@@ -354,13 +392,31 @@ contract NFA is Ownable, IBAP578 {
         _states[tokenId].logicAddress = newLogic;
 
         emit LogicUpgraded(address(this), old, newLogic);
+        emit AgentLogicUpgraded(tokenId, old, newLogic);
     }
 
     function fundAgent(uint256 tokenId) external payable override {
         require(_owners[tokenId] != address(0), "NFA: nonexistent");
+        require(_states[tokenId].status != Status.Terminated, "NFA: terminated");
+        require(msg.value > 0, "NFA: zero value");
 
         _states[tokenId].balance += msg.value;
+        _totalAgentFunds += msg.value;
         emit AgentFunded(address(this), msg.sender, msg.value);
+        emit AgentFundedByToken(tokenId, msg.sender, msg.value);
+    }
+
+    function withdrawFromAgent(uint256 tokenId, uint256 amount) external nonReentrant {
+        require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
+        require(amount > 0, "NFA: zero amount");
+        require(_states[tokenId].balance >= amount, "NFA: insufficient");
+
+        _states[tokenId].balance -= amount;
+        _totalAgentFunds -= amount;
+
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "NFA: withdraw failed");
+        emit AgentWithdrawn(tokenId, msg.sender, amount);
     }
 
     function getState(uint256 tokenId) external view override returns (State memory) {
@@ -381,29 +437,41 @@ contract NFA is Ownable, IBAP578 {
 
     function pause(uint256 tokenId) external override {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
+        require(_states[tokenId].status == Status.Active, "NFA: not active");
         _states[tokenId].status = Status.Paused;
         emit StatusChanged(address(this), Status.Paused);
+        emit AgentStatusChanged(tokenId, Status.Paused);
     }
 
     function unpause(uint256 tokenId) external override {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
+        require(_states[tokenId].status == Status.Paused, "NFA: not paused");
         _states[tokenId].status = Status.Active;
         emit StatusChanged(address(this), Status.Active);
+        emit AgentStatusChanged(tokenId, Status.Active);
     }
 
     function terminate(uint256 tokenId) external override {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
+        require(_states[tokenId].status != Status.Terminated, "NFA: terminated");
         _states[tokenId].status = Status.Terminated;
         emit StatusChanged(address(this), Status.Terminated);
+        emit AgentStatusChanged(tokenId, Status.Terminated);
     }
 
     function setSignerAddress(address newSigner) external onlyOwner {
+        require(newSigner != address(0), "NFA: zero signer");
+        address oldSigner = signerAddress;
         signerAddress = newSigner;
+        emit SignerAddressUpdated(oldSigner, newSigner);
     }
 
-    function withdraw() external onlyOwner {
-        (bool success, ) = owner().call{value: address(this).balance}("");
+    function withdraw() external onlyOwner nonReentrant {
+        uint256 ownerBalance = address(this).balance - _totalAgentFunds;
+        require(ownerBalance > 0, "NFA: nothing to withdraw");
+        (bool success, ) = owner().call{value: ownerBalance}("");
         require(success, "NFA: withdraw failed");
+        emit OwnerWithdrawal(owner(), ownerBalance);
     }
 
     function setMintLimitPerAddress(uint256 newLimit) external onlyOwner {
@@ -448,10 +516,19 @@ contract NFA is Ownable, IBAP578 {
             v := byte(0, mload(add(signature, 0x60)))
         }
 
+        if (uint256(s) > _SECP256K1_HALF_ORDER) {
+            return address(0);
+        }
+        if (v != 27 && v != 28) {
+            return address(0);
+        }
+
         return ecrecover(digest, v, r, s);
     }
 
-    receive() external payable {}
+    receive() external payable {
+        emit UnattributedFundsReceived(msg.sender, msg.value);
+    }
 }
 
 interface IERC721Receiver {
