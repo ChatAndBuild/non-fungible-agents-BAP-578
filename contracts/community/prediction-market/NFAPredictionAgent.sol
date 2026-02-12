@@ -344,7 +344,7 @@ contract NFAPredictionAgent is
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireMinted(tokenId);
-        return string(abi.encodePacked(_baseTokenURI, Strings.toString(tokenId), ".json"));
+        return string.concat(_baseTokenURI, Strings.toString(tokenId), ".json");
     }
 
     // ─── Admin ──────────────────────────────────────────────────
