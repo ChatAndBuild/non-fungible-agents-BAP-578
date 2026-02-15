@@ -8,8 +8,10 @@ interface IERC20 {
 /// @title Minimal Ownable (no OpenZeppelin)
 contract Ownable {
     address private _owner;
+    address private _pendingOwner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
 
     constructor() {
         _owner = msg.sender;
@@ -25,10 +27,22 @@ contract Ownable {
         return _owner;
     }
 
+    function pendingOwner() public view returns (address) {
+        return _pendingOwner;
+    }
+
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "Owner: zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
+        _pendingOwner = newOwner;
+        emit OwnershipTransferStarted(_owner, newOwner);
+    }
+
+    function acceptOwnership() external {
+        require(msg.sender == _pendingOwner, "Owner: not pending owner");
+        address oldOwner = _owner;
+        _owner = _pendingOwner;
+        _pendingOwner = address(0);
+        emit OwnershipTransferred(oldOwner, _owner);
     }
 }
 
@@ -90,7 +104,6 @@ contract NFA is Ownable, IBAP578 {
     event AgentLogicUpgraded(uint256 indexed tokenId, address oldLogic, address newLogic);
     event AgentFundedByToken(uint256 indexed tokenId, address indexed funder, uint256 amount);
     event AgentStatusChanged(uint256 indexed tokenId, Status newStatus);
-    event UnattributedFundsReceived(address indexed sender, uint256 amount);
 
     string public name = "Non-Fungible Agent";
     string public symbol = "NFA";
@@ -127,11 +140,14 @@ contract NFA is Ownable, IBAP578 {
     bool private _locked;
 
     // EIP-712
-    bytes32 public DOMAIN_SEPARATOR;
     bytes32 public constant MINT_REQUEST_TYPEHASH =
         keccak256("MintRequest(address wallet,uint256 nonce,uint256 expiry)");
     uint256 private constant _SECP256K1_HALF_ORDER =
         0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
+    bytes32 private constant _EIP712_DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    uint256 private immutable _initialChainId;
+    bytes32 private immutable _initialDomainSeparator;
 
     struct MintRequest {
         address wallet;
@@ -152,21 +168,8 @@ contract NFA is Ownable, IBAP578 {
 
         signerAddress = msg.sender;
         mintLimitPerAddress = 2;
-
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name)),
-                keccak256(bytes("1")),
-                chainId,
-                address(this)
-            )
-        );
+        _initialChainId = block.chainid;
+        _initialDomainSeparator = _buildDomainSeparator(block.chainid);
     }
 
     // ERC165
@@ -340,7 +343,7 @@ contract NFA is Ownable, IBAP578 {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(MINT_REQUEST_TYPEHASH, req.wallet, req.nonce, req.expiry))
             )
         );
@@ -526,8 +529,27 @@ contract NFA is Ownable, IBAP578 {
         return ecrecover(digest, v, r, s);
     }
 
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        if (block.chainid == _initialChainId) {
+            return _initialDomainSeparator;
+        }
+        return _buildDomainSeparator(block.chainid);
+    }
+
+    function _buildDomainSeparator(uint256 chainId) private view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                _EIP712_DOMAIN_TYPEHASH,
+                keccak256(bytes(name)),
+                keccak256(bytes("1")),
+                chainId,
+                address(this)
+            )
+        );
+    }
+
     receive() external payable {
-        emit UnattributedFundsReceived(msg.sender, msg.value);
+        revert("NFA: use fundAgent");
     }
 }
 
