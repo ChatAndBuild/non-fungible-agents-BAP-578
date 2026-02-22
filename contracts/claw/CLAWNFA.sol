@@ -95,11 +95,6 @@ contract NFA is Ownable, IBAP578 {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
-    event AgentFunded(uint256 indexed tokenId, uint256 amount);
-    event AgentWithdraw(uint256 indexed tokenId, uint256 amount);
-    event AgentStatusChanged(uint256 indexed tokenId, bool active);
-    event LogicAddressUpdated(uint256 indexed tokenId, address newLogicAddress);
-    event MetadataUpdated(uint256 indexed tokenId);
     event ContractPaused(bool paused);
     event AllowedLogicContractUpdated(address indexed logic, bool allowed);
     event BaseURIUpdated(string previousBaseURI, string newBaseURI);
@@ -369,7 +364,7 @@ contract NFA is Ownable, IBAP578 {
         _mint(msg.sender);
     }
 
-    function executeAction(uint256 tokenId, bytes calldata data) external override {
+    function executeAction(uint256 tokenId, bytes calldata data) external override nonReentrant {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
 
         State storage s = _states[tokenId];
@@ -389,7 +384,6 @@ contract NFA is Ownable, IBAP578 {
             }
         }
 
-        emit ActionExecuted(address(this), result);
         emit AgentActionExecuted(tokenId, result);
     }
 
@@ -406,9 +400,7 @@ contract NFA is Ownable, IBAP578 {
         address old = _states[tokenId].logicAddress;
         _states[tokenId].logicAddress = newLogic;
 
-        emit LogicUpgraded(address(this), old, newLogic);
         emit AgentLogicUpgraded(tokenId, old, newLogic);
-        emit LogicAddressUpdated(tokenId, newLogic);
     }
 
     function fundAgent(uint256 tokenId) external payable override whenNotPaused {
@@ -418,9 +410,7 @@ contract NFA is Ownable, IBAP578 {
 
         _states[tokenId].balance += msg.value;
         _totalAgentFunds += msg.value;
-        emit AgentFunded(address(this), msg.sender, msg.value);
         emit AgentFundedByToken(tokenId, msg.sender, msg.value);
-        emit AgentFunded(tokenId, msg.value);
     }
 
     function withdrawFromAgent(uint256 tokenId, uint256 amount) external nonReentrant {
@@ -433,8 +423,21 @@ contract NFA is Ownable, IBAP578 {
 
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "NFA: withdraw failed");
-        emit AgentWithdraw(tokenId, amount);
         emit AgentWithdrawn(tokenId, msg.sender, amount);
+    }
+
+    function burn(uint256 tokenId) external {
+        address tokenOwner = ownerOf(tokenId);
+        require(tokenOwner == msg.sender, "NFA: not owner");
+        require(_states[tokenId].balance == 0, "NFA: non-zero balance");
+
+        delete _tokenApprovals[tokenId];
+        _balances[tokenOwner] -= 1;
+        delete _owners[tokenId];
+        delete _states[tokenId];
+        delete _agentMetadata[tokenId];
+
+        emit Transfer(tokenOwner, address(0), tokenId);
     }
 
     function getState(uint256 tokenId) external view override returns (State memory) {
@@ -451,15 +454,12 @@ contract NFA is Ownable, IBAP578 {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
         _agentMetadata[tokenId] = metadata;
         emit MetadataUpdated(tokenId, tokenURI(tokenId));
-        emit MetadataUpdated(tokenId);
     }
 
     function pause(uint256 tokenId) external override {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
         require(_states[tokenId].status == Status.Active, "NFA: not active");
         _states[tokenId].status = Status.Paused;
-        emit StatusChanged(address(this), Status.Paused);
-        emit AgentStatusChanged(tokenId, false);
         emit AgentStatusChanged(tokenId, Status.Paused);
     }
 
@@ -467,8 +467,6 @@ contract NFA is Ownable, IBAP578 {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
         require(_states[tokenId].status == Status.Paused, "NFA: not paused");
         _states[tokenId].status = Status.Active;
-        emit StatusChanged(address(this), Status.Active);
-        emit AgentStatusChanged(tokenId, true);
         emit AgentStatusChanged(tokenId, Status.Active);
     }
 
@@ -476,8 +474,6 @@ contract NFA is Ownable, IBAP578 {
         require(ownerOf(tokenId) == msg.sender, "NFA: not owner");
         require(_states[tokenId].status != Status.Terminated, "NFA: terminated");
         _states[tokenId].status = Status.Terminated;
-        emit StatusChanged(address(this), Status.Terminated);
-        emit AgentStatusChanged(tokenId, false);
         emit AgentStatusChanged(tokenId, Status.Terminated);
     }
 
