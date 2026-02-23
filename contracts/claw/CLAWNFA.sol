@@ -147,7 +147,9 @@ contract NFA is Ownable, IBAP578 {
     uint256 private constant _SECP256K1_HALF_ORDER =
         0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
     bytes32 private constant _EIP712_DOMAIN_TYPEHASH =
-        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
     uint256 private immutable _initialChainId;
     bytes32 private immutable _initialDomainSeparator;
 
@@ -184,7 +186,7 @@ contract NFA is Ownable, IBAP578 {
         return
             interfaceId == 0x01ffc9a7 || // ERC165
             interfaceId == 0x80ac58cd || // ERC721
-            interfaceId == 0x5b5e139f;   // ERC721Metadata
+            interfaceId == 0x5b5e139f; // ERC721Metadata
     }
 
     // Core ERC721 Metadata function for marketplaces
@@ -242,7 +244,10 @@ contract NFA is Ownable, IBAP578 {
 
     // ERC721 Transfers
     function transferFrom(address from, address to, uint256 tokenId) public {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "NFA: caller is not token owner or approved");
+        require(
+            _isApprovedOrOwner(msg.sender, tokenId),
+            "NFA: caller is not token owner or approved"
+        );
         _transfer(from, to, tokenId);
     }
 
@@ -251,14 +256,22 @@ contract NFA is Ownable, IBAP578 {
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "NFA: caller is not token owner or approved");
+        require(
+            _isApprovedOrOwner(msg.sender, tokenId),
+            "NFA: caller is not token owner or approved"
+        );
         _transfer(from, to, tokenId);
-        require(_checkOnERC721Received(from, to, tokenId, data), "NFA: transfer to non ERC721Receiver implementer");
+        require(
+            _checkOnERC721Received(from, to, tokenId, data),
+            "NFA: transfer to non ERC721Receiver implementer"
+        );
     }
 
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
         address owner = ownerOf(tokenId);
-        return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
+        return (spender == owner ||
+            isApprovedForAll(owner, spender) ||
+            getApproved(tokenId) == spender);
     }
 
     function _transfer(address from, address to, uint256 tokenId) internal {
@@ -285,7 +298,9 @@ contract NFA is Ownable, IBAP578 {
         bytes memory data
     ) private returns (bool) {
         if (to.code.length > 0) {
-            try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (bytes4 retval) {
+            try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (
+                bytes4 retval
+            ) {
                 return retval == IERC721Receiver.onERC721Received.selector;
             } catch (bytes memory reason) {
                 if (reason.length == 0) {
@@ -421,7 +436,7 @@ contract NFA is Ownable, IBAP578 {
         _states[tokenId].balance -= amount;
         _totalAgentFunds -= amount;
 
-        (bool success, ) = msg.sender.call{value: amount}("");
+        (bool success, ) = msg.sender.call{ value: amount }("");
         require(success, "NFA: withdraw failed");
         emit AgentWithdrawn(tokenId, msg.sender, amount);
     }
@@ -445,7 +460,9 @@ contract NFA is Ownable, IBAP578 {
         return _states[tokenId];
     }
 
-    function getAgentMetadata(uint256 tokenId) external view override returns (AgentMetadata memory) {
+    function getAgentMetadata(
+        uint256 tokenId
+    ) external view override returns (AgentMetadata memory) {
         require(_owners[tokenId] != address(0), "NFA: nonexistent");
         return _agentMetadata[tokenId];
     }
@@ -492,7 +509,7 @@ contract NFA is Ownable, IBAP578 {
     function withdraw() external onlyOwner nonReentrant {
         uint256 ownerBalance = address(this).balance - _totalAgentFunds;
         require(ownerBalance > 0, "NFA: nothing to withdraw");
-        (bool success, ) = owner().call{value: ownerBalance}("");
+        (bool success, ) = owner().call{ value: ownerBalance }("");
         require(success, "NFA: withdraw failed");
         emit OwnerWithdrawal(owner(), ownerBalance);
     }
@@ -557,15 +574,16 @@ contract NFA is Ownable, IBAP578 {
     }
 
     function _buildDomainSeparator(uint256 chainId) private view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                _EIP712_DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
-                keccak256(bytes("1")),
-                chainId,
-                address(this)
-            )
-        );
+        return
+            keccak256(
+                abi.encode(
+                    _EIP712_DOMAIN_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes("1")),
+                    chainId,
+                    address(this)
+                )
+            );
     }
 
     receive() external payable {
