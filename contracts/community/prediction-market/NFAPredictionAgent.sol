@@ -365,6 +365,14 @@ contract NFAPredictionAgent is
         return _agentBalances[tokenId];
     }
 
+    /// @dev Called by the prediction market to credit BNB back to an agent's balance
+    function creditAgentBalance(uint256 tokenId) external payable {
+        require(msg.sender == predictionMarket, "Only prediction market");
+        require(msg.value > 0, "Must send BNB");
+        _agentBalances[tokenId] += msg.value;
+        emit AgentFunded(tokenId, msg.value);
+    }
+
     // ─── Vault Management ────────────────────────────────────────
     function updateVault(
         uint256 tokenId,

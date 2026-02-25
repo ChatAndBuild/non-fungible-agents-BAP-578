@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interfaces/IBinanceOracle.sol";
+import "./interfaces/INFAPredictionAgent.sol";
 
 /**
  * @title PredictionMarket
@@ -58,6 +59,9 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
     // Agent positions: marketId => agentTokenId => Position
     mapping(uint256 => mapping(uint256 => Position)) public agentPositions;
+
+    // Per-agent balances within the prediction market (isolated from each other)
+    mapping(uint256 => uint256) public agentBalances;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -380,21 +384,46 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
     // --- Agent Position (NFA Integration) ---
 
+    function agentDeposit(uint256 agentTokenId) external payable nonReentrant whenNotPaused {
+        require(msg.sender == nfaContract, "Only NFA contract");
+        require(msg.value > 0, "Must send BNB");
+        agentBalances[agentTokenId] += msg.value;
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    function agentWithdraw(
+        uint256 agentTokenId,
+        uint256 amount
+    ) external nonReentrant whenNotPaused {
+        require(msg.sender == nfaContract, "Only NFA contract");
+        require(amount > 0, "Amount must be > 0");
+        require(agentBalances[agentTokenId] >= amount, "Insufficient agent balance");
+        agentBalances[agentTokenId] -= amount;
+        // Credit back to per-agent balance in NFA contract
+        INFAPredictionAgent(nfaContract).creditAgentBalance{ value: amount }(agentTokenId);
+        emit Withdraw(nfaContract, amount);
+    }
+
     function agentTakePosition(
         uint256 agentTokenId,
         uint256 marketId,
         bool isYes,
         uint256 amount
-    ) external nonReentrant whenNotPaused {
+    ) external payable nonReentrant whenNotPaused {
         require(msg.sender == nfaContract, "Only NFA contract");
         require(amount > 0, "Amount must be > 0");
         Market storage market = markets[marketId];
         require(market.exists, "Market does not exist");
         require(!market.resolved, "Market already resolved");
         require(block.timestamp < market.endTime, "Market ended");
-        require(balances[msg.sender] >= amount, "Insufficient balance");
 
-        balances[msg.sender] -= amount;
+        // Accept BNB and credit to per-agent balance
+        if (msg.value > 0) {
+            agentBalances[agentTokenId] += msg.value;
+        }
+
+        require(agentBalances[agentTokenId] >= amount, "Insufficient agent balance");
+        agentBalances[agentTokenId] -= amount;
 
         // Track per-agent positions instead of merging into NFA contract address
         Position storage pos = agentPositions[marketId][agentTokenId];
@@ -441,8 +470,8 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
         uint256 reward = winnerAmount + (winnerAmount * totalLoserPool) / totalWinnerPool;
 
-        // Credit reward to NFA contract balance for the agent to withdraw
-        balances[nfaContract] += reward;
+        // Credit reward to per-agent balance (not contract-level)
+        agentBalances[agentTokenId] += reward;
         emit WinningsClaimed(marketId, nfaContract, reward);
     }
 
