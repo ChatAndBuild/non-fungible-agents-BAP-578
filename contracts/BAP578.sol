@@ -137,6 +137,16 @@ contract BAP578 is
         freeMintsPerUser = 3;
     }
 
+    /**
+     * @dev Reinitializer for upgrading from V1 (without totalAgentBalances tracking).
+     * Must be called via upgradeToAndCall() when upgrading a deployed V1 proxy.
+     * The caller should compute _totalAgentBalances off-chain by summing all
+     * agentStates[tokenId].balance values for existing tokens.
+     */
+    function initializeV2(uint256 _totalAgentBalances) external reinitializer(2) {
+        totalAgentBalances = _totalAgentBalances;
+    }
+
     // ============================================
     // MAIN FUNCTIONS
     // ============================================
