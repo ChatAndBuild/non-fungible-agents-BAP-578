@@ -106,11 +106,12 @@ contract NFA is Ownable, IBAP578 {
     event AgentFundedByToken(uint256 indexed tokenId, address indexed funder, uint256 amount);
     event AgentStatusChanged(uint256 indexed tokenId, Status newStatus);
 
-    string public name = "Non-Fungible Agent";
-    string public symbol = "NFA";
+    string public constant NAME = "Non-Fungible Agent";
+    string public constant SYMBOL = "NFA";
 
-    uint256 public constant MAX_SUPPLY = 1000;
+    uint256 public constant MAX_SUPPLY = 10000;
     uint256 private _nextTokenId;
+    uint256 private _burnedTokenCount;
 
     mapping(uint256 => address) private _owners;
     mapping(address => uint256) private _balances;
@@ -189,6 +190,14 @@ contract NFA is Ownable, IBAP578 {
             interfaceId == 0x5b5e139f; // ERC721Metadata
     }
 
+    function name() public pure returns (string memory) {
+        return NAME;
+    }
+
+    function symbol() public pure returns (string memory) {
+        return SYMBOL;
+    }
+
     // Core ERC721 Metadata function for marketplaces
     function tokenURI(uint256 tokenId) public view returns (string memory) {
         require(_owners[tokenId] != address(0), "NFA: nonexistent token");
@@ -214,7 +223,7 @@ contract NFA is Ownable, IBAP578 {
     }
 
     function totalSupply() external view returns (uint256) {
-        return _nextTokenId;
+        return _nextTokenId - _burnedTokenCount;
     }
 
     // ERC721 Approvals
@@ -451,6 +460,7 @@ contract NFA is Ownable, IBAP578 {
         delete _owners[tokenId];
         delete _states[tokenId];
         delete _agentMetadata[tokenId];
+        _burnedTokenCount += 1;
 
         emit Transfer(tokenOwner, address(0), tokenId);
     }
@@ -578,7 +588,7 @@ contract NFA is Ownable, IBAP578 {
             keccak256(
                 abi.encode(
                     _EIP712_DOMAIN_TYPEHASH,
-                    keccak256(bytes(name)),
+                    keccak256(bytes(NAME)),
                     keccak256(bytes("1")),
                     chainId,
                     address(this)
