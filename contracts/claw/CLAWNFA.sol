@@ -73,7 +73,6 @@ interface IBAP578 {
 
     event ActionExecuted(address indexed agent, bytes result);
     event LogicUpgraded(address indexed agent, address oldLogic, address newLogic);
-    event AgentFunded(address indexed agent, address indexed funder, uint256 amount);
     event StatusChanged(address indexed agent, Status newStatus);
     event MetadataUpdated(uint256 indexed tokenId, string metadataURI);
     event MintLimitUpdated(uint256 oldLimit, uint256 newLimit);
