@@ -108,7 +108,7 @@ contract NFA is Ownable, IBAP578 {
     string public constant NAME = "Non-Fungible Agent";
     string public constant SYMBOL = "NFA";
 
-    uint256 public constant MAX_SUPPLY = 10000;
+    uint256 public immutable MAX_SUPPLY;
     uint256 private _nextTokenId;
     uint256 private _burnedTokenCount;
 
@@ -171,9 +171,11 @@ contract NFA is Ownable, IBAP578 {
         _;
     }
 
-    constructor(address _requiredToken) Ownable() {
+    constructor(address _requiredToken, uint256 _maxSupply) Ownable() {
         require(_requiredToken != address(0), "NFA: zero address token");
+        require(_maxSupply > 0, "NFA: max supply is zero");
         REQUIRED_TOKEN = _requiredToken;
+        MAX_SUPPLY = _maxSupply;
 
         signerAddress = msg.sender;
         mintLimitPerAddress = 2;

@@ -50,7 +50,7 @@ describe('CLAWNFA / NFA', function () {
     await token.deployed();
 
     const NFA = await ethers.getContractFactory('NFA');
-    nfa = await NFA.deploy(token.address);
+    nfa = await NFA.deploy(token.address, 10000);
     await nfa.deployed();
 
     await token.setBalance(addr1.address, minBalance);
