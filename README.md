@@ -81,6 +81,11 @@ npx @skillshub/bap578-test-template
 npx @skillshub/bap578-contract-idea-sprint
 ```
 
+Optional local skeletons included:
+
+- `contracts/templates/BAP578AdapterBlueprint.sol`
+- `test/templates/bap578-adapter.template.test.js`
+
 ## Contract Structure
 
 ### AgentMetadata
