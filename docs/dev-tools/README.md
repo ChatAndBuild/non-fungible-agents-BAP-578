@@ -14,6 +14,8 @@ npx @skillshub/bap578-test-template
 npx @skillshub/bap578-contract-idea-sprint
 ```
 
+If package registry commands are unavailable in your environment, use the pinned source links in `bap578-dev-kit.md`.
+
 ## Documentation Index
 
 - [BAP-578 Dev Kit Guide](./bap578-dev-kit.md)

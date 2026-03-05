@@ -2,6 +2,8 @@
 
 This quick path helps new contributors go from zero to a validated BAP-578 development baseline.
 
+If `npx @skillshub/...` is unavailable in your environment, follow the pinned source links in `bap578-dev-kit.md` first.
+
 ## Prerequisites (2 minutes)
 
 - Node.js >= 18
