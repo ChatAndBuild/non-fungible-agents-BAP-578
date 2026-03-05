@@ -53,3 +53,10 @@ npx @skillshub/bap578-deploy-plan@0.1.0
 npx @skillshub/bap578-test-template@0.1.0
 npx @skillshub/bap578-contract-idea-sprint@0.1.0
 ```
+
+## Optional In-Repo Templates
+
+This PR also includes minimal skeleton files for teams that want local starting points:
+
+- `contracts/templates/BAP578AdapterBlueprint.sol`
+- `test/templates/bap578-adapter.template.test.js`

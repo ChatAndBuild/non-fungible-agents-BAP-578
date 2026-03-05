@@ -19,3 +19,8 @@ npx @skillshub/bap578-contract-idea-sprint
 - [BAP-578 Dev Kit Guide](./bap578-dev-kit.md)
 - [Getting Started in 15 Minutes](./getting-started-15-minutes.md)
 - [Security Checklist](./security-checklist.md)
+
+## Optional Template Files (Included)
+
+- `contracts/templates/BAP578AdapterBlueprint.sol`
+- `test/templates/bap578-adapter.template.test.js`
