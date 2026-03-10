@@ -42,7 +42,11 @@ contract BAP578AdapterBlueprint {
         vault.creditNative{ value: msg.value }(tokenId);
     }
 
-    function withdraw(uint256 tokenId, uint256 amount, address to) external onlyOperator(tokenId) nonReentrant {
+    function withdraw(
+        uint256 tokenId,
+        uint256 amount,
+        address to
+    ) external onlyOperator(tokenId) nonReentrant {
         require(to != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be > 0");
         emit NativeWithdrawn(tokenId, to, amount);
