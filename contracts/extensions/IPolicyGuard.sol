@@ -42,12 +42,7 @@ interface IPolicyGuard {
     /// @param target  The target contract of the executed action
     /// @param value   The native value sent
     /// @param data    The calldata that was executed
-    function commit(
-        uint256 tokenId,
-        address target,
-        uint256 value,
-        bytes calldata data
-    ) external;
+    function commit(uint256 tokenId, address target, uint256 value, bytes calldata data) external;
 
     /// @notice Register a policy in the global approved set
     /// @param policy The IPolicy contract address
@@ -64,17 +59,12 @@ interface IPolicyGuard {
     /// @notice Bind a set of policies to a specific agent
     /// @param tokenId  The NFA token ID
     /// @param policies Array of IPolicy addresses to bind
-    function bindPolicies(
-        uint256 tokenId,
-        address[] calldata policies
-    ) external;
+    function bindPolicies(uint256 tokenId, address[] calldata policies) external;
 
     /// @notice Get all policies bound to a specific agent
     /// @param tokenId The NFA token ID
     /// @return Array of IPolicy contract addresses
-    function getBoundPolicies(
-        uint256 tokenId
-    ) external view returns (address[] memory);
+    function getBoundPolicies(uint256 tokenId) external view returns (address[] memory);
 
     // --- Events ---
 

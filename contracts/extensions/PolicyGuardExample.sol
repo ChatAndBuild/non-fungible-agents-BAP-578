@@ -78,16 +78,10 @@ contract PolicyGuardExample is IPolicyGuard {
     // ═══════════════════════════════════════════════════════
 
     /// @inheritdoc IPolicyGuard
-    function bindPolicies(
-        uint256 tokenId,
-        address[] calldata policies
-    ) external onlyOwner {
+    function bindPolicies(uint256 tokenId, address[] calldata policies) external onlyOwner {
         // Validate all policies are registered
         for (uint256 i = 0; i < policies.length; i++) {
-            require(
-                isRegistered[policies[i]],
-                "PolicyGuard: policy not registered"
-            );
+            require(isRegistered[policies[i]], "PolicyGuard: policy not registered");
         }
 
         // Replace existing bound policies
@@ -100,9 +94,7 @@ contract PolicyGuardExample is IPolicyGuard {
     }
 
     /// @inheritdoc IPolicyGuard
-    function getBoundPolicies(
-        uint256 tokenId
-    ) external view returns (address[] memory) {
+    function getBoundPolicies(uint256 tokenId) external view returns (address[] memory) {
         return _boundPolicies[tokenId];
     }
 
