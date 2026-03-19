@@ -142,6 +142,12 @@ contract BAP578 is
      * Must be called via upgradeToAndCall() when upgrading a deployed V1 proxy.
      * The caller should compute _totalAgentBalances off-chain by summing all
      * agentStates[tokenId].balance values for existing tokens.
+     *
+     * WARNING: The upgrade MUST be performed atomically via upgradeToAndCall() to
+     * prevent race conditions. Any fundAgent() calls between the off-chain snapshot
+     * and the on-chain upgrade will cause totalAgentBalances to be under-counted,
+     * which would allow emergencyWithdraw() to drain agent funds. Pause the contract
+     * before upgrading to eliminate this risk.
      */
     function initializeV2(uint256 _totalAgentBalances) external onlyOwner reinitializer(2) {
         totalAgentBalances = _totalAgentBalances;
@@ -370,7 +376,7 @@ contract BAP578 is
     /**
      * @dev Emergency withdraw — only unallocated funds (not agent balances)
      */
-    function emergencyWithdraw() external onlyOwner {
+    function emergencyWithdraw() external onlyOwner nonReentrant {
         uint256 unallocated = address(this).balance - totalAgentBalances;
         require(unallocated > 0, "No unallocated balance");
         (bool success, ) = payable(owner()).call{ value: unallocated }("");
