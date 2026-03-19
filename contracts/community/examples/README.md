@@ -142,7 +142,8 @@ contract MyLogic is IAgentLogic {
 > ⚠️ These are educational examples. Do NOT deploy to production without a full security audit.
 
 - Logic contracts interact with external protocols — always validate inputs
-- Use reentrancy guards for functions that transfer value
+- All examples use `ReentrancyGuard` for functions that transfer value
+- Oracle integrations use `latestRoundData()` with staleness checks (not deprecated `latestAnswer()`)
 - Test thoroughly on BSC Testnet before mainnet deployment
 
 ## License

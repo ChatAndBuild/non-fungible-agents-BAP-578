@@ -26,7 +26,6 @@ import "./interfaces/IBAP578.sol";
  */
 contract AutoFunder is IAgentLogic {
     IBAP578 public immutable bap578;
-    address public immutable bap578Address;
 
     struct FundConfig {
         uint256 minBalance; // Trigger top-up when agent balance drops below this
@@ -45,7 +44,6 @@ contract AutoFunder is IAgentLogic {
     constructor(address _bap578) {
         require(_bap578 != address(0), "AutoFunder: zero BAP578 address");
         bap578 = IBAP578(_bap578);
-        bap578Address = _bap578;
     }
 
     /// @notice Configure auto-funding parameters for an agent.
@@ -110,7 +108,7 @@ contract AutoFunder is IAgentLogic {
         config.reserve -= amount;
 
         // Call BAP578.fundAgent(tokenId) with BNB
-        (bool success, ) = bap578Address.call{ value: amount }(
+        (bool success, ) = address(bap578).call{ value: amount }(
             abi.encodeWithSignature("fundAgent(uint256)", tokenId)
         );
         require(success, "AutoFunder: fund failed");

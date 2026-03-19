@@ -115,11 +115,11 @@ contract PriceAlert is IAgentLogic {
     }
 
     /// @dev Read the latest price from a Binance Oracle Feed Adapter.
-    ///      Feed Adapters implement AggregatorV2V3Interface, so latestAnswer()
-    ///      returns the most recent price with 8 decimals.
+    ///      Uses latestRoundData() with staleness check instead of deprecated latestAnswer().
     function _getPrice(address priceFeed) internal view returns (uint256) {
-        int256 price = IBinanceOracleFeed(priceFeed).latestAnswer();
+        (, int256 price, , uint256 updatedAt, ) = IBinanceOracleFeed(priceFeed).latestRoundData();
         require(price > 0, "PriceAlert: invalid price");
+        require(block.timestamp - updatedAt <= 1 hours, "PriceAlert: stale price");
         return uint256(price);
     }
 }
@@ -128,6 +128,8 @@ contract PriceAlert is IAgentLogic {
 ///      Compatible with AggregatorV2V3Interface.
 ///      See: https://oracle.binance.com/docs/price-feeds/feed-adapter/
 interface IBinanceOracleFeed {
-    /// @notice Returns the latest price with 8 decimals.
-    function latestAnswer() external view returns (int256);
+    function latestRoundData()
+        external
+        view
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }

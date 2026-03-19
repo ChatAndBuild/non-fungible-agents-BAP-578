@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import "./interfaces/IAgentLogic.sol";
 import "./interfaces/IBAP578.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title SimpleTrader
@@ -22,7 +23,7 @@ import "./interfaces/IBAP578.sol";
  * ⚠️  This is an educational example. Do NOT use in production without
  *     a full security audit.
  */
-contract SimpleTrader is IAgentLogic {
+contract SimpleTrader is IAgentLogic, ReentrancyGuard {
     IBAP578 public immutable bap578;
 
     uint256 public constant MAX_TRADE_AMOUNT = 1 ether;
@@ -42,7 +43,7 @@ contract SimpleTrader is IAgentLogic {
     function execute(
         uint256 tokenId,
         bytes calldata data
-    ) external payable returns (bytes memory result) {
+    ) external payable nonReentrant returns (bytes memory result) {
         // 1. Verify caller is the agent owner
         require(bap578.ownerOf(tokenId) == msg.sender, "SimpleTrader: not agent owner");
 
