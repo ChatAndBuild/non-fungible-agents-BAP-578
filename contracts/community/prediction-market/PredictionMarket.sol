@@ -188,7 +188,9 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         require(block.timestamp >= market.endTime, "Market not ended");
 
         AggregatorV2V3Interface oracle = AggregatorV2V3Interface(market.priceFeed);
-        int256 currentPrice = oracle.latestAnswer();
+        (, int256 currentPrice, , uint256 updatedAt, ) = oracle.latestRoundData();
+        require(updatedAt > 0, "Oracle round not complete");
+        require(block.timestamp - updatedAt <= 1 hours, "Stale oracle price");
 
         bool outcome;
         if (market.resolutionType == 1) {
@@ -343,9 +345,14 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         require(dailyMarketCount[msg.sender] < maxMarketsPerDay, "Daily market limit reached");
         dailyMarketCount[msg.sender]++;
 
-        // Collect creation fee in BNB
+        // Collect creation fee in BNB, refund excess
         require(msg.value >= marketCreationFee, "Insufficient creation fee");
-        accumulatedFees += msg.value;
+        accumulatedFees += marketCreationFee;
+        uint256 excess = msg.value - marketCreationFee;
+        if (excess > 0) {
+            (bool refunded, ) = msg.sender.call{ value: excess }("");
+            require(refunded, "Refund failed");
+        }
 
         // Create market
         uint256 marketId = nextMarketId++;

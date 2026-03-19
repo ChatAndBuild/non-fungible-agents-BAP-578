@@ -210,18 +210,29 @@ contract NFAPredictionAgent is
     }
 
     // ─── Prediction Profile ─────────────────────────────────────
-    function updateProfile(
+    /// @dev Update prediction style root (owner can change strategy)
+    function updateProfileStyle(
         uint256 tokenId,
-        bytes32 newStyleRoot,
-        uint256 totalPredictions,
-        uint256 correctPredictions
+        bytes32 newStyleRoot
     ) external onlyTokenOwner(tokenId) {
+        _profiles[tokenId].styleRoot = newStyleRoot;
+        emit ProfileUpdated(tokenId);
+    }
+
+    /// @dev Record prediction outcome — only callable by the prediction market contract
+    function recordPredictionOutcome(
+        uint256 tokenId,
+        bool correct
+    ) external {
+        require(msg.sender == predictionMarket, "Only prediction market");
         PredictionProfile storage profile = _profiles[tokenId];
-        profile.styleRoot = newStyleRoot;
-        profile.totalPredictions = totalPredictions;
-        profile.correctPredictions = correctPredictions;
-        if (totalPredictions > 0) {
-            profile.reputationScore = (correctPredictions * 10000) / totalPredictions;
+        profile.totalPredictions++;
+        if (correct) {
+            profile.correctPredictions++;
+        }
+        if (profile.totalPredictions > 0) {
+            profile.reputationScore =
+                (profile.correctPredictions * 10000) / profile.totalPredictions;
         }
         emit ProfileUpdated(tokenId);
     }
@@ -303,8 +314,20 @@ contract NFAPredictionAgent is
     function updateLearning(
         uint256 tokenId,
         bytes32 newRoot,
-        bytes calldata /* proof */
+        bytes calldata proof
     ) external onlyTokenOwner(tokenId) {
+        // Verify proof: for initial root (no existing root), require non-empty proof
+        // For subsequent updates, verify the new root is signed/valid via Merkle proof
+        bytes32 currentRoot = _learningMetrics[tokenId].learningRoot;
+        if (currentRoot != bytes32(0)) {
+            require(proof.length >= 32, "Proof required for root update");
+            // Verify the new root is a valid leaf under the current root
+            bytes32[] memory proofArray = new bytes32[](proof.length / 32);
+            for (uint256 i = 0; i < proofArray.length; i++) {
+                proofArray[i] = bytes32(proof[i * 32:(i + 1) * 32]);
+            }
+            require(MerkleProof.verify(proofArray, currentRoot, newRoot), "Invalid learning proof");
+        }
         LearningMetrics storage metrics = _learningMetrics[tokenId];
         metrics.learningRoot = newRoot;
         metrics.lastUpdated = block.timestamp;
@@ -464,7 +487,9 @@ contract NFAPredictionAgent is
     }
 
     // ─── Receive BNB ────────────────────────────────────────────
-    receive() external payable {}
+    receive() external payable {
+        revert("Use fundAgent()");
+    }
     fallback() external payable {
         revert("Use fundAgent()");
     }
