@@ -104,12 +104,13 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
 
     /**
      * @notice Approve a logic contract address
-     * @param logic Address to approve
+     * @param logic Address to approve (must be a contract, not EOA)
      * @param reason Audit reference or description
      */
     function approveLogic(address logic, string calldata reason) external onlyOwner {
         if (logic == address(0)) revert ZeroAddressNotAllowed();
         if (approvedLogic[logic]) revert LogicAlreadyApproved();
+        require(logic.code.length > 0, "Logic must be a contract");
         
         approvedLogic[logic] = true;
         approvedLogicList.push(logic);
@@ -121,6 +122,9 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @notice Revoke approval for a logic contract
      * @param logic Address to revoke
      * @param reason Reason for revocation
+     * @dev After revocation, agents using this logic will be blocked from
+     *      operating until their logic is reset via forceResetLogic() or
+     *      the owner sets a new approved logic via setLogicAddress().
      */
     function revokeLogic(address logic, string calldata reason) external onlyOwner {
         if (!approvedLogic[logic]) revert LogicNotInList();
@@ -137,6 +141,25 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         }
         
         emit LogicRevoked(logic, reason);
+    }
+
+    /**
+     * @notice Check if an agent's current logic is still valid
+     * @dev Returns false if the agent's logic was revoked after assignment
+     */
+    function isAgentLogicValid(uint256 tokenId) public view returns (bool) {
+        if (tokenId >= totalMinted) revert InvalidTokenId();
+        address logic = agents[tokenId].logic;
+        return logic == address(0) || approvedLogic[logic];
+    }
+
+    /**
+     * @notice Modifier to ensure agent's logic is still approved
+     * @dev Reverts with AgentUsingRevokedLogic if logic was revoked
+     */
+    modifier validAgentLogic(uint256 tokenId) {
+        if (!isAgentLogicValid(tokenId)) revert AgentUsingRevokedLogic();
+        _;
     }
 
     /**
@@ -264,7 +287,7 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @notice Fund an agent with native token (BNB on BSC)
      * @param tokenId The agent token ID
      */
-    function fundAgent(uint256 tokenId) external payable nonReentrant {
+    function fundAgent(uint256 tokenId) external payable nonReentrant validAgentLogic(tokenId) {
         if (tokenId >= totalMinted) revert InvalidTokenId();
         if (msg.value == 0) revert ZeroAmount();
 
@@ -310,7 +333,7 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @param tokenId The agent token ID
      * @param xp Experience points to add
      */
-    function evolve(uint256 tokenId, uint256 xp) external {
+    function evolve(uint256 tokenId, uint256 xp) external validAgentLogic(tokenId) {
         if (tokenId >= totalMinted) revert InvalidTokenId();
         if (ownerOf(tokenId) != msg.sender) revert NotAgentOwner();
         if (xp == 0) revert ZeroAmount();
@@ -438,9 +461,10 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      */
     function forceResetLogic(uint256 tokenId, string calldata reason) external onlyOwner {
         if (tokenId >= totalMinted) revert InvalidTokenId();
+        address oldLogic = agents[tokenId].logic;
         agents[tokenId].logic = address(0);
         emit AgentLogicUpdated(tokenId, address(0));
-        emit LogicRevoked(agents[tokenId].logic, reason);
+        emit LogicRevoked(oldLogic, reason);
     }
 
     /// @notice Disable renounceOwnership to prevent locking allowlist
