@@ -21,4 +21,6 @@ interface IBAP578 {
             uint256 createdAt,
             address owner
         );
+
+    function fundAgent(uint256 tokenId) external payable;
 }

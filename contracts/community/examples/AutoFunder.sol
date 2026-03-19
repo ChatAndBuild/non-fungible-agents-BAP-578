@@ -61,6 +61,7 @@ contract AutoFunder is IAgentLogic {
     /// @notice Deposit BNB into the reserve for a specific agent.
     function depositReserve(uint256 tokenId) external payable {
         require(msg.value > 0, "AutoFunder: zero deposit");
+        bap578.ownerOf(tokenId); // reverts if token does not exist
         configs[tokenId].reserve += msg.value;
         emit ReserveDeposited(tokenId, msg.value);
     }
@@ -108,10 +109,7 @@ contract AutoFunder is IAgentLogic {
         config.reserve -= amount;
 
         // Call BAP578.fundAgent(tokenId) with BNB
-        (bool success, ) = address(bap578).call{ value: amount }(
-            abi.encodeWithSignature("fundAgent(uint256)", tokenId)
-        );
-        require(success, "AutoFunder: fund failed");
+        bap578.fundAgent{ value: amount }(tokenId);
 
         emit AgentTopUp(tokenId, amount);
         return true;
