@@ -188,9 +188,10 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         require(block.timestamp >= market.endTime, "Market not ended");
 
         AggregatorV2V3Interface oracle = AggregatorV2V3Interface(market.priceFeed);
-        (, int256 currentPrice, , uint256 updatedAt, ) = oracle.latestRoundData();
+        (uint80 roundId, int256 currentPrice, , uint256 updatedAt, uint80 answeredInRound) = oracle.latestRoundData();
         require(updatedAt > 0, "Oracle round not complete");
         require(block.timestamp - updatedAt <= 1 hours, "Stale oracle price");
+        require(answeredInRound >= roundId, "Stale round: answer not finalised");
 
         bool outcome;
         if (market.resolutionType == 1) {
@@ -472,6 +473,7 @@ contract PredictionMarket is ReentrancyGuard, Ownable, Pausable {
         }
 
         require(winnerAmount > 0, "No winning position");
+        require(totalWinnerPool > 0, "Empty winner pool");
 
         pos.claimed = true;
 

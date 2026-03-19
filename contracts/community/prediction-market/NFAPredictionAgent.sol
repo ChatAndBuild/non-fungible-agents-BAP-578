@@ -122,6 +122,13 @@ contract NFAPredictionAgent is
         _agentMetadata[tokenId] = metadata;
         _agentStates[tokenId] = AgentState.ACTIVE;
 
+        // Refund any excess above the mint price
+        uint256 excess = msg.value - MINT_PRICE;
+        if (excess > 0) {
+            (bool refunded, ) = msg.sender.call{ value: excess }("");
+            require(refunded, "Excess refund failed");
+        }
+
         return tokenId;
     }
 
@@ -315,11 +322,21 @@ contract NFAPredictionAgent is
         uint256 tokenId,
         bytes32 newRoot,
         bytes calldata proof
-    ) external onlyTokenOwner(tokenId) {
+    ) external {
+        require(
+            ownerOf(tokenId) == msg.sender || msg.sender == predictionMarket,
+            "Not authorized"
+        );
         // Verify proof: for initial root (no existing root), require non-empty proof
         // For subsequent updates, verify the new root is signed/valid via Merkle proof
         bytes32 currentRoot = _learningMetrics[tokenId].learningRoot;
-        if (currentRoot != bytes32(0)) {
+        if (currentRoot == bytes32(0)) {
+            // Initial root: only owner or prediction market can set the anchor
+            require(
+                msg.sender == ownerOf(tokenId) || msg.sender == predictionMarket,
+                "Only owner or market can set initial root"
+            );
+        } else {
             require(proof.length >= 32, "Proof required for root update");
             // Verify the new root is a valid leaf under the current root
             bytes32[] memory proofArray = new bytes32[](proof.length / 32);
@@ -350,7 +367,8 @@ contract NFAPredictionAgent is
         return _learningMetrics[tokenId];
     }
 
-    function recordInteraction(uint256 tokenId, bool success) external onlyTokenOwner(tokenId) {
+    function recordInteraction(uint256 tokenId, bool success) external {
+        require(msg.sender == predictionMarket, "Only prediction market");
         LearningMetrics storage metrics = _learningMetrics[tokenId];
         metrics.totalInteractions++;
         if (success) {
