@@ -437,7 +437,7 @@ contract BAP578 is
     ) external view returns (uint256[] memory) {
         uint256 tokenCount = balanceOf(account);
         if (offset >= tokenCount) return new uint256[](0);
-        uint256 end = offset + limit > tokenCount ? tokenCount : offset + limit;
+        uint256 end = (limit > tokenCount - offset) ? tokenCount : offset + limit;
         uint256[] memory tokens = new uint256[](end - offset);
         for (uint256 i = offset; i < end; i++) {
             tokens[i - offset] = tokenOfOwnerByIndex(account, i);
