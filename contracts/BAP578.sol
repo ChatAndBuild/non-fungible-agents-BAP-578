@@ -143,7 +143,7 @@ contract BAP578 is
      * The caller should compute _totalAgentBalances off-chain by summing all
      * agentStates[tokenId].balance values for existing tokens.
      */
-    function initializeV2(uint256 _totalAgentBalances) external reinitializer(2) {
+    function initializeV2(uint256 _totalAgentBalances) external onlyOwner reinitializer(2) {
         totalAgentBalances = _totalAgentBalances;
     }
 
@@ -266,8 +266,8 @@ contract BAP578 is
      * @dev Burn an agent NFT (token owner only, balance must be 0)
      */
     function burn(uint256 tokenId) external onlyTokenOwner(tokenId) {
-        emit AgentBurned(tokenId, msg.sender);
         _burn(tokenId);
+        emit AgentBurned(tokenId, msg.sender);
     }
 
     /**
@@ -487,6 +487,7 @@ contract BAP578 is
         super._burn(tokenId);
         delete agentStates[tokenId];
         delete agentMetadata[tokenId];
+        delete isFreeMint[tokenId];
     }
 
     function tokenURI(
