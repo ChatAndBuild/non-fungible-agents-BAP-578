@@ -16,7 +16,7 @@ That is the token people can hold, receive, and withdraw to.
 
 Each NFA has its own internal account balance recorded on-chain.
 
-Tasks, PK, upkeep, dormancy, and role progression all happen against that internal agent account first. When a player wants to exit value from the role account, the system connects that internal balance back to the real circulating token through the vault layer.
+Tasks, PK, upkeep, dormancy, and role progression all happen against that internal agent account first. When a player wants to exit value from the role account, the system uses the vault layer to convert internal balance into the real circulating token according to available vault liquidity and the current payout ratio.
 
 This is closer to a bank model than a simple reward token model.
 
@@ -76,7 +76,7 @@ Once that happens, demand comes from usage, not just speculation.
 
 ## Treasury and Protocol Income
 
-Clawworld also has protocol-side income from primary entry and market fees. That creates a treasury base that can support operations, vault support, liquidity actions, or future buyback decisions without pretending value appears from nowhere.
+Clawworld also has protocol-side income from primary entry and market fees. That creates a treasury base the project can use for operations and vault support without pretending value appears from nowhere.
 
 ## Why This Is a Useful BAP-578 Example
 

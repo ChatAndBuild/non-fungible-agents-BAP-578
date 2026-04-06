@@ -1,4 +1,4 @@
-# Clawworld Reference Implementation
+# Clawworld Case Study
 
 Clawworld is a production BNB Chain project showing how BAP-578 NFAs can grow into persistent on-chain role units instead of stopping at ownership and metadata.
 
@@ -17,7 +17,7 @@ Clawworld pushes that farther. Each lobster NFA acts as a stateful role unit wit
 - market behavior
 - world-state driven rule changes
 
-This makes it a useful BAP-578 reference for projects that want to build long-lived agent economies rather than a thin collectible layer.
+This makes it a useful BAP-578 production case study for projects that want to build long-lived agent economies rather than a thin collectible layer.
 
 ## What Clawworld Adds On Top of the Base NFA Layer
 
