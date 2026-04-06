@@ -6,90 +6,103 @@ There are two layers of value moving at the same time.
 
 ## Two-Layer Asset Design
 
-### Outside the game
+### Outside the game — CLW token
 
-The real circulating asset is `Claworld`.
+The real circulating asset is `CLW` (`0x3b486c191c74c9945fa944a3ddde24acdd63ffff` on BSC mainnet).
 
-That is the token people can hold, receive, and withdraw to.
+That is the token players can hold, trade on DEX, receive, and withdraw to their wallet.
 
-### Inside the game
+### Inside the game — per-agent balance
 
-Each NFA has its own internal account balance recorded on-chain.
+Each NFA has its own internal CLW balance recorded on-chain inside ClawRouter. Tasks, PK, Battle Royale, upkeep, dormancy, and role progression all happen against this internal agent account first.
 
-Tasks, PK, upkeep, dormancy, and role progression all happen against that internal agent account first. When a player wants to exit value from the role account, the system uses the vault layer to convert internal balance into the real circulating token according to available vault liquidity and the current payout ratio.
+When a player wants to exit value from the role account, the system uses GenesisVault to convert internal balance into the circulating CLW token, subject to available vault liquidity and the current payout ratio.
 
-This is closer to a bank model than a simple reward token model.
+This is closer to a bank model than a simple reward token model:
 
-- the external token is the cash layer
-- the per-agent balance is the account layer
+- the **external CLW token** is the cash layer
+- the **per-agent balance** is the account layer
 
 ## Why This Matters
 
-A lot of game tokens get dumped because players receive them directly and instantly treat them as something to sell.
+Most game tokens get dumped because players receive them directly and instantly treat them as something to sell.
 
 Clawworld changes that flow.
 
-When value first lands inside an NFA account, players are more likely to use it to keep the role alive, level it, stake it in PK, or prepare it for market rather than dump it immediately.
-
-That alone changes behavior.
+When value first lands inside an NFA account, players are incentivized to use it: keep the role alive, level it, stake it in PK or Battle Royale, or prepare it for market. That creates internal demand before external sell pressure.
 
 ## The Flywheel in Plain Terms
 
 ### 1. Players enter
 
-Players spend BNB to mint into the system and receive an NFA with a starting position.
+Players spend BNB to mint an NFA (ClawNFA). BNB entry flows through FlapPortal into CLW, seeding vault liquidity.
 
 ### 2. Roles produce
 
-The NFA performs tasks and earns internal Claworld based on role fit, world-state conditions, and gameplay choices.
+The NFA performs tasks (TaskSkill) and earns internal CLW based on role fit, world-state conditions, and personality alignment.
 
 ### 3. Roles consume
 
-The same NFA must keep paying upkeep to remain healthy and active. That means value does not only flow outward. It keeps cycling back into role maintenance.
+The same NFA must keep paying upkeep to remain healthy and active. Value does not only flow outward — it keeps cycling back into role maintenance.
 
 ### 4. Competitive play applies pressure
 
-PK requires staking internal Claworld. Every settled match burns part of the total stake and sends the rest to the winner.
-
-That creates three useful effects:
+**PK** (PKSkill) requires staking internal CLW. Every settled match burns part of the total stake and sends the rest to the winner. Three effects:
 
 - real risk
 - real redistribution
 - real token removal
 
+**Battle Royale** (BattleRoyale) extends this: 10 players stake CLW into rooms, one random room loses. 10% of losing stake → treasury, 90% → survivors proportionally. Higher stakes, higher tension, more CLW cycling.
+
 ### 5. Market circulation restarts the loop
 
-When players buy or sell NFAs, they are not just trading images. They are taking over role accounts that already have a history, state profile, and future earning path. That pushes fresh players back into tasking, upkeep, and PK.
+When players buy or sell NFAs (MarketSkill), they are not trading images. They are taking over role accounts with history, personality, stats, balance, and future earning potential. That pushes fresh players back into tasking, upkeep, and competitive play.
 
-## Real-World Analogy
+## Value Flow Summary
 
-The easiest analogy is an old online game with point cards and character upkeep.
+```
+BNB mint → FlapPortal → CLW → GenesisVault
+                                    │
+                            ┌───────┴───────┐
+                            ▼               ▼
+                      Task rewards    Vault withdrawals
+                            │
+                            ▼
+                    Per-agent balance
+                     │     │     │
+                     ▼     ▼     ▼
+                  Upkeep  PK   Battle Royale
+                   (burn) (burn)  (burn→treasury)
+                            │
+                            ▼
+                    Market resale
+                    (fee→treasury)
+```
 
-Players do not buy resources just because they like the token. They buy because:
-
-- their character needs to keep running
-- they want to level faster
-- they want to join higher-risk PvP
-- they want to keep their role competitive
-
-Once that happens, demand comes from usage, not just speculation.
+Multiple burn and fee channels create steady token removal. The WorldState contract can dynamically tune reward/upkeep/stake multipliers to respond to ecosystem conditions.
 
 ## Treasury and Protocol Income
 
-Clawworld also has protocol-side income from primary entry and market fees. That creates a treasury base the project can use for operations and vault support without pretending value appears from nowhere.
+GenesisVault receives income from:
+
+- primary minting (BNB → CLW)
+- PK burn share
+- Battle Royale losing room treasury cut (10%)
+- marketplace fees
+
+This creates a sustainable treasury base for operations and vault support, without pretending value appears from nowhere.
 
 ## Why This Is a Useful BAP-578 Example
 
-This model shows one practical way a BAP-578 role unit can become economically thicker over time.
+This model shows a practical way a BAP-578 role unit can become economically thick over time.
 
-The asset is no longer just owned.
+The asset is no longer just owned. It is:
 
-It is:
+- **maintained** — upkeep keeps roles active
+- **funded** — internal balance earns and spends
+- **risked** — PK and Battle Royale create real loss scenarios
+- **priced** — market values history, stats, and earning potential
+- **reused** — traded roles re-enter the economy with full state
 
-- maintained
-- funded
-- risked
-- priced
-- reused
-
-That is the point where a role unit starts feeling different from a thin collectible.
+That is the point where a role unit starts feeling fundamentally different from a thin collectible. And all of this runs on-chain through 11 UUPS-upgradeable contracts on BSC mainnet.

@@ -88,13 +88,13 @@ Optional local skeletons included:
 
 ## Production Showcases
 
-This repository can also point to production-backed case studies showing how BAP-578 NFAs expand beyond base ownership into stateful gameplay, account systems, and AI-facing runtimes.
+Production-backed case studies showing BAP-578 NFAs running in the real world — 11 UUPS contracts on BSC mainnet, three user-facing surfaces, and a full game economy.
 
-- [Clawworld Case Study](docs/CLAWORLD-REFERENCE-IMPLEMENTATION.md) - A full BNB Chain production case study covering persistent NFA state, internal account balances, tasks, PK, market trading, world-state control, and browser gameplay.
-- [Clawworld Showcase](docs/CLAWORLD-SHOWCASE.md) - A concise walkthrough of the live user flow across mint, tasks, PK, market, browser game, and local skill CLI.
-- [Clawworld Architecture](docs/CLAWORLD-ARCHITECTURE.md) - How Clawworld maps BAP-578 identity, state, execution, and learning into a multi-contract gameplay layer.
-- [Clawworld Economic Model](docs/CLAWORLD-ECONOMIC-MODEL.md) - A plain-language breakdown of the two-layer asset system, treasury income, upkeep pressure, PK burn, and market circulation.
-- [Clawworld Skill CLI](docs/CLAWORLD-SKILL-CLI.md) - Why a local skill CLI matters as a BAP-578 usage layer, with command examples and external production links.
+- [Clawworld Reference Implementation](docs/CLAWORLD-REFERENCE-IMPLEMENTATION.md) — 11 mainnet contracts implementing all four BAP-578 capabilities (Identity, Wallet, Execution, Learning). Includes deployed addresses, codebase scale, and the newest Battle Royale skill.
+- [Clawworld Architecture](docs/CLAWORLD-ARCHITECTURE.md) — Explicit BAP-578 four-capability mapping table. Shows how ClawNFA, ClawRouter, skill contracts, and PersonalityEngine map to Identity, Wallet, Execution, and Learning.
+- [Clawworld Showcase](docs/CLAWORLD-SHOWCASE.md) — End-to-end user flow: mint → tasks → upkeep → PK → Battle Royale → market. Plus the AI model skill CLI interface.
+- [Clawworld Economic Model](docs/CLAWORLD-ECONOMIC-MODEL.md) — Two-layer asset design (external CLW token + per-agent internal balance), treasury flywheel, burn mechanics, and value flow diagram.
+- [Clawworld Skill CLI](docs/CLAWORLD-SKILL-CLI.md) — How the OpenClaw skill CLI turns a BAP-578 role unit into a model-operable runtime surface with production command examples.
 
 ## Contract Structure
 

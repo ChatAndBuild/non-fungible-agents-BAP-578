@@ -1,84 +1,123 @@
 # Clawworld Architecture
 
-This note explains how Clawworld turns a BAP-578-style NFA into a usable role unit across contracts, gameplay systems, and AI-facing tooling.
+This document explains how Clawworld maps the BAP-578 NFA standard into a multi-contract gameplay system on BNB Chain. All 11 contracts are live on BSC mainnet as UUPS-upgradeable proxies.
+
+## BAP-578 Four-Capability Mapping
+
+BAP-578 defines four core capabilities for a Non-Fungible Agent. Clawworld implements all four:
+
+| BAP-578 Capability | Clawworld Contract | What It Does |
+|--------------------|--------------------|--------------|
+| **Identity** | ClawNFA (ERC-721) | Mint, ownership, rarity tier, shelter origin, on-chain metadata. The base token that everything else references. |
+| **Wallet** | ClawRouter + GenesisVault + DepositRouter | Per-agent internal CLW balance, deposit from external wallet, earn from tasks, spend on upkeep, withdraw through vault with payout ratio. |
+| **Execution** | TaskSkill, PKSkill, BattleRoyale, MarketSkill | Modular skill contracts authorized by ClawRouter. Each skill reads/writes agent state. New skills deploy without touching existing contracts. |
+| **Learning** | PersonalityEngine | Five-axis personality (aggression, caution, social, creative, analytical) that drifts based on player behavior and feeds back into reward multipliers, role fit, and strategic outcomes. |
+
+This is not a loose analogy. Each capability corresponds to a deployed, verifiable contract on BSC mainnet.
 
 ## Core Idea
 
-Clawworld treats each NFA as a persistent role account. Ownership still matters, but the agent also carries state, balance, permissions, and behavior over time.
+Clawworld treats each NFA as a persistent role account. Ownership still matters, but the agent also carries state, balance, permissions, and behavior that evolve over time.
 
 ## Layer Map
 
-### Base role layer
+### 1. Base identity layer — ClawNFA
 
 The core NFA contract establishes:
 
-- ownership
-- rarity and identity
-- metadata entry point
-- upgrade-safe lifecycle
+- ERC-721 ownership
+- rarity tier and shelter origin (set at mint, immutable)
+- on-chain metadata entry point
+- UUPS upgrade-safe lifecycle
 
-This is the part that stays closest to the base BAP-578 idea.
+This is the part that stays closest to the base BAP-578 identity definition.
 
-### State and account layer
+### 2. State and account layer — ClawRouter + GenesisVault
 
-Above that sits a router-style state layer which tracks:
+Above identity sits a router-style state layer which tracks:
 
-- level
-- XP
-- internal Claworld balance
-- active or dormant state
-- personality values
-- combat stats
+- level and XP
+- internal CLW balance (per-agent, not per-wallet)
+- active or dormant lifecycle state
+- personality values (via PersonalityEngine)
+- combat stats and match history
+- skill authorization (which contracts can mutate agent state)
 
-This is where Clawworld starts to feel different from a standard collectible. A lobster is no longer just held. It is managed like a role account.
+This is where Clawworld diverges from a standard collectible. A lobster is no longer just held — it is managed like a character account with its own balance sheet.
 
-### Execution layer
+### 3. Execution layer — Skill contracts
 
-Execution is split into separate skill contracts:
+Execution is split into separate authorized skill contracts:
 
-- tasks
-- PK
-- market
-- personality evolution
+| Skill | Purpose |
+|-------|---------|
+| TaskSkill | PvE task execution, role-fit rewards, XP gain |
+| PKSkill | 1v1 staked PvP, burn + redistribution |
+| BattleRoyale | 10-room survival, future-block-hash randomness, concurrent matches |
+| MarketSkill | Fixed-price sale, auction, swap |
+| PersonalityEngine | Personality drift based on behavior |
 
-This keeps the system modular. New behaviors can be added without collapsing everything into one contract.
+This keeps the system modular. BattleRoyale was added in April 2026 without modifying any existing contract — it deployed as a new UUPS proxy and was authorized through ClawRouter.
 
-### World-state layer
+### 4. World-state layer — WorldState
 
-A separate world-state contract controls global parameters such as:
+A separate contract controls global parameters:
 
 - task reward multiplier
 - upkeep multiplier
 - PK stake cap
 - mutation bonus
 
-This gives the economy a changing environment instead of fixed forever parameters.
+This gives the economy a living environment. Parameters can shift in response to ecosystem health, creating seasons and pressure cycles.
 
-### Usage layer
+### 5. Usage layer — Three surfaces, one role
 
 Clawworld exposes the same underlying NFA through three user-facing surfaces:
 
-- a web terminal
-- a browser game
-- a local skill CLI
+- **Web terminal** — dashboard, stats, contract interaction
+- **Phaser browser game** — visual map with shelter, arena, and battle royale
+- **OpenClaw skill CLI** — model-facing command interface for AI agents
 
-That matters for BAP-578 because it demonstrates how one role unit can be consumed by different interfaces without splitting the underlying identity.
+That matters for BAP-578 because it proves one role unit can be consumed by both human players and AI models through stable interfaces, without splitting identity or state.
 
-## Why This Structure Is Useful
+## Contract Dependency Flow
 
-The architecture shows a practical answer to a common BAP-578 question:
+```
+ClawNFA (identity)
+    │
+    ▼
+ClawRouter (state hub) ◄── WorldState (global params)
+    │
+    ├── TaskSkill
+    ├── PKSkill
+    ├── BattleRoyale
+    ├── MarketSkill
+    ├── PersonalityEngine
+    │
+    ▼
+GenesisVault ◄── DepositRouter ◄── FlapPortal (BNB→CLW)
+```
 
-How does an NFA move from "an owned agent object" to "a persistent playable unit"?
+All skill contracts call into ClawRouter to read and write agent state. ClawRouter checks authorization before allowing mutations. This hub-and-spoke design means new skills plug in without architectural changes.
 
-Clawworld’s answer is:
+## Why This Structure Answers the BAP-578 Question
 
-1. keep ownership stable
-2. attach state to the role itself
-3. let authorized execution modules mutate that state
-4. expose the result through tools that players and models can both use
+The architecture provides a concrete answer to:
+
+> How does an NFA move from "an owned agent object" to "a persistent playable unit"?
+
+Clawworld’s answer:
+
+1. **Keep identity stable** — ClawNFA never changes after mint
+2. **Attach state to the role itself** — ClawRouter holds per-agent data, not per-wallet
+3. **Let authorized modules mutate state** — skill contracts are the only writers
+4. **Expose the result through multiple surfaces** — terminal, game, and CLI all read the same on-chain state
+
+This is not theoretical. Every layer is a deployed contract, every state mutation is an on-chain transaction, and the system has been running in production on BSC mainnet since March 2026.
 
 ## External References
 
 - Main repo: [fa762/ClaworldNfa](https://github.com/fa762/ClaworldNfa)
 - Skill source: [fa762/claw-world-skill](https://github.com/fa762/claw-world-skill)
 - Live site: [clawnfaterminal.xyz](https://www.clawnfaterminal.xyz)
+- BscScan (ClawNFA): [bscscan.com/address/0xAa2094798B5892191124eae9D77E337544FFAE48](https://bscscan.com/address/0xAa2094798B5892191124eae9D77E337544FFAE48)
