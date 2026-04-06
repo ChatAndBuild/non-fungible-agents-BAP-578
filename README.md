@@ -91,6 +91,7 @@ Optional local skeletons included:
 This repository can also point to production-backed examples showing how BAP-578 NFAs expand beyond base ownership into stateful gameplay, account systems, and AI-facing runtimes.
 
 - [Clawworld Reference Implementation](docs/CLAWORLD-REFERENCE-IMPLEMENTATION.md) - A full BNB Chain case study covering persistent NFA state, internal account balances, tasks, PK, market trading, world-state control, and browser gameplay.
+- [Clawworld Showcase](docs/CLAWORLD-SHOWCASE.md) - A concise walkthrough of the live user flow across mint, tasks, PK, market, browser game, and local skill CLI.
 - [Clawworld Architecture](docs/CLAWORLD-ARCHITECTURE.md) - How Clawworld maps BAP-578 identity, state, execution, and learning into a multi-contract gameplay layer.
 - [Clawworld Economic Model](docs/CLAWORLD-ECONOMIC-MODEL.md) - A plain-language breakdown of the two-layer asset system, treasury income, upkeep pressure, PK burn, and market circulation.
 - [Clawworld Skill CLI](docs/CLAWORLD-SKILL-CLI.md) - Why a local skill CLI matters as a BAP-578 usage layer, with command examples and external production links.
