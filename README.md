@@ -88,7 +88,7 @@ Optional local skeletons included:
 
 ## Production Showcases
 
-Production-backed case studies showing BAP-578 NFAs running in the real world — 11 UUPS contracts on BSC mainnet, three user-facing surfaces, and a full game economy.
+Production-backed case studies showing how BAP-578 NFAs expand beyond base ownership into stateful gameplay, account systems, and AI-facing runtimes.
 
 - [Clawworld Reference Implementation](docs/CLAWORLD-REFERENCE-IMPLEMENTATION.md) — 11 mainnet contracts implementing all four BAP-578 capabilities (Identity, Wallet, Execution, Learning). Includes deployed addresses, codebase scale, and the newest Battle Royale skill.
 - [Clawworld Architecture](docs/CLAWORLD-ARCHITECTURE.md) — Explicit BAP-578 four-capability mapping table. Shows how ClawNFA, ClawRouter, skill contracts, and PersonalityEngine map to Identity, Wallet, Execution, and Learning.

@@ -32,7 +32,7 @@ The core NFA contract establishes:
 
 This is the part that stays closest to the base BAP-578 identity definition.
 
-### 2. State and account layer — ClawRouter + GenesisVault
+### 2. State and account layer — ClawRouter + GenesisVault + DepositRouter
 
 Above identity sits a router-style state layer which tracks:
 

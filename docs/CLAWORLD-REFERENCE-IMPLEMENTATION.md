@@ -88,7 +88,7 @@ The most recent addition demonstrates that the architecture is genuinely extensi
 
 - **10 rooms**, 10 players trigger a round
 - Players stake CLW into a room; can **change rooms** and **add stake** before the round triggers
-- Randomness uses **future block hash** (`blockhash(triggerBlock + 5)`) — no oracle, no backend
+- Randomness uses **future block hash** (`blockhash(triggerBlock + 5)`) — no oracle, no backend. Note: on BSC's 21-validator set this is adequate for game-level stakes but not suitable for high-value lotteries; teams adapting this pattern should evaluate their own risk threshold
 - Losing room: 10% → treasury, 90% → survivors proportionally (push distribution, no claim step)
 - Multiple concurrent matches with permanent IDs (match 1 is always match 1)
 - Deployed as a new UUPS skill contract without touching any existing contract
