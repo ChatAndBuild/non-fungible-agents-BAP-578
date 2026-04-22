@@ -71,6 +71,12 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // v2 events
     event LogicApproved(address indexed logic, string reason);
     event LogicRevoked(address indexed logic, string reason);
+    /// @notice Emitted when an admin force-resets a single agent's logic back
+    ///         to address(0). Distinct from LogicRevoked so off-chain indexers
+    ///         can reconstruct the global allowlist purely from
+    ///         LogicApproved / LogicRevoked without being confused by
+    ///         per-agent resets that do not touch approvedLogic.
+    event AgentLogicForceReset(uint256 indexed tokenId, address indexed oldLogic, string reason);
 
     // ============ Errors ============
 
@@ -456,15 +462,20 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Force reset logic for an agent (admin emergency)
-     * @dev Use when a logic contract is revoked but agents still reference it
+     * @notice Force reset a single agent's logic back to address(0) (admin emergency)
+     * @dev Use when a logic contract is compromised but agents still reference it,
+     *      or the agent's owner is unresponsive. This does NOT modify the global
+     *      allowlist — `approvedLogic[oldLogic]` is untouched. To remove a logic
+     *      from the allowlist use `revokeLogic` instead. Emits
+     *      `AgentLogicForceReset` (not `LogicRevoked`) so off-chain indexers can
+     *      distinguish per-agent resets from global allowlist revocations.
      */
     function forceResetLogic(uint256 tokenId, string calldata reason) external onlyOwner {
         if (tokenId >= totalMinted) revert InvalidTokenId();
         address oldLogic = agents[tokenId].logic;
         agents[tokenId].logic = address(0);
         emit AgentLogicUpdated(tokenId, address(0));
-        emit LogicRevoked(oldLogic, reason);
+        emit AgentLogicForceReset(tokenId, oldLogic, reason);
     }
 
     /// @notice Disable renounceOwnership to prevent locking allowlist

@@ -287,13 +287,31 @@ describe('NFAv2 (SynthLaunch community implementation)', function () {
         .mintAgent('gamma', 'p', 'v', 'a', approvedLogic.address, 'm', { value: MINT_PRICE });
     });
 
-    it('emits LogicRevoked with the OLD logic address (Greptile fix #1)', async function () {
-      // Prior to Greptile fix, this event emitted address(0) because
-      // agents[tokenId].logic was cleared BEFORE the event. The fix caches
-      // oldLogic first, so the event now carries the real pre-reset address.
+    it('emits AgentLogicForceReset with tokenId + old logic + reason', async function () {
+      // This emits the dedicated per-agent reset event, not LogicRevoked.
+      // Indexers can rebuild the global allowlist from LogicApproved/LogicRevoked
+      // alone without being misled by agent-level resets.
       await expect(nfa.forceResetLogic(0, 'emergency'))
-        .to.emit(nfa, 'LogicRevoked')
-        .withArgs(approvedLogic.address, 'emergency');
+        .to.emit(nfa, 'AgentLogicForceReset')
+        .withArgs(0, approvedLogic.address, 'emergency');
+    });
+
+    it('does NOT emit LogicRevoked (that event is reserved for global allowlist changes)', async function () {
+      await expect(nfa.forceResetLogic(0, 'emergency')).to.not.emit(nfa, 'LogicRevoked');
+    });
+
+    it('leaves the global allowlist untouched — approvedLogic[oldLogic] stays true', async function () {
+      // This is the key invariant the P1 fix guarantees. A force-reset of one
+      // agent must not implicitly remove the logic from the global allowlist,
+      // otherwise re-approveLogic would revert with LogicAlreadyApproved despite
+      // indexers believing it was revoked.
+      expect(await nfa.approvedLogic(approvedLogic.address)).to.equal(true);
+      await nfa.forceResetLogic(0, 'emergency');
+      expect(await nfa.approvedLogic(approvedLogic.address)).to.equal(true);
+      // Re-approving would fail if the allowlist were implicitly touched:
+      await expect(
+        nfa.approveLogic(approvedLogic.address, 're-approve attempt')
+      ).to.be.revertedWithCustomError(nfa, 'LogicAlreadyApproved');
     });
 
     it('also emits AgentLogicUpdated to address(0)', async function () {
