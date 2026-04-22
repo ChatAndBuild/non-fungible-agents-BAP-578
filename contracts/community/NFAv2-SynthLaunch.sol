@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title NFA v2 - Non-Fungible Agents
@@ -95,7 +95,7 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
 
     // ============ Constructor ============
 
-    constructor(address _treasury) ERC721("Non-Fungible Agent", "NFA") Ownable(msg.sender) {
+    constructor(address _treasury) ERC721("Non-Fungible Agent", "NFA") {
         if (_treasury == address(0)) revert TreasuryZero();
         treasury = _treasury;
     }
@@ -473,6 +473,10 @@ contract NFAv2 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // ============ Overrides ============
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
 
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
