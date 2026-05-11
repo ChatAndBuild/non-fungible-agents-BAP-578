@@ -1,7 +1,5 @@
 # BAP578 - Non-Fungible Agents (NFA)
 
-ERC-721 NFT Smart Contract (BAP578) for AI Agents with structured metadata and built-in features on BNB Chain.
-
 ![Non-Fungible Agents](NFA-ReadMe-Header.png)
 
 ## Features
