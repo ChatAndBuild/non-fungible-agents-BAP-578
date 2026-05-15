@@ -84,6 +84,16 @@ Optional local skeletons included:
 - `contracts/templates/BAP578AdapterBlueprint.sol`
 - `test/templates/bap578-adapter.template.test.js`
 
+## Production Showcases
+
+Production-backed case studies showing how BAP-578 NFAs expand beyond base ownership into stateful gameplay, account systems, and AI-facing runtimes.
+
+- [Clawworld Reference Implementation](docs/CLAWORLD-REFERENCE-IMPLEMENTATION.md) — 11 mainnet contracts implementing all four BAP-578 capabilities (Identity, Wallet, Execution, Learning). Includes deployed addresses, codebase scale, and the newest Battle Royale skill.
+- [Clawworld Architecture](docs/CLAWORLD-ARCHITECTURE.md) — Explicit BAP-578 four-capability mapping table. Shows how ClawNFA, ClawRouter, skill contracts, and PersonalityEngine map to Identity, Wallet, Execution, and Learning.
+- [Clawworld Showcase](docs/CLAWORLD-SHOWCASE.md) — End-to-end user flow: mint → tasks → upkeep → PK → Battle Royale → market. Plus the AI model skill CLI interface.
+- [Clawworld Economic Model](docs/CLAWORLD-ECONOMIC-MODEL.md) — Two-layer asset design (external CLW token + per-agent internal balance), treasury flywheel, burn mechanics, and value flow diagram.
+- [Clawworld Skill CLI](docs/CLAWORLD-SKILL-CLI.md) — How the OpenClaw skill CLI turns a BAP-578 role unit into a model-operable runtime surface with production command examples.
+
 ## Contract Structure
 
 ### AgentMetadata
