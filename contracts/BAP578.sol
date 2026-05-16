@@ -45,6 +45,9 @@ contract BAP578 is
     // ============================================
 
     uint256 public constant MINT_FEE = 0.01 ether;
+    uint256 public constant MAX_METADATA_URI_LENGTH = 512;
+    uint256 public constant MAX_PERSONA_LENGTH = 2048;
+    uint256 public constant MAX_STRING_LENGTH = 1024;
 
     // ============================================
     // STATE VARIABLES
@@ -69,6 +72,9 @@ contract BAP578 is
     // Pause state for emergency
     bool public paused;
 
+    // Total ETH deposited across all agents (for safe emergency withdraw)
+    uint256 public totalAgentBalances;
+
     // ============================================
     // EVENTS
     // ============================================
@@ -87,6 +93,8 @@ contract BAP578 is
     event TreasuryUpdated(address newTreasury);
     event ContractPaused(bool paused);
     event FreeMintGranted(address indexed user, uint256 amount);
+    event FreeMintsPerUserUpdated(uint256 oldAmount, uint256 newAmount);
+    event AgentBurned(uint256 indexed tokenId, address indexed owner);
 
     // ============================================
     // MODIFIERS
@@ -129,6 +137,22 @@ contract BAP578 is
         freeMintsPerUser = 3;
     }
 
+    /**
+     * @dev Reinitializer for upgrading from V1 (without totalAgentBalances tracking).
+     * Must be called via upgradeToAndCall() when upgrading a deployed V1 proxy.
+     * The caller should compute _totalAgentBalances off-chain by summing all
+     * agentStates[tokenId].balance values for existing tokens.
+     *
+     * WARNING: The upgrade MUST be performed atomically via upgradeToAndCall() to
+     * prevent race conditions. Any fundAgent() calls between the off-chain snapshot
+     * and the on-chain upgrade will cause totalAgentBalances to be under-counted,
+     * which would allow emergencyWithdraw() to drain agent funds. Pause the contract
+     * before upgrading to eliminate this risk.
+     */
+    function initializeV2(uint256 _totalAgentBalances) external onlyOwner reinitializer(2) {
+        totalAgentBalances = _totalAgentBalances;
+    }
+
     // ============================================
     // MAIN FUNCTIONS
     // ============================================
@@ -148,15 +172,34 @@ contract BAP578 is
             "Invalid logic address"
         );
 
+        // Validate metadata string lengths
+        require(bytes(metadataURI).length <= MAX_METADATA_URI_LENGTH, "URI too long");
+        require(bytes(extendedMetadata.persona).length <= MAX_PERSONA_LENGTH, "Persona too long");
+        require(
+            bytes(extendedMetadata.experience).length <= MAX_STRING_LENGTH,
+            "Experience too long"
+        );
+        require(
+            bytes(extendedMetadata.voiceHash).length <= MAX_STRING_LENGTH,
+            "VoiceHash too long"
+        );
+        require(
+            bytes(extendedMetadata.animationURI).length <= MAX_STRING_LENGTH,
+            "AnimationURI too long"
+        );
+        require(bytes(extendedMetadata.vaultURI).length <= MAX_STRING_LENGTH, "VaultURI too long");
+
         // Check if user has free mints remaining (base + bonus)
         uint256 totalFreeMints = freeMintsPerUser + bonusFreeMints[msg.sender];
         uint256 freeMintsRemaining = totalFreeMints > freeMintsClaimed[msg.sender]
             ? totalFreeMints - freeMintsClaimed[msg.sender]
             : 0;
 
-        if (freeMintsRemaining > 0) {
+        bool isFree = freeMintsRemaining > 0;
+
+        if (isFree) {
+            require(msg.value == 0, "Free mint does not require payment");
             require(to == msg.sender, "Free mints can only be minted to self");
-            isFreeMint[_tokenIdCounter + 1] = true;
             freeMintsClaimed[msg.sender]++;
         } else {
             // Require payment
@@ -167,8 +210,13 @@ contract BAP578 is
             require(success, "Treasury transfer failed");
         }
 
-        // Mint NFT
+        // Mint NFT — increment first, then use tokenId consistently
         uint256 tokenId = ++_tokenIdCounter;
+
+        if (isFree) {
+            isFreeMint[tokenId] = true;
+        }
+
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
 
@@ -190,9 +238,11 @@ contract BAP578 is
     /**
      * @dev Fund an agent with ETH
      */
-    function fundAgent(uint256 tokenId) external payable whenNotPaused {
+    function fundAgent(uint256 tokenId) external payable whenNotPaused nonReentrant {
         require(_exists(tokenId), "Token does not exist");
+        require(msg.value > 0, "Must send ETH");
         agentStates[tokenId].balance += msg.value;
+        totalAgentBalances += msg.value;
         emit AgentFunded(tokenId, msg.value);
     }
 
@@ -203,10 +253,12 @@ contract BAP578 is
         uint256 tokenId,
         uint256 amount
     ) external onlyTokenOwner(tokenId) nonReentrant {
+        require(amount > 0, "Amount must be greater than 0");
         require(agentStates[tokenId].balance >= amount, "Insufficient balance");
 
         // Update state first
         agentStates[tokenId].balance -= amount;
+        totalAgentBalances -= amount;
 
         // Emit event before external call
         emit AgentWithdraw(tokenId, amount);
@@ -214,6 +266,14 @@ contract BAP578 is
         // External call last (Checks-Effects-Interactions pattern)
         (bool success, ) = payable(msg.sender).call{ value: amount }("");
         require(success, "Withdrawal failed");
+    }
+
+    /**
+     * @dev Burn an agent NFT (token owner only, balance must be 0)
+     */
+    function burn(uint256 tokenId) external onlyTokenOwner(tokenId) {
+        _burn(tokenId);
+        emit AgentBurned(tokenId, msg.sender);
     }
 
     /**
@@ -248,6 +308,28 @@ contract BAP578 is
         string memory newMetadataURI,
         AgentMetadata memory newExtendedMetadata
     ) external onlyTokenOwner(tokenId) {
+        require(bytes(newMetadataURI).length <= MAX_METADATA_URI_LENGTH, "URI too long");
+        require(
+            bytes(newExtendedMetadata.persona).length <= MAX_PERSONA_LENGTH,
+            "Persona too long"
+        );
+        require(
+            bytes(newExtendedMetadata.experience).length <= MAX_STRING_LENGTH,
+            "Experience too long"
+        );
+        require(
+            bytes(newExtendedMetadata.voiceHash).length <= MAX_STRING_LENGTH,
+            "VoiceHash too long"
+        );
+        require(
+            bytes(newExtendedMetadata.animationURI).length <= MAX_STRING_LENGTH,
+            "AnimationURI too long"
+        );
+        require(
+            bytes(newExtendedMetadata.vaultURI).length <= MAX_STRING_LENGTH,
+            "VaultURI too long"
+        );
+
         _setTokenURI(tokenId, newMetadataURI);
         agentMetadata[tokenId] = newExtendedMetadata;
         emit MetadataUpdated(tokenId);
@@ -278,7 +360,9 @@ contract BAP578 is
      * @dev Update free mints per user
      */
     function setFreeMintsPerUser(uint256 amount) external onlyOwner {
+        uint256 oldAmount = freeMintsPerUser;
         freeMintsPerUser = amount;
+        emit FreeMintsPerUserUpdated(oldAmount, amount);
     }
 
     /**
@@ -290,12 +374,12 @@ contract BAP578 is
     }
 
     /**
-     * @dev Emergency withdraw (owner only)
+     * @dev Emergency withdraw — only unallocated funds (not agent balances)
      */
-    function emergencyWithdraw() external onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No balance");
-        (bool success, ) = payable(owner()).call{ value: balance }("");
+    function emergencyWithdraw() external onlyOwner nonReentrant {
+        uint256 unallocated = address(this).balance - totalAgentBalances;
+        require(unallocated > 0, "No unallocated balance");
+        (bool success, ) = payable(owner()).call{ value: unallocated }("");
         require(success, "Emergency withdraw failed");
     }
 
@@ -350,6 +434,24 @@ contract BAP578 is
     }
 
     /**
+     * @dev Get tokens owned by an address with pagination
+     */
+    function tokensOfOwnerPaginated(
+        address account,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory) {
+        uint256 tokenCount = balanceOf(account);
+        if (offset >= tokenCount) return new uint256[](0);
+        uint256 end = (limit > tokenCount - offset) ? tokenCount : offset + limit;
+        uint256[] memory tokens = new uint256[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            tokens[i - offset] = tokenOfOwnerByIndex(account, i);
+        }
+        return tokens;
+    }
+
+    /**
      * @dev Get total supply
      */
     function getTotalSupply() external view returns (uint256) {
@@ -389,6 +491,9 @@ contract BAP578 is
     ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
         require(agentStates[tokenId].balance == 0, "Agent balance must be 0");
         super._burn(tokenId);
+        delete agentStates[tokenId];
+        delete agentMetadata[tokenId];
+        delete isFreeMint[tokenId];
     }
 
     function tokenURI(
@@ -413,4 +518,14 @@ contract BAP578 is
     receive() external payable {
         revert("Use fundAgent() instead");
     }
+
+    fallback() external payable {
+        revert("Use fundAgent() to send ETH");
+    }
+
+    // ============================================
+    // STORAGE GAP (for upgrade safety)
+    // ============================================
+
+    uint256[39] private __gap;
 }
