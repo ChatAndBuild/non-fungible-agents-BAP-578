@@ -42,6 +42,15 @@ interface IVaultPermissionManager {
         string action
     );
 
+    /// @notice Emitted when the contract observes that a token changed owner.
+    ///         Every grant issued under `previousOwner` is invalid from here on.
+    event OwnerEpochAdvanced(
+        uint256 indexed tokenId,
+        address indexed previousOwner,
+        address indexed newOwner,
+        uint256 newEpoch
+    );
+
     // ---- Writes -----------------------------------------------------------
 
     /// @notice Create a new permission namespace for an agent.
@@ -55,8 +64,10 @@ interface IVaultPermissionManager {
 
     /// @notice Grant a permission tier to a grantee on a vault.
     /// @param expiry Unix timestamp; 0 means no expiry. Past timestamps revert.
-    /// @dev Callable by the NFT owner or an address that already holds ADMIN
-    ///      on the same (tokenId, vaultId).
+    /// @dev Callable by the NFT owner, or by an address holding ADMIN on the
+    ///      same (tokenId, vaultId). A grantor cannot grant to itself, and only
+    ///      the NFT owner may grant or renew the ADMIN tier: an ADMIN can grant
+    ///      READ / WRITE but cannot create further admins or renew its own grant.
     function grantPermission(
         uint256 tokenId,
         string calldata vaultId,
@@ -85,6 +96,14 @@ interface IVaultPermissionManager {
         bytes calldata data
     ) external returns (bytes memory result);
 
+    /// @notice Commit the token's current owner into contract state, advancing
+    ///         the owner epoch if it changed.
+    /// @dev Callable by anyone. Every state-changing function above also does
+    ///      this implicitly; `syncOwner` exists so an off-chain indexer watching
+    ///      BAP-578 Transfer events can invalidate stale grants on a token that
+    ///      would otherwise round-trip owners with no other VPM activity.
+    function syncOwner(uint256 tokenId) external;
+
     // ---- Reads ------------------------------------------------------------
 
     /// @notice Whether `accessor` currently holds at least `minLevel`.
@@ -108,4 +127,9 @@ interface IVaultPermissionManager {
 
     /// @notice Whether the named vault exists on the agent.
     function vaultExists(uint256 tokenId, string calldata vaultId) external view returns (bool);
+
+    /// @notice The token's current owner epoch. A grant is valid only while its
+    ///         stamped epoch matches this value; the epoch advances on every
+    ///         observed owner change, so a transfer invalidates prior grants.
+    function ownerEpoch(uint256 tokenId) external view returns (uint256);
 }

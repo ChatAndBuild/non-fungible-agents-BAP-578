@@ -107,6 +107,66 @@ describe('VaultPermissionManager Extension', function () {
                 ),
             ).to.be.revertedWith('VPM: expiry in past');
         });
+
+        it('rejects granting to self', async function () {
+            await expect(
+                vpm.connect(owner).grantPermission(
+                    TOKEN_ID, VAULT_ID, owner.address, WRITE, 0, '',
+                ),
+            ).to.be.revertedWith('VPM: cannot grant to self');
+        });
+    });
+
+    describe('ADMIN tier restrictions', function () {
+        beforeEach(async function () {
+            await vpm.connect(owner).createVault(TOKEN_ID, VAULT_ID, '');
+        });
+
+        it('lets the NFT owner grant ADMIN', async function () {
+            await vpm.connect(owner).grantPermission(
+                TOKEN_ID, VAULT_ID, admin.address, ADMIN, 0, '',
+            );
+            const [ok] = await vpm.checkPermission(TOKEN_ID, VAULT_ID, admin.address, ADMIN);
+            expect(ok).to.equal(true);
+        });
+
+        it('forbids an ADMIN from granting the ADMIN tier', async function () {
+            await vpm.connect(owner).grantPermission(
+                TOKEN_ID, VAULT_ID, admin.address, ADMIN, 0, '',
+            );
+            await expect(
+                vpm.connect(admin).grantPermission(
+                    TOKEN_ID, VAULT_ID, stranger.address, ADMIN, 0, '',
+                ),
+            ).to.be.revertedWith('VPM: only owner grants ADMIN');
+        });
+
+        it('lets an ADMIN grant READ and WRITE', async function () {
+            await vpm.connect(owner).grantPermission(
+                TOKEN_ID, VAULT_ID, admin.address, ADMIN, 0, '',
+            );
+            await vpm.connect(admin).grantPermission(
+                TOKEN_ID, VAULT_ID, operator.address, WRITE, 0, '',
+            );
+            await vpm.connect(admin).grantPermission(
+                TOKEN_ID, VAULT_ID, stranger.address, READ, 0, '',
+            );
+            expect(await vpm.canForward(TOKEN_ID, VAULT_ID, operator.address)).to.equal(true);
+        });
+
+        it('blocks an ADMIN from self-renewing (grant-to-self is rejected first)', async function () {
+            const shortExpiry = (await ethers.provider.getBlock('latest')).timestamp + 60;
+            await vpm.connect(owner).grantPermission(
+                TOKEN_ID, VAULT_ID, admin.address, ADMIN, shortExpiry, '',
+            );
+            // The ADMIN cannot extend its own grant: grant-to-self is rejected,
+            // and even without that, ADMIN-tier grants are owner-only.
+            await expect(
+                vpm.connect(admin).grantPermission(
+                    TOKEN_ID, VAULT_ID, admin.address, ADMIN, shortExpiry + 100000, '',
+                ),
+            ).to.be.revertedWith('VPM: cannot grant to self');
+        });
     });
 
     describe('revokePermission', function () {
@@ -360,15 +420,34 @@ describe('VaultPermissionManager Extension', function () {
             expect(await vpm.canForward(TOKEN_ID, VAULT_ID, operator.address)).to.equal(false);
         });
 
-        // Documented edge case: if the NFT returns to the original owner and no
-        // explicit revoke happened, the stale grant reactivates because its
-        // ownerAtGrant field matches the current owner again. Owners who want
-        // belt-and-braces protection should revoke explicitly before re-acquiring.
-        it('reactivates a stale grant if the NFT returns to the original granter', async function () {
+        it('does NOT reactivate when the contract observed the intermediate owner', async function () {
+            await bap578Mock.transfer(TOKEN_ID, stranger.address);
+            // Anyone (here the new owner) commits the owner change, advancing the epoch.
+            await vpm.connect(stranger).syncOwner(TOKEN_ID);
+            await bap578Mock.transfer(TOKEN_ID, owner.address);
+            // The grant was stamped at epoch 0; the epoch is now 2, so it stays dead.
+            expect(await vpm.canForward(TOKEN_ID, VAULT_ID, operator.address)).to.equal(false);
+        });
+
+        // Documented residual edge case: if the NFT round-trips owners with NO
+        // VPM call at all in between, the contract never observed the change, so
+        // the epoch never advanced and the original grant reactivates. Closing
+        // this fully needs a transfer hook on BAP-578; an off-chain indexer
+        // calling syncOwner on Transfer events also closes it in practice.
+        it('residual: reactivates only on a fully unobserved owner round-trip', async function () {
             await bap578Mock.transfer(TOKEN_ID, stranger.address);
             expect(await vpm.canForward(TOKEN_ID, VAULT_ID, operator.address)).to.equal(false);
             await bap578Mock.transfer(TOKEN_ID, owner.address);
             expect(await vpm.canForward(TOKEN_ID, VAULT_ID, operator.address)).to.equal(true);
+        });
+
+        it('exposes the owner epoch and advances it on observed transfers', async function () {
+            expect(await vpm.ownerEpoch(TOKEN_ID)).to.equal(0);
+            await bap578Mock.transfer(TOKEN_ID, stranger.address);
+            // View call already reflects the pending change.
+            expect(await vpm.ownerEpoch(TOKEN_ID)).to.equal(1);
+            await vpm.connect(stranger).syncOwner(TOKEN_ID);
+            expect(await vpm.ownerEpoch(TOKEN_ID)).to.equal(1);
         });
     });
 });
