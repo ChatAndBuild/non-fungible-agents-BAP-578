@@ -22,17 +22,37 @@ if (DEPLOYER_PRIVATE_KEY === '00000000000000000000000000000000000000000000000000
  */
 module.exports = {
   solidity: {
-    version: '0.8.28', // any version you want
-    settings: {
-      viaIR: true,
-      optimizer: {
-        enabled: true,
-        details: {
-          yulDetails: {
-            optimizerSteps: 'u',
+    compilers: [
+      {
+        version: '0.8.28', // any version you want
+        settings: {
+          viaIR: true,
+          optimizer: {
+            enabled: true,
+            details: {
+              yulDetails: {
+                optimizerSteps: 'u',
+              },
+            },
+            runs: 8888,
           },
         },
-        runs: 8888,
+      },
+    ],
+    // The example logic modules are large production contracts. Compile them
+    // for deployment size (runs: 1) so they stay under the 24 KB EVM limit.
+    overrides: {
+      'contracts/examples/logic/CTOAgentLogic.sol': {
+        version: '0.8.19',
+        settings: { viaIR: true, optimizer: { enabled: true, runs: 1 } },
+      },
+      'contracts/examples/logic/HunterAgentLogic.sol': {
+        version: '0.8.19',
+        settings: { viaIR: true, optimizer: { enabled: true, runs: 1 } },
+      },
+      'contracts/examples/logic/TradingAgentLogicV5.sol': {
+        version: '0.8.19',
+        settings: { viaIR: true, optimizer: { enabled: true, runs: 1 } },
       },
     },
   },
