@@ -14,7 +14,6 @@ relocate, or decline them.
 | File | Mainnet address | What it does |
 |---|---|---|
 | `logic/HunterAgentLogic.sol` | `0x4F35D6B3DEdecfe3aD6600b39A705BcD53E2aE81` | Position-tracking trading agent (stop-loss / take-profit, PancakeSwap + FourMeme). |
-| `logic/TradingAgentLogicV5.sol` | `0x933f288e3213a0A05F28A4A6Ec5790129bdaE6d7` | Direct-swap trading agent (PancakeSwap + FourMeme). |
 | `logic/CTOAgentLogic.sol` | `0x8E54612c12710c41ae57abAa8D4637f394DE2b0B` | Campaign agent (multi-tranche entry / exit plus social actions). |
 | `logic/MetricsTracker.sol` | base contract | Shared metrics base (`getMetrics`, action / trade counters). |
 | `interfaces/IPlatformRegistry.sol` | interface | Off-chain platform registry interface. |
@@ -37,11 +36,10 @@ address above.
 
 ## Compilation
 
-`HunterAgentLogic`, `TradingAgentLogicV5`, and `CTOAgentLogic` are large. The
-root `hardhat.config.js` has a scoped `overrides` block that compiles just those
-three at `solc 0.8.19` with `viaIR` and `optimizer runs: 1`, which is the
-configuration they were deployed with and which keeps them under the 24 KB EVM
-code-size limit.
+`HunterAgentLogic` and `CTOAgentLogic` are large. The root `hardhat.config.js`
+has a scoped `overrides` block that compiles those two at `solc 0.8.19` with
+`viaIR` and `optimizer runs: 1`, which is the configuration they were deployed
+with and which keeps them under the 24 KB EVM code-size limit.
 
 ## Static-analysis notes
 
@@ -63,3 +61,13 @@ has been reviewed:
 - **`bap578.ownerOf(tokenId)` return value ignored**: the call is made as a
   token-exists guard (it reverts for a non-existent token); the returned address
   is intentionally unused.
+
+## Known limitations
+
+- **`check_positions` returns a custom-packed layout.** `HunterAgentLogic`'s
+  `check_positions` action returns `abi.encode(uint256 count)` followed by one
+  `abi.encode(...)` per position concatenated with `abi.encodePacked`. This is
+  not a standard ABI array, so `abi.decode` of the whole blob as a tuple array
+  will not work. An off-chain consumer reads the leading 32-byte `count`, then
+  decodes each following fixed 224-byte chunk as
+  `(address, uint256, uint256, uint256, uint256, uint256, bool)`.

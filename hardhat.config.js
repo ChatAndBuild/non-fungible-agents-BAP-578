@@ -50,10 +50,6 @@ module.exports = {
         version: '0.8.19',
         settings: { viaIR: true, optimizer: { enabled: true, runs: 1 } },
       },
-      'contracts/examples/logic/TradingAgentLogicV5.sol': {
-        version: '0.8.19',
-        settings: { viaIR: true, optimizer: { enabled: true, runs: 1 } },
-      },
     },
   },
   networks: {

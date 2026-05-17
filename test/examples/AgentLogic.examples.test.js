@@ -12,7 +12,6 @@ const { ethers } = require('hardhat');
  */
 const CONTRACTS = [
   { name: 'HunterAgentLogic', version: '1.0.0' },
-  { name: 'TradingAgentLogicV5', version: '5.0.0' },
   { name: 'CTOAgentLogic', version: '1.0.0' },
 ];
 
